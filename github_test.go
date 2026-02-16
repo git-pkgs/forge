@@ -13,7 +13,7 @@ import (
 func TestGitHubFetchRepository(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/v3/repos/octocat/hello-world", func(w http.ResponseWriter, r *http.Request) {
-		json.NewEncoder(w).Encode(github.Repository{
+		_ = json.NewEncoder(w).Encode(github.Repository{
 			FullName:         ptr("octocat/hello-world"),
 			Name:             ptr("hello-world"),
 			Description:      ptr("My first repository"),
@@ -88,7 +88,7 @@ func TestGitHubFetchRepositoryNotFound(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/v3/repos/octocat/nonexistent", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(w).Encode(map[string]string{"message": "Not Found"})
+		_ = json.NewEncoder(w).Encode(map[string]string{"message": "Not Found"})
 	})
 
 	srv := httptest.NewServer(mux)
@@ -107,7 +107,7 @@ func TestGitHubFetchRepositoryNotFound(t *testing.T) {
 func TestGitHubFetchRepositoryNoassertionLicense(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/v3/repos/test/noassertion", func(w http.ResponseWriter, r *http.Request) {
-		json.NewEncoder(w).Encode(github.Repository{
+		_ = json.NewEncoder(w).Encode(github.Repository{
 			FullName: ptr("test/noassertion"),
 			Name:     ptr("noassertion"),
 			Owner:    &github.User{Login: ptr("test")},
@@ -134,7 +134,7 @@ func TestGitHubFetchRepositoryNoassertionLicense(t *testing.T) {
 func TestGitHubListRepositories(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/v3/orgs/myorg/repos", func(w http.ResponseWriter, r *http.Request) {
-		json.NewEncoder(w).Encode([]*github.Repository{
+		_ = json.NewEncoder(w).Encode([]*github.Repository{
 			{
 				FullName: ptr("myorg/repo-a"),
 				Name:     ptr("repo-a"),
@@ -176,10 +176,10 @@ func TestGitHubListRepositoriesFallbackToUser(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/v3/orgs/someuser/repos", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(w).Encode(map[string]string{"message": "Not Found"})
+		_ = json.NewEncoder(w).Encode(map[string]string{"message": "Not Found"})
 	})
 	mux.HandleFunc("GET /api/v3/users/someuser/repos", func(w http.ResponseWriter, r *http.Request) {
-		json.NewEncoder(w).Encode([]*github.Repository{
+		_ = json.NewEncoder(w).Encode([]*github.Repository{
 			{
 				FullName: ptr("someuser/personal"),
 				Name:     ptr("personal"),
@@ -210,7 +210,7 @@ func TestGitHubListRepositoriesFallbackToUser(t *testing.T) {
 func TestGitHubListRepositoriesWithFilters(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/v3/orgs/myorg/repos", func(w http.ResponseWriter, r *http.Request) {
-		json.NewEncoder(w).Encode([]*github.Repository{
+		_ = json.NewEncoder(w).Encode([]*github.Repository{
 			{
 				FullName: ptr("myorg/active"),
 				Name:     ptr("active"),
@@ -258,7 +258,7 @@ func TestGitHubListRepositoriesWithFilters(t *testing.T) {
 func TestGitHubFetchTags(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/v3/repos/octocat/hello-world/tags", func(w http.ResponseWriter, r *http.Request) {
-		json.NewEncoder(w).Encode([]github.RepositoryTag{
+		_ = json.NewEncoder(w).Encode([]github.RepositoryTag{
 			{
 				Name:   ptr("v1.0.0"),
 				Commit: &github.Commit{SHA: ptr("abc123")},
