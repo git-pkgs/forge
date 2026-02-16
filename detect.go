@@ -31,7 +31,7 @@ func detectFromHeaders(ctx context.Context, baseURL string) (ForgeType, error) {
 	if err != nil {
 		return Unknown, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.Header.Get("X-Forgejo-Version") != "" {
 		return Forgejo, nil
@@ -78,7 +78,7 @@ func probeGiteaAPI(ctx context.Context, baseURL string) (ForgeType, error) {
 	if err != nil {
 		return Unknown, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return Unknown, fmt.Errorf("status %d", resp.StatusCode)
@@ -107,7 +107,7 @@ func probeURL(ctx context.Context, url string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	return resp.StatusCode == http.StatusOK, nil
 }

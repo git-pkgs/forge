@@ -13,7 +13,7 @@ import (
 // giteaVersionHandler serves the /api/v1/version endpoint that the Gitea SDK
 // requires during client creation.
 func giteaVersionHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, `{"version":"1.21.0"}`)
+	_, _ = fmt.Fprintf(w, `{"version":"1.21.0"}`)
 }
 
 func TestGiteaFetchRepository(t *testing.T) {
@@ -23,7 +23,7 @@ func TestGiteaFetchRepository(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/v1/version", giteaVersionHandler)
 	mux.HandleFunc("GET /api/v1/repos/testorg/testrepo", func(w http.ResponseWriter, r *http.Request) {
-		json.NewEncoder(w).Encode(map[string]any{
+		_ = json.NewEncoder(w).Encode(map[string]any{
 			"full_name":         "testorg/testrepo",
 			"name":              "testrepo",
 			"description":       "A Gitea repo",
@@ -55,7 +55,7 @@ func TestGiteaFetchRepository(t *testing.T) {
 		})
 	})
 	mux.HandleFunc("GET /api/v1/repos/testorg/testrepo/topics", func(w http.ResponseWriter, r *http.Request) {
-		json.NewEncoder(w).Encode(map[string]any{
+		_ = json.NewEncoder(w).Encode(map[string]any{
 			"topics": []string{"python", "machine-learning"},
 		})
 	})
@@ -115,7 +115,7 @@ func TestGiteaListRepositories(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/v1/version", giteaVersionHandler)
 	mux.HandleFunc("GET /api/v1/orgs/testorg/repos", func(w http.ResponseWriter, r *http.Request) {
-		json.NewEncoder(w).Encode([]map[string]any{
+		_ = json.NewEncoder(w).Encode([]map[string]any{
 			{
 				"full_name":      "testorg/repo-a",
 				"name":           "repo-a",
@@ -168,7 +168,7 @@ func TestGiteaListRepositoriesFallbackToUser(t *testing.T) {
 		w.WriteHeader(http.StatusNotFound)
 	})
 	mux.HandleFunc("GET /api/v1/users/someuser/repos", func(w http.ResponseWriter, r *http.Request) {
-		json.NewEncoder(w).Encode([]map[string]any{
+		_ = json.NewEncoder(w).Encode([]map[string]any{
 			{
 				"full_name":      "someuser/personal",
 				"name":           "personal",
@@ -203,7 +203,7 @@ func TestGiteaFetchTags(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/v1/version", giteaVersionHandler)
 	mux.HandleFunc("GET /api/v1/repos/testorg/testrepo/tags", func(w http.ResponseWriter, r *http.Request) {
-		json.NewEncoder(w).Encode([]map[string]any{
+		_ = json.NewEncoder(w).Encode([]map[string]any{
 			{
 				"name":   "v3.0.0",
 				"id":     "sha-tag-1",

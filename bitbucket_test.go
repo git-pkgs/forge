@@ -15,7 +15,7 @@ func TestBitbucketFetchRepository(t *testing.T) {
 		if auth := r.Header.Get("Authorization"); auth != "Bearer test-bb-token" {
 			t.Errorf("expected Bearer token, got %q", auth)
 		}
-		json.NewEncoder(w).Encode(bbRepository{
+		_ = json.NewEncoder(w).Encode(bbRepository{
 			Slug:        "stash-example-plugin",
 			Name:        "stash-example-plugin",
 			FullName:    "atlassian/stash-example-plugin",
@@ -110,7 +110,7 @@ func TestBitbucketFetchRepositoryNotFound(t *testing.T) {
 func TestBitbucketListRepositories(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /2.0/repositories/atlassian", func(w http.ResponseWriter, r *http.Request) {
-		json.NewEncoder(w).Encode(map[string]any{
+		_ = json.NewEncoder(w).Encode(map[string]any{
 			"values": []bbRepository{
 				{
 					Slug:     "repo-a",
@@ -178,7 +178,7 @@ func TestBitbucketListRepositoriesNotFound(t *testing.T) {
 func TestBitbucketFetchTags(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /2.0/repositories/atlassian/myrepo/refs/tags", func(w http.ResponseWriter, r *http.Request) {
-		json.NewEncoder(w).Encode(bbTagsResponse{
+		_ = json.NewEncoder(w).Encode(bbTagsResponse{
 			Values: []bbTag{
 				{Name: "v1.0.0", Target: struct {
 					Hash string `json:"hash"`

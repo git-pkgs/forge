@@ -16,7 +16,7 @@ func TestGitLabFetchRepository(t *testing.T) {
 	mux := http.NewServeMux()
 	// GitLab SDK URL-encodes the project path: mygroup/myrepo -> mygroup%2Fmyrepo
 	mux.HandleFunc("GET /api/v4/projects/mygroup%2Fmyrepo", func(w http.ResponseWriter, r *http.Request) {
-		json.NewEncoder(w).Encode(map[string]any{
+		_ = json.NewEncoder(w).Encode(map[string]any{
 			"path_with_namespace":    "mygroup/myrepo",
 			"name":                   "myrepo",
 			"description":            "A GitLab project",
@@ -78,7 +78,7 @@ func TestGitLabFetchRepositoryNotFound(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/v4/projects/mygroup%2Fnonexistent", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(w).Encode(map[string]string{"message": "404 Project Not Found"})
+		_ = json.NewEncoder(w).Encode(map[string]string{"message": "404 Project Not Found"})
 	})
 
 	srv := httptest.NewServer(mux)
@@ -95,7 +95,7 @@ func TestGitLabFetchRepositoryNotFound(t *testing.T) {
 func TestGitLabListRepositories(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/v4/groups/mygroup/projects", func(w http.ResponseWriter, r *http.Request) {
-		json.NewEncoder(w).Encode([]map[string]any{
+		_ = json.NewEncoder(w).Encode([]map[string]any{
 			{
 				"path_with_namespace": "mygroup/project-a",
 				"name":               "project-a",
@@ -140,10 +140,10 @@ func TestGitLabListRepositoriesFallbackToUser(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/v4/groups/someuser/projects", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(w).Encode(map[string]string{"message": "404 Group Not Found"})
+		_ = json.NewEncoder(w).Encode(map[string]string{"message": "404 Group Not Found"})
 	})
 	mux.HandleFunc("GET /api/v4/users/someuser/projects", func(w http.ResponseWriter, r *http.Request) {
-		json.NewEncoder(w).Encode([]map[string]any{
+		_ = json.NewEncoder(w).Encode([]map[string]any{
 			{
 				"path_with_namespace": "someuser/personal",
 				"name":               "personal",
@@ -174,7 +174,7 @@ func TestGitLabListRepositoriesFallbackToUser(t *testing.T) {
 func TestGitLabFetchTags(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/v4/projects/mygroup%2Fmyrepo/repository/tags", func(w http.ResponseWriter, r *http.Request) {
-		json.NewEncoder(w).Encode([]map[string]any{
+		_ = json.NewEncoder(w).Encode([]map[string]any{
 			{
 				"name":   "v2.0.0",
 				"commit": map[string]string{"id": "aaa111"},

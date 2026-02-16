@@ -35,7 +35,7 @@ func convertGitLabProject(p *gitlab.Project) Repository {
 		ForksCount:          int(p.ForksCount),
 		OpenIssuesCount:     int(p.OpenIssuesCount),
 		HasIssues:           true,
-		PullRequestsEnabled: p.MergeRequestsEnabled,
+		PullRequestsEnabled: p.MergeRequestsAccessLevel != gitlab.DisabledAccessControl,
 		Topics:              p.Topics,
 	}
 
