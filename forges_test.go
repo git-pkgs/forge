@@ -222,7 +222,7 @@ func TestDetectForgeTypeGiteaAPI(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	})
 	mux.HandleFunc("GET /api/v1/version", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintf(w, `{"version":"1.21.0"}`)
+		_, _ = fmt.Fprintf(w,`{"version":"1.21.0"}`)
 	})
 
 	srv := httptest.NewServer(mux)
@@ -243,7 +243,7 @@ func TestDetectForgeTypeForgejoAPI(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	})
 	mux.HandleFunc("GET /api/v1/version", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintf(w, `{"version":"7.0.0+forgejo"}`)
+		_, _ = fmt.Fprintf(w,`{"version":"7.0.0+forgejo"}`)
 	})
 
 	srv := httptest.NewServer(mux)
@@ -267,7 +267,7 @@ func TestDetectForgeTypeGitLabAPI(t *testing.T) {
 		w.WriteHeader(http.StatusNotFound)
 	})
 	mux.HandleFunc("GET /api/v4/version", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintf(w, `{"version":"16.0.0"}`)
+		_, _ = fmt.Fprintf(w,`{"version":"16.0.0"}`)
 	})
 
 	srv := httptest.NewServer(mux)
@@ -294,7 +294,7 @@ func TestDetectForgeTypeGitHubAPI(t *testing.T) {
 		w.WriteHeader(http.StatusNotFound)
 	})
 	mux.HandleFunc("GET /api/v3/meta", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintf(w, `{"verifiable_password_authentication": true}`)
+		_, _ = fmt.Fprintf(w,`{"verifiable_password_authentication": true}`)
 	})
 
 	srv := httptest.NewServer(mux)
