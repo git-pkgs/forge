@@ -3,13 +3,30 @@ package resolve
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"os"
 	"os/exec"
 	"strings"
 
 	"github.com/git-pkgs/forge"
+	"github.com/git-pkgs/forge/bitbucket"
+	"github.com/git-pkgs/forge/gitea"
+	ghforge "github.com/git-pkgs/forge/github"
+	glforge "github.com/git-pkgs/forge/gitlab"
 	"github.com/git-pkgs/forge/internal/config"
 )
+
+var builders = forges.ForgeBuilders{
+	GitHub: func(baseURL, token string, hc *http.Client) forges.Forge {
+		return ghforge.NewWithBase(baseURL, token, hc)
+	},
+	GitLab: func(baseURL, token string, hc *http.Client) forges.Forge {
+		return glforge.New(baseURL, token, hc)
+	},
+	Gitea: func(baseURL, token string, hc *http.Client) forges.Forge {
+		return gitea.New(baseURL, token, hc)
+	},
+}
 
 // Repo figures out the forge, owner, and repo name from flags or the current
 // git remote. The -R flag takes precedence; otherwise we read the "origin"
@@ -76,11 +93,19 @@ func newClient(domain string) *forges.Client {
 	if ft := configForgeType(domain); ft != "" {
 		switch ft {
 		case "gitea", "forgejo":
-			opts = append(opts, forges.WithGitea(domain, token))
+			opts = append(opts, forges.WithForge(domain, gitea.New("https://"+domain, token, nil)))
 		case "gitlab":
-			opts = append(opts, forges.WithGitLab(domain, token))
+			opts = append(opts, forges.WithForge(domain, glforge.New("https://"+domain, token, nil)))
 		}
 	}
+
+	// Register default forges.
+	opts = append(opts,
+		forges.WithForge("github.com", ghforge.New(TokenForDomain("github.com"), nil)),
+		forges.WithForge("gitlab.com", glforge.New("https://gitlab.com", TokenForDomain("gitlab.com"), nil)),
+		forges.WithForge("codeberg.org", gitea.New("https://codeberg.org", TokenForDomain("codeberg.org"), nil)),
+		forges.WithForge("bitbucket.org", bitbucket.New(TokenForDomain("bitbucket.org"), nil)),
+	)
 
 	return forges.NewClient(opts...)
 }
@@ -94,7 +119,7 @@ func forgeForDomainMaybeConfig(ctx context.Context, client *forges.Client, domai
 		return f, nil
 	}
 	token := TokenForDomain(domain)
-	if regErr := client.RegisterDomain(ctx, domain, token); regErr != nil {
+	if regErr := client.RegisterDomain(ctx, domain, token, builders); regErr != nil {
 		return nil, fmt.Errorf("unknown forge at %s: %w", domain, regErr)
 	}
 	return client.ForgeFor(domain)

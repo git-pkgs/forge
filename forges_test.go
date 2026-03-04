@@ -8,39 +8,12 @@ import (
 	"net/http/httptest"
 	"os"
 	"testing"
-	"time"
 )
-
-// Test helpers
-
-func ptr(s string) *string   { return &s }
-func ptrBool(b bool) *bool   { return &b }
-func ptrInt(i int) *int      { return &i }
-func ptrInt64(i int64) *int64 { return &i }
-
-func parseTime(s string) time.Time {
-	t, _ := time.Parse(time.RFC3339, s)
-	return t
-}
 
 func assertEqual(t *testing.T, field, want, got string) {
 	t.Helper()
 	if want != got {
 		t.Errorf("%s: want %q, got %q", field, want, got)
-	}
-}
-
-func assertEqualBool(t *testing.T, field string, want, got bool) {
-	t.Helper()
-	if want != got {
-		t.Errorf("%s: want %v, got %v", field, want, got)
-	}
-}
-
-func assertEqualInt(t *testing.T, field string, want, got int) {
-	t.Helper()
-	if want != got {
-		t.Errorf("%s: want %d, got %d", field, want, got)
 	}
 }
 
@@ -129,10 +102,14 @@ func TestParseRepoURL(t *testing.T) {
 // Client routing tests
 
 func TestClientRouting(t *testing.T) {
-	c := NewClient()
+	mock := &mockForge{repoService: &mockRepoService{}}
+	c := NewClient(
+		WithForge("github.com", mock),
+		WithForge("gitlab.com", mock),
+	)
 
-	// Verify default domains are registered
-	for _, domain := range []string{"github.com", "gitlab.com", "codeberg.org", "bitbucket.org"} {
+	// Verify registered domains
+	for _, domain := range []string{"github.com", "gitlab.com"} {
 		if _, err := c.forgeFor(domain); err != nil {
 			t.Errorf("expected forge for %s, got error: %v", domain, err)
 		}
