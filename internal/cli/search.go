@@ -3,9 +3,9 @@ package cli
 import (
 	"fmt"
 
-	"github.com/git-pkgs/forges/internal/output"
-	"github.com/git-pkgs/forges/internal/resolve"
-	"github.com/git-pkgs/forges"
+	"github.com/git-pkgs/forge/internal/output"
+	"github.com/git-pkgs/forge/internal/resolve"
+	"github.com/git-pkgs/forge"
 	"github.com/spf13/cobra"
 )
 

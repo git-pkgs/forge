@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/git-pkgs/forges/internal/config"
+	"github.com/git-pkgs/forge/internal/config"
 )
 
 func TestAuthCmd(t *testing.T) {

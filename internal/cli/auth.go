@@ -6,8 +6,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/git-pkgs/forges/internal/config"
-	"github.com/git-pkgs/forges/internal/resolve"
+	"github.com/git-pkgs/forge/internal/config"
+	"github.com/git-pkgs/forge/internal/resolve"
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
 )

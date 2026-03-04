@@ -7,8 +7,8 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/git-pkgs/forges"
-	"github.com/git-pkgs/forges/internal/config"
+	"github.com/git-pkgs/forge"
+	"github.com/git-pkgs/forge/internal/config"
 )
 
 // Repo figures out the forge, owner, and repo name from flags or the current

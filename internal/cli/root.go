@@ -3,8 +3,8 @@ package cli
 import (
 	"os"
 
-	"github.com/git-pkgs/forges/internal/config"
-	"github.com/git-pkgs/forges/internal/output"
+	"github.com/git-pkgs/forge/internal/config"
+	"github.com/git-pkgs/forge/internal/output"
 	"github.com/spf13/cobra"
 )
 

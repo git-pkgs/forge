@@ -5,7 +5,7 @@ Go library and CLI for working with git forges. Supports GitHub, GitLab, Gitea/F
 ## CLI
 
 ```
-go install github.com/git-pkgs/forges/cmd/forge@latest
+go install github.com/git-pkgs/forge/cmd/forge@latest
 ```
 
 The CLI detects which forge to use from your git remote, or you can set it with `--forge-type`.
@@ -72,7 +72,7 @@ Precedence from highest to lowest: CLI flags, environment variables, `.forge`, `
 ## Library
 
 ```go
-import "github.com/git-pkgs/forges"
+import "github.com/git-pkgs/forge"
 ```
 
 ```go

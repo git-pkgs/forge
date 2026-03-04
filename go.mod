@@ -1,4 +1,4 @@
-module github.com/git-pkgs/forges
+module github.com/git-pkgs/forge
 
 go 1.25.6
 

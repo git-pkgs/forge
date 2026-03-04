@@ -9,7 +9,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/git-pkgs/forges/internal/resolve"
+	"github.com/git-pkgs/forge/internal/resolve"
 	"github.com/spf13/cobra"
 )
 

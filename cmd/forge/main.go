@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	"github.com/git-pkgs/forges/internal/cli"
+	"github.com/git-pkgs/forge/internal/cli"
 )
 
 func main() {
