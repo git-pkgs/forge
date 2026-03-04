@@ -60,7 +60,7 @@ func (s *gitHubMilestoneService) List(ctx context.Context, owner, repo string, o
 		if resp.NextPage == 0 || (opts.Limit > 0 && len(all) >= opts.Limit) {
 			break
 		}
-		ghOpts.ListOptions.Page = resp.NextPage
+		ghOpts.Page = resp.NextPage
 	}
 
 	if opts.Limit > 0 && len(all) > opts.Limit {

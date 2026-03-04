@@ -176,11 +176,7 @@ func (s *gitLabIssueService) Create(ctx context.Context, owner, repo string, opt
 		Title:       gitlab.Ptr(opts.Title),
 		Description: gitlab.Ptr(opts.Body),
 	}
-	if len(opts.Assignees) > 0 {
-		// GitLab requires assignee IDs, but we only have usernames.
-		// We'll use AssigneeIDs if we can resolve them, but for now
-		// we leave this limitation documented.
-	}
+	// GitLab requires assignee IDs, not usernames -- skipping assignee assignment.
 	if len(opts.Labels) > 0 {
 		lbls := gitlab.LabelOptions(opts.Labels)
 		glOpts.Labels = &lbls

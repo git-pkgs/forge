@@ -56,7 +56,7 @@ var browseCmd = &cobra.Command{
 		}
 
 		if flagNoBrowser {
-			fmt.Fprintln(os.Stdout, url)
+			_, _ = fmt.Fprintln(os.Stdout, url)
 			return nil
 		}
 

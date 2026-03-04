@@ -59,13 +59,13 @@ func prViewCmd() *cobra.Command {
 				return p.PrintJSON(pr)
 			}
 
-			fmt.Fprintf(os.Stdout, "#%d %s\n", pr.Number, pr.Title)
-			fmt.Fprintf(os.Stdout, "State:   %s\n", pr.State)
-			fmt.Fprintf(os.Stdout, "Author:  %s\n", pr.Author.Login)
-			fmt.Fprintf(os.Stdout, "Branch:  %s -> %s\n", pr.Head, pr.Base)
+			_, _ = fmt.Fprintf(os.Stdout, "#%d %s\n", pr.Number, pr.Title)
+			_, _ = fmt.Fprintf(os.Stdout, "State:   %s\n", pr.State)
+			_, _ = fmt.Fprintf(os.Stdout, "Author:  %s\n", pr.Author.Login)
+			_, _ = fmt.Fprintf(os.Stdout, "Branch:  %s -> %s\n", pr.Head, pr.Base)
 
 			if pr.Draft {
-				fmt.Fprintln(os.Stdout, "Draft:   yes")
+				_, _ = fmt.Fprintln(os.Stdout, "Draft:   yes")
 			}
 
 			if len(pr.Reviewers) > 0 {
@@ -73,7 +73,7 @@ func prViewCmd() *cobra.Command {
 				for i, r := range pr.Reviewers {
 					names[i] = r.Login
 				}
-				fmt.Fprintf(os.Stdout, "Review:  %s\n", strings.Join(names, ", "))
+				_, _ = fmt.Fprintf(os.Stdout, "Review:  %s\n", strings.Join(names, ", "))
 			}
 
 			if len(pr.Labels) > 0 {
@@ -81,20 +81,20 @@ func prViewCmd() *cobra.Command {
 				for i, l := range pr.Labels {
 					names[i] = l.Name
 				}
-				fmt.Fprintf(os.Stdout, "Labels:  %s\n", strings.Join(names, ", "))
+				_, _ = fmt.Fprintf(os.Stdout, "Labels:  %s\n", strings.Join(names, ", "))
 			}
 
 			if pr.Milestone != nil {
-				fmt.Fprintf(os.Stdout, "Mile:    %s\n", pr.Milestone.Title)
+				_, _ = fmt.Fprintf(os.Stdout, "Mile:    %s\n", pr.Milestone.Title)
 			}
 
 			if pr.Additions > 0 || pr.Deletions > 0 {
-				fmt.Fprintf(os.Stdout, "Changes: +%d -%d (%d files)\n", pr.Additions, pr.Deletions, pr.ChangedFiles)
+				_, _ = fmt.Fprintf(os.Stdout, "Changes: +%d -%d (%d files)\n", pr.Additions, pr.Deletions, pr.ChangedFiles)
 			}
 
 			if pr.Body != "" {
-				fmt.Fprintln(os.Stdout)
-				fmt.Fprintln(os.Stdout, pr.Body)
+				_, _ = fmt.Fprintln(os.Stdout)
+				_, _ = fmt.Fprintln(os.Stdout, pr.Body)
 			}
 
 			if flagComments {
@@ -103,9 +103,9 @@ func prViewCmd() *cobra.Command {
 					return err
 				}
 				for _, c := range comments {
-					fmt.Fprintln(os.Stdout)
-					fmt.Fprintf(os.Stdout, "--- %s ---\n", c.Author.Login)
-					fmt.Fprintln(os.Stdout, c.Body)
+					_, _ = fmt.Fprintln(os.Stdout)
+					_, _ = fmt.Fprintf(os.Stdout, "--- %s ---\n", c.Author.Login)
+					_, _ = fmt.Fprintln(os.Stdout, c.Body)
 				}
 			}
 
@@ -250,7 +250,7 @@ func prCreateCmd() *cobra.Command {
 				return p.PrintJSON(pr)
 			}
 
-			fmt.Fprintf(os.Stdout, "%s\n", pr.HTMLURL)
+			_, _ = fmt.Fprintf(os.Stdout, "%s\n", pr.HTMLURL)
 			return nil
 		},
 	}
@@ -287,7 +287,7 @@ func prCloseCmd() *cobra.Command {
 				return fmt.Errorf("closing PR #%d: %w", number, err)
 			}
 
-			fmt.Fprintf(os.Stdout, "Closed #%d\n", number)
+			_, _ = fmt.Fprintf(os.Stdout, "Closed #%d\n", number)
 			return nil
 		},
 	}
@@ -313,7 +313,7 @@ func prReopenCmd() *cobra.Command {
 				return fmt.Errorf("reopening PR #%d: %w", number, err)
 			}
 
-			fmt.Fprintf(os.Stdout, "Reopened #%d\n", number)
+			_, _ = fmt.Fprintf(os.Stdout, "Reopened #%d\n", number)
 			return nil
 		},
 	}
@@ -374,7 +374,7 @@ func prEditCmd() *cobra.Command {
 				return p.PrintJSON(pr)
 			}
 
-			fmt.Fprintf(os.Stdout, "%s\n", pr.HTMLURL)
+			_, _ = fmt.Fprintf(os.Stdout, "%s\n", pr.HTMLURL)
 			return nil
 		},
 	}
@@ -422,7 +422,7 @@ func prMergeCmd() *cobra.Command {
 				return fmt.Errorf("merging PR #%d: %w", number, err)
 			}
 
-			fmt.Fprintf(os.Stdout, "Merged #%d\n", number)
+			_, _ = fmt.Fprintf(os.Stdout, "Merged #%d\n", number)
 			return nil
 		},
 	}
@@ -455,7 +455,7 @@ func prDiffCmd() *cobra.Command {
 				return fmt.Errorf("getting diff for PR #%d: %w", number, err)
 			}
 
-			fmt.Fprint(os.Stdout, diff)
+			_, _ = fmt.Fprint(os.Stdout, diff)
 			return nil
 		},
 	}
@@ -493,7 +493,7 @@ func prCommentCmd() *cobra.Command {
 				return p.PrintJSON(comment)
 			}
 
-			fmt.Fprintf(os.Stdout, "%s\n", comment.HTMLURL)
+			_, _ = fmt.Fprintf(os.Stdout, "%s\n", comment.HTMLURL)
 			return nil
 		},
 	}

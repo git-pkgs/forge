@@ -21,7 +21,7 @@ func TestGitHubDeployKeyList(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/v3/repos/octocat/hello/keys", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprint(w, `[
+		_, _ = fmt.Fprint(w, `[
 			{"id": 1, "title": "deploy-key-1", "key": "ssh-rsa AAAA...", "read_only": true},
 			{"id": 2, "title": "deploy-key-2", "key": "ssh-ed25519 AAAA...", "read_only": false}
 		]`)
@@ -50,7 +50,7 @@ func TestGitHubDeployKeyCreate(t *testing.T) {
 	mux.HandleFunc("POST /api/v3/repos/octocat/hello/keys", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
-		fmt.Fprint(w, `{"id": 3, "title": "new-key", "key": "ssh-rsa BBBB...", "read_only": true}`)
+		_, _ = fmt.Fprint(w, `{"id": 3, "title": "new-key", "key": "ssh-rsa BBBB...", "read_only": true}`)
 	})
 
 	srv := httptest.NewServer(mux)
@@ -89,7 +89,7 @@ func TestGitHubDeployKeyDeleteNotFound(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("DELETE /api/v3/repos/octocat/hello/keys/999", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
-		fmt.Fprint(w, `{"message": "Not Found"}`)
+		_, _ = fmt.Fprint(w, `{"message": "Not Found"}`)
 	})
 
 	srv := httptest.NewServer(mux)

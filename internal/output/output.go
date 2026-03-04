@@ -46,16 +46,16 @@ func (p *Printer) PrintJSON(v any) error {
 // rows is a slice of slices where each inner slice is one row.
 func (p *Printer) PrintTable(headers []string, rows [][]string) {
 	w := tabwriter.NewWriter(p.Out, 0, 0, 2, ' ', 0)
-	fmt.Fprintln(w, strings.Join(headers, "\t"))
+	_, _ = fmt.Fprintln(w, strings.Join(headers, "\t"))
 	for _, row := range rows {
-		fmt.Fprintln(w, strings.Join(row, "\t"))
+		_, _ = fmt.Fprintln(w, strings.Join(row, "\t"))
 	}
-	w.Flush()
+	_ = w.Flush()
 }
 
 // PrintPlain writes each value on its own line.
 func (p *Printer) PrintPlain(lines []string) {
 	for _, line := range lines {
-		fmt.Fprintln(p.Out, line)
+		_, _ = fmt.Fprintln(p.Out, line)
 	}
 }

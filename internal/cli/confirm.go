@@ -19,7 +19,7 @@ func confirm(prompt string) error {
 
 	fmt.Fprint(os.Stderr, prompt)
 	var answer string
-	fmt.Scanln(&answer)
+	_, _ = fmt.Scanln(&answer)
 	if strings.ToLower(answer) != "y" {
 		return errors.New("cancelled")
 	}

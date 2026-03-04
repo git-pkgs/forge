@@ -62,23 +62,23 @@ func repoViewCmd() *cobra.Command {
 				return p.PrintJSON(r)
 			}
 
-			fmt.Fprintf(os.Stdout, "%s\n", r.FullName)
+			_, _ = fmt.Fprintf(os.Stdout, "%s\n", r.FullName)
 			if r.Description != "" {
-				fmt.Fprintf(os.Stdout, "%s\n", r.Description)
+				_, _ = fmt.Fprintf(os.Stdout, "%s\n", r.Description)
 			}
-			fmt.Fprintln(os.Stdout)
+			_, _ = fmt.Fprintln(os.Stdout)
 
 			if r.HTMLURL != "" {
-				fmt.Fprintf(os.Stdout, "URL:       %s\n", r.HTMLURL)
+				_, _ = fmt.Fprintf(os.Stdout, "URL:       %s\n", r.HTMLURL)
 			}
 			if r.Language != "" {
-				fmt.Fprintf(os.Stdout, "Language:  %s\n", r.Language)
+				_, _ = fmt.Fprintf(os.Stdout, "Language:  %s\n", r.Language)
 			}
 			if r.License != "" {
-				fmt.Fprintf(os.Stdout, "License:   %s\n", r.License)
+				_, _ = fmt.Fprintf(os.Stdout, "License:   %s\n", r.License)
 			}
 			if r.DefaultBranch != "" {
-				fmt.Fprintf(os.Stdout, "Branch:    %s\n", r.DefaultBranch)
+				_, _ = fmt.Fprintf(os.Stdout, "Branch:    %s\n", r.DefaultBranch)
 			}
 
 			var flags []string
@@ -92,12 +92,12 @@ func repoViewCmd() *cobra.Command {
 				flags = append(flags, "archived")
 			}
 			if len(flags) > 0 {
-				fmt.Fprintf(os.Stdout, "Flags:     %s\n", strings.Join(flags, ", "))
+				_, _ = fmt.Fprintf(os.Stdout, "Flags:     %s\n", strings.Join(flags, ", "))
 			}
 
-			fmt.Fprintf(os.Stdout, "Stars:     %d\n", r.StargazersCount)
-			fmt.Fprintf(os.Stdout, "Forks:     %d\n", r.ForksCount)
-			fmt.Fprintf(os.Stdout, "Issues:    %d\n", r.OpenIssuesCount)
+			_, _ = fmt.Fprintf(os.Stdout, "Stars:     %d\n", r.StargazersCount)
+			_, _ = fmt.Fprintf(os.Stdout, "Forks:     %d\n", r.ForksCount)
+			_, _ = fmt.Fprintf(os.Stdout, "Issues:    %d\n", r.OpenIssuesCount)
 
 			return nil
 		},
@@ -245,7 +245,7 @@ func repoCreateCmd() *cobra.Command {
 				return p.PrintJSON(repo)
 			}
 
-			fmt.Fprintf(os.Stdout, "%s\n", repo.HTMLURL)
+			_, _ = fmt.Fprintf(os.Stdout, "%s\n", repo.HTMLURL)
 
 			if flagClone && repo.CloneURL != "" {
 				cloneCmd := exec.CommandContext(cmd.Context(), "git", "clone", repo.CloneURL)
@@ -328,7 +328,7 @@ func repoEditCmd() *cobra.Command {
 				return p.PrintJSON(r)
 			}
 
-			fmt.Fprintf(os.Stdout, "%s\n", r.HTMLURL)
+			_, _ = fmt.Fprintf(os.Stdout, "%s\n", r.HTMLURL)
 			return nil
 		},
 	}
@@ -374,7 +374,7 @@ func repoDeleteCmd() *cobra.Command {
 				return fmt.Errorf("deleting repo %s/%s: %w", owner, repoName, err)
 			}
 
-			fmt.Fprintf(os.Stdout, "Deleted %s/%s\n", owner, repoName)
+			_, _ = fmt.Fprintf(os.Stdout, "Deleted %s/%s\n", owner, repoName)
 			return nil
 		},
 	}
@@ -425,7 +425,7 @@ func repoForkCmd() *cobra.Command {
 				return p.PrintJSON(r)
 			}
 
-			fmt.Fprintf(os.Stdout, "%s\n", r.HTMLURL)
+			_, _ = fmt.Fprintf(os.Stdout, "%s\n", r.HTMLURL)
 
 			if flagClone && r.CloneURL != "" {
 				cloneCmd := exec.CommandContext(cmd.Context(), "git", "clone", r.CloneURL)

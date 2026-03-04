@@ -21,7 +21,7 @@ func TestGitHubCIListRuns(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/v3/repos/octocat/hello/actions/runs", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprint(w, `{
+		_, _ = fmt.Fprint(w, `{
 			"total_count": 1,
 			"workflow_runs": [
 				{
@@ -67,7 +67,7 @@ func TestGitHubCIGetRun(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/v3/repos/octocat/hello/actions/runs/123", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprint(w, `{
+		_, _ = fmt.Fprint(w, `{
 			"id": 123,
 			"name": "CI",
 			"status": "completed",
@@ -78,7 +78,7 @@ func TestGitHubCIGetRun(t *testing.T) {
 	})
 	mux.HandleFunc("GET /api/v3/repos/octocat/hello/actions/runs/123/jobs", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprint(w, `{
+		_, _ = fmt.Fprint(w, `{
 			"total_count": 1,
 			"jobs": [
 				{
@@ -112,7 +112,7 @@ func TestGitHubCICancelRun(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST /api/v3/repos/octocat/hello/actions/runs/123/cancel", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusAccepted)
-		fmt.Fprint(w, `{}`)
+		_, _ = fmt.Fprint(w, `{}`)
 	})
 
 	srv := httptest.NewServer(mux)

@@ -285,7 +285,7 @@ func (s *bitbucketPRService) Diff(ctx context.Context, owner, repo string, numbe
 	if err != nil {
 		return "", err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode == http.StatusNotFound {
 		return "", forge.ErrNotFound

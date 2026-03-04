@@ -57,16 +57,16 @@ func issueViewCmd() *cobra.Command {
 				return p.PrintJSON(issue)
 			}
 
-			fmt.Fprintf(os.Stdout, "#%d %s\n", issue.Number, issue.Title)
-			fmt.Fprintf(os.Stdout, "State:   %s\n", issue.State)
-			fmt.Fprintf(os.Stdout, "Author:  %s\n", issue.Author.Login)
+			_, _ = fmt.Fprintf(os.Stdout, "#%d %s\n", issue.Number, issue.Title)
+			_, _ = fmt.Fprintf(os.Stdout, "State:   %s\n", issue.State)
+			_, _ = fmt.Fprintf(os.Stdout, "Author:  %s\n", issue.Author.Login)
 
 			if len(issue.Assignees) > 0 {
 				names := make([]string, len(issue.Assignees))
 				for i, a := range issue.Assignees {
 					names[i] = a.Login
 				}
-				fmt.Fprintf(os.Stdout, "Assign:  %s\n", strings.Join(names, ", "))
+				_, _ = fmt.Fprintf(os.Stdout, "Assign:  %s\n", strings.Join(names, ", "))
 			}
 
 			if len(issue.Labels) > 0 {
@@ -74,16 +74,16 @@ func issueViewCmd() *cobra.Command {
 				for i, l := range issue.Labels {
 					names[i] = l.Name
 				}
-				fmt.Fprintf(os.Stdout, "Labels:  %s\n", strings.Join(names, ", "))
+				_, _ = fmt.Fprintf(os.Stdout, "Labels:  %s\n", strings.Join(names, ", "))
 			}
 
 			if issue.Milestone != nil {
-				fmt.Fprintf(os.Stdout, "Mile:    %s\n", issue.Milestone.Title)
+				_, _ = fmt.Fprintf(os.Stdout, "Mile:    %s\n", issue.Milestone.Title)
 			}
 
 			if issue.Body != "" {
-				fmt.Fprintln(os.Stdout)
-				fmt.Fprintln(os.Stdout, issue.Body)
+				_, _ = fmt.Fprintln(os.Stdout)
+				_, _ = fmt.Fprintln(os.Stdout, issue.Body)
 			}
 
 			if flagComments {
@@ -92,9 +92,9 @@ func issueViewCmd() *cobra.Command {
 					return err
 				}
 				for _, c := range comments {
-					fmt.Fprintln(os.Stdout)
-					fmt.Fprintf(os.Stdout, "--- %s ---\n", c.Author.Login)
-					fmt.Fprintln(os.Stdout, c.Body)
+					_, _ = fmt.Fprintln(os.Stdout)
+					_, _ = fmt.Fprintf(os.Stdout, "--- %s ---\n", c.Author.Login)
+					_, _ = fmt.Fprintln(os.Stdout, c.Body)
 				}
 			}
 
@@ -229,7 +229,7 @@ func issueCreateCmd() *cobra.Command {
 				return p.PrintJSON(issue)
 			}
 
-			fmt.Fprintf(os.Stdout, "%s\n", issue.HTMLURL)
+			_, _ = fmt.Fprintf(os.Stdout, "%s\n", issue.HTMLURL)
 			return nil
 		},
 	}
@@ -262,7 +262,7 @@ func issueCloseCmd() *cobra.Command {
 				return fmt.Errorf("closing issue #%d: %w", number, err)
 			}
 
-			fmt.Fprintf(os.Stdout, "Closed #%d\n", number)
+			_, _ = fmt.Fprintf(os.Stdout, "Closed #%d\n", number)
 			return nil
 		},
 	}
@@ -288,7 +288,7 @@ func issueReopenCmd() *cobra.Command {
 				return fmt.Errorf("reopening issue #%d: %w", number, err)
 			}
 
-			fmt.Fprintf(os.Stdout, "Reopened #%d\n", number)
+			_, _ = fmt.Fprintf(os.Stdout, "Reopened #%d\n", number)
 			return nil
 		},
 	}
@@ -345,7 +345,7 @@ func issueEditCmd() *cobra.Command {
 				return p.PrintJSON(issue)
 			}
 
-			fmt.Fprintf(os.Stdout, "%s\n", issue.HTMLURL)
+			_, _ = fmt.Fprintf(os.Stdout, "%s\n", issue.HTMLURL)
 			return nil
 		},
 	}
@@ -386,7 +386,7 @@ func issueDeleteCmd() *cobra.Command {
 				return fmt.Errorf("deleting issue #%d: %w", number, err)
 			}
 
-			fmt.Fprintf(os.Stdout, "Deleted #%d\n", number)
+			_, _ = fmt.Fprintf(os.Stdout, "Deleted #%d\n", number)
 			return nil
 		},
 	}
@@ -427,7 +427,7 @@ func issueCommentCmd() *cobra.Command {
 				return p.PrintJSON(comment)
 			}
 
-			fmt.Fprintf(os.Stdout, "%s\n", comment.HTMLURL)
+			_, _ = fmt.Fprintf(os.Stdout, "%s\n", comment.HTMLURL)
 			return nil
 		},
 	}

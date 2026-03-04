@@ -21,7 +21,7 @@ func TestGitHubReleaseList(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/v3/repos/octocat/hello/releases", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprint(w, `[
+		_, _ = fmt.Fprint(w, `[
 			{
 				"tag_name": "v1.0.0",
 				"name": "Release 1.0.0",
@@ -72,7 +72,7 @@ func TestGitHubReleaseGet(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/v3/repos/octocat/hello/releases/tags/v1.0.0", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprint(w, `{
+		_, _ = fmt.Fprint(w, `{
 			"tag_name": "v1.0.0",
 			"name": "Release 1.0.0",
 			"body": "First release",
@@ -98,7 +98,7 @@ func TestGitHubReleaseGetNotFound(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/v3/repos/octocat/hello/releases/tags/v999.0.0", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
-		fmt.Fprint(w, `{"message": "Not Found"}`)
+		_, _ = fmt.Fprint(w, `{"message": "Not Found"}`)
 	})
 
 	srv := httptest.NewServer(mux)
@@ -115,7 +115,7 @@ func TestGitHubReleaseGetLatest(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/v3/repos/octocat/hello/releases/latest", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprint(w, `{
+		_, _ = fmt.Fprint(w, `{
 			"tag_name": "v2.0.0",
 			"name": "Release 2.0.0",
 			"draft": false,
@@ -139,7 +139,7 @@ func TestGitHubReleaseCreate(t *testing.T) {
 	mux.HandleFunc("POST /api/v3/repos/octocat/hello/releases", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
-		fmt.Fprint(w, `{
+		_, _ = fmt.Fprint(w, `{
 			"tag_name": "v3.0.0",
 			"name": "Release 3.0.0",
 			"body": "New release",
@@ -170,7 +170,7 @@ func TestGitHubReleaseDelete(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/v3/repos/octocat/hello/releases/tags/v1.0.0", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprint(w, `{"id": 1, "tag_name": "v1.0.0"}`)
+		_, _ = fmt.Fprint(w, `{"id": 1, "tag_name": "v1.0.0"}`)
 	})
 	mux.HandleFunc("DELETE /api/v3/repos/octocat/hello/releases/1", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNoContent)

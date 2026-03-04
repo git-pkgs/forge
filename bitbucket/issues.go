@@ -182,9 +182,10 @@ func (s *bitbucketIssueService) List(ctx context.Context, owner, repo string, op
 	url := fmt.Sprintf("%s/repositories/%s/%s/issues?pagelen=%d", bitbucketAPI, owner, repo, perPage)
 
 	// Bitbucket uses q= query parameter for filtering
-	if opts.State == "open" {
+	switch opts.State {
+	case "open":
 		url += "&q=state+%3D+%22new%22+OR+state+%3D+%22open%22"
-	} else if opts.State == "closed" {
+	case "closed":
 		url += "&q=state+%3D+%22resolved%22+OR+state+%3D+%22closed%22"
 	}
 
@@ -238,7 +239,7 @@ func (s *bitbucketIssueService) Update(ctx context.Context, owner, repo string, 
 	if opts.Body != nil {
 		body["content"] = map[string]string{"raw": *opts.Body}
 	}
-	if opts.Assignees != nil && len(opts.Assignees) > 0 {
+	if len(opts.Assignees) > 0 {
 		body["assignee"] = map[string]string{"username": opts.Assignees[0]}
 	}
 

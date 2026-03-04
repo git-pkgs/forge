@@ -183,9 +183,7 @@ func (s *giteaPRService) Create(ctx context.Context, owner, repo string, opts fo
 	if len(opts.Assignees) > 0 {
 		gOpts.Assignees = opts.Assignees
 	}
-	if len(opts.Labels) > 0 {
-		// Gitea requires label IDs
-	}
+	// Gitea requires label IDs, not names.
 
 	pr, resp, err := s.client.CreatePullRequest(owner, repo, gOpts)
 	if err != nil {

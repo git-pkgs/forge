@@ -39,9 +39,9 @@ func TestAuthLoginRequiresDomainNonInteractive(t *testing.T) {
 	// Replace stdin with a pipe so term.IsTerminal returns false
 	origStdin := os.Stdin
 	r, w, _ := os.Pipe()
-	w.Close()
+	_ = w.Close()
 	os.Stdin = r
-	defer func() { os.Stdin = origStdin; r.Close() }()
+	defer func() { os.Stdin = origStdin; _ = r.Close() }()
 
 	var buf bytes.Buffer
 	rootCmd.SetOut(&buf)
@@ -103,8 +103,8 @@ func TestAuthStatus(t *testing.T) {
 
 	// Write a config with a domain
 	cfgDir := filepath.Join(dir, "forge")
-	os.MkdirAll(cfgDir, 0700)
-	os.WriteFile(filepath.Join(cfgDir, "config"), []byte(`[gitea.example.com]
+	_ = os.MkdirAll(cfgDir, 0700)
+	_ = os.WriteFile(filepath.Join(cfgDir, "config"), []byte(`[gitea.example.com]
 type = gitea
 token = some_token
 `), 0600)

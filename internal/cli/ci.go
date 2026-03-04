@@ -137,25 +137,25 @@ func ciViewCmd() *cobra.Command {
 				status = run.Conclusion
 			}
 
-			fmt.Fprintf(os.Stdout, "#%d %s\n", run.ID, run.Title)
-			fmt.Fprintf(os.Stdout, "Status:  %s\n", status)
-			fmt.Fprintf(os.Stdout, "Branch:  %s\n", run.Branch)
+			_, _ = fmt.Fprintf(os.Stdout, "#%d %s\n", run.ID, run.Title)
+			_, _ = fmt.Fprintf(os.Stdout, "Status:  %s\n", status)
+			_, _ = fmt.Fprintf(os.Stdout, "Branch:  %s\n", run.Branch)
 			if run.SHA != "" {
-				fmt.Fprintf(os.Stdout, "SHA:     %s\n", run.SHA[:min(7, len(run.SHA))])
+				_, _ = fmt.Fprintf(os.Stdout, "SHA:     %s\n", run.SHA[:min(7, len(run.SHA))])
 			}
 			if run.HTMLURL != "" {
-				fmt.Fprintf(os.Stdout, "URL:     %s\n", run.HTMLURL)
+				_, _ = fmt.Fprintf(os.Stdout, "URL:     %s\n", run.HTMLURL)
 			}
 
 			if len(run.Jobs) > 0 {
-				fmt.Fprintln(os.Stdout)
-				fmt.Fprintln(os.Stdout, "Jobs:")
+				_, _ = fmt.Fprintln(os.Stdout)
+				_, _ = fmt.Fprintln(os.Stdout, "Jobs:")
 				for _, j := range run.Jobs {
 					jStatus := j.Status
 					if j.Conclusion != "" {
 						jStatus = j.Conclusion
 					}
-					fmt.Fprintf(os.Stdout, "  %s  %s\n", j.Name, jStatus)
+					_, _ = fmt.Fprintf(os.Stdout, "  %s  %s\n", j.Name, jStatus)
 				}
 			}
 
@@ -202,7 +202,7 @@ func ciRunCmd() *cobra.Command {
 				return err
 			}
 
-			fmt.Fprintln(os.Stdout, "Triggered workflow run")
+			_, _ = fmt.Fprintln(os.Stdout, "Triggered workflow run")
 			return nil
 		},
 	}
@@ -232,7 +232,7 @@ func ciCancelCmd() *cobra.Command {
 				return err
 			}
 
-			fmt.Fprintf(os.Stdout, "Cancelled run %d\n", runID)
+			_, _ = fmt.Fprintf(os.Stdout, "Cancelled run %d\n", runID)
 			return nil
 		},
 	}
@@ -258,7 +258,7 @@ func ciRetryCmd() *cobra.Command {
 				return err
 			}
 
-			fmt.Fprintf(os.Stdout, "Retried run %d\n", runID)
+			_, _ = fmt.Fprintf(os.Stdout, "Retried run %d\n", runID)
 			return nil
 		},
 	}
@@ -284,7 +284,7 @@ func ciLogCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			defer rc.Close()
+			defer func() { _ = rc.Close() }()
 
 			_, err = io.Copy(os.Stdout, rc)
 			return err

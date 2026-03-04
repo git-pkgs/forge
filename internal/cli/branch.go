@@ -109,7 +109,7 @@ func branchCreateCmd() *cobra.Command {
 				return p.PrintJSON(branch)
 			}
 
-			fmt.Fprintf(os.Stdout, "%s %s\n", branch.Name, branch.SHA)
+			_, _ = fmt.Fprintf(os.Stdout, "%s %s\n", branch.Name, branch.SHA)
 			return nil
 		},
 	}
@@ -143,7 +143,7 @@ func branchDeleteCmd() *cobra.Command {
 				return err
 			}
 
-			fmt.Fprintf(os.Stdout, "Deleted %s\n", name)
+			_, _ = fmt.Fprintf(os.Stdout, "Deleted %s\n", name)
 			return nil
 		},
 	}

@@ -31,7 +31,7 @@ var apiCmd = &cobra.Command{
 		endpoint = strings.ReplaceAll(endpoint, "{repo}", repoName)
 
 		// Build full URL
-		baseURL := "https://" + domain
+		var baseURL string
 		switch {
 		case strings.Contains(domain, "github"):
 			baseURL = "https://api." + domain
@@ -86,14 +86,14 @@ var apiCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		if flagAPIInclude {
-			fmt.Fprintf(os.Stdout, "%s %s\n", resp.Proto, resp.Status)
+			_, _ = fmt.Fprintf(os.Stdout, "%s %s\n", resp.Proto, resp.Status)
 			for k, v := range resp.Header {
-				fmt.Fprintf(os.Stdout, "%s: %s\n", k, strings.Join(v, ", "))
+				_, _ = fmt.Fprintf(os.Stdout, "%s: %s\n", k, strings.Join(v, ", "))
 			}
-			fmt.Fprintln(os.Stdout)
+			_, _ = fmt.Fprintln(os.Stdout)
 		}
 
 		if !flagAPISilent {
@@ -105,10 +105,10 @@ var apiCmd = &cobra.Command{
 			// Try to pretty-print JSON
 			var pretty bytes.Buffer
 			if json.Indent(&pretty, respBody, "", "  ") == nil {
-				fmt.Fprintln(os.Stdout, pretty.String())
+				_, _ = fmt.Fprintln(os.Stdout, pretty.String())
 			} else {
-				os.Stdout.Write(respBody)
-				fmt.Fprintln(os.Stdout)
+				_, _ = os.Stdout.Write(respBody)
+				_, _ = fmt.Fprintln(os.Stdout)
 			}
 		}
 

@@ -112,7 +112,7 @@ func deployKeyAddCmd() *cobra.Command {
 				return p.PrintJSON(key)
 			}
 
-			fmt.Fprintf(os.Stdout, "%d %s\n", key.ID, key.Title)
+			_, _ = fmt.Fprintf(os.Stdout, "%d %s\n", key.ID, key.Title)
 			return nil
 		},
 	}
@@ -151,7 +151,7 @@ func deployKeyDeleteCmd() *cobra.Command {
 				return err
 			}
 
-			fmt.Fprintf(os.Stdout, "Deleted key %d\n", id)
+			_, _ = fmt.Fprintf(os.Stdout, "Deleted key %d\n", id)
 			return nil
 		},
 	}

@@ -265,7 +265,7 @@ func (s *gitLabRepoService) Fork(ctx context.Context, owner, repo string, opts f
 	pid := owner + "/" + repo
 	glOpts := &gitlab.ForkProjectOptions{}
 	if opts.Owner != "" {
-		glOpts.Namespace = gitlab.Ptr(opts.Owner)
+		glOpts.NamespacePath = gitlab.Ptr(opts.Owner)
 	}
 	if opts.Name != "" {
 		glOpts.Name = gitlab.Ptr(opts.Name)

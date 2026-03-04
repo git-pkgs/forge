@@ -44,7 +44,7 @@ var commentCmd = &cobra.Command{
 			return p.PrintJSON(comment)
 		}
 
-		fmt.Fprintf(os.Stdout, "%s\n", comment.HTMLURL)
+		_, _ = fmt.Fprintf(os.Stdout, "%s\n", comment.HTMLURL)
 		return nil
 	},
 }

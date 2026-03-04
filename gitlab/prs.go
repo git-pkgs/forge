@@ -81,12 +81,12 @@ func convertGitLabMR(mr *gitlab.MergeRequest) forge.PullRequest {
 		}
 	}
 
-	if mr.MergedBy != nil {
+	if mr.MergeUser != nil {
 		result.MergedBy = &forge.User{
-			Login:     mr.MergedBy.Username,
-			Name:      mr.MergedBy.Name,
-			AvatarURL: mr.MergedBy.AvatarURL,
-			HTMLURL:   mr.MergedBy.WebURL,
+			Login:     mr.MergeUser.Username,
+			Name:      mr.MergeUser.Name,
+			AvatarURL: mr.MergeUser.AvatarURL,
+			HTMLURL:   mr.MergeUser.WebURL,
 		}
 	}
 

@@ -108,31 +108,31 @@ func releaseViewCmd() *cobra.Command {
 				return p.PrintJSON(release)
 			}
 
-			fmt.Fprintf(os.Stdout, "%s %s\n", release.TagName, release.Title)
+			_, _ = fmt.Fprintf(os.Stdout, "%s %s\n", release.TagName, release.Title)
 			if release.Draft {
-				fmt.Fprintln(os.Stdout, "Draft: true")
+				_, _ = fmt.Fprintln(os.Stdout, "Draft: true")
 			}
 			if release.Prerelease {
-				fmt.Fprintln(os.Stdout, "Prerelease: true")
+				_, _ = fmt.Fprintln(os.Stdout, "Prerelease: true")
 			}
 			if !release.PublishedAt.IsZero() {
-				fmt.Fprintf(os.Stdout, "Published: %s\n", release.PublishedAt.Format("2006-01-02"))
+				_, _ = fmt.Fprintf(os.Stdout, "Published: %s\n", release.PublishedAt.Format("2006-01-02"))
 			}
 			if release.HTMLURL != "" {
-				fmt.Fprintf(os.Stdout, "URL: %s\n", release.HTMLURL)
+				_, _ = fmt.Fprintf(os.Stdout, "URL: %s\n", release.HTMLURL)
 			}
 
 			if len(release.Assets) > 0 {
-				fmt.Fprintln(os.Stdout)
-				fmt.Fprintln(os.Stdout, "Assets:")
+				_, _ = fmt.Fprintln(os.Stdout)
+				_, _ = fmt.Fprintln(os.Stdout, "Assets:")
 				for _, a := range release.Assets {
-					fmt.Fprintf(os.Stdout, "  %s (%d bytes)\n", a.Name, a.Size)
+					_, _ = fmt.Fprintf(os.Stdout, "  %s (%d bytes)\n", a.Name, a.Size)
 				}
 			}
 
 			if release.Body != "" {
-				fmt.Fprintln(os.Stdout)
-				fmt.Fprintln(os.Stdout, release.Body)
+				_, _ = fmt.Fprintln(os.Stdout)
+				_, _ = fmt.Fprintln(os.Stdout, release.Body)
 			}
 
 			return nil
@@ -189,9 +189,9 @@ func releaseCreateCmd() *cobra.Command {
 				return p.PrintJSON(release)
 			}
 
-			fmt.Fprintf(os.Stdout, "%s %s\n", release.TagName, release.Title)
+			_, _ = fmt.Fprintf(os.Stdout, "%s %s\n", release.TagName, release.Title)
 			if release.HTMLURL != "" {
-				fmt.Fprintln(os.Stdout, release.HTMLURL)
+				_, _ = fmt.Fprintln(os.Stdout, release.HTMLURL)
 			}
 			return nil
 		},
@@ -261,7 +261,7 @@ func releaseEditCmd() *cobra.Command {
 				return p.PrintJSON(release)
 			}
 
-			fmt.Fprintf(os.Stdout, "%s %s\n", release.TagName, release.Title)
+			_, _ = fmt.Fprintf(os.Stdout, "%s %s\n", release.TagName, release.Title)
 			return nil
 		},
 	}
@@ -300,7 +300,7 @@ func releaseDeleteCmd() *cobra.Command {
 				return err
 			}
 
-			fmt.Fprintf(os.Stdout, "Deleted %s\n", tag)
+			_, _ = fmt.Fprintf(os.Stdout, "Deleted %s\n", tag)
 			return nil
 		},
 	}
@@ -327,7 +327,7 @@ func releaseUploadCmd() *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("opening file: %w", err)
 			}
-			defer f.Close()
+			defer func() { _ = f.Close() }()
 
 			asset, err := forge.Releases().UploadAsset(cmd.Context(), owner, repoName, tag, f)
 			if err != nil {
@@ -339,9 +339,9 @@ func releaseUploadCmd() *cobra.Command {
 				return p.PrintJSON(asset)
 			}
 
-			fmt.Fprintf(os.Stdout, "%s (%d bytes)\n", asset.Name, asset.Size)
+			_, _ = fmt.Fprintf(os.Stdout, "%s (%d bytes)\n", asset.Name, asset.Size)
 			if asset.DownloadURL != "" {
-				fmt.Fprintln(os.Stdout, asset.DownloadURL)
+				_, _ = fmt.Fprintln(os.Stdout, asset.DownloadURL)
 			}
 			return nil
 		},
@@ -385,7 +385,7 @@ func releaseDownloadCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			defer rc.Close()
+			defer func() { _ = rc.Close() }()
 
 			outPath := flagOutput
 			if outPath == "" {
@@ -396,13 +396,13 @@ func releaseDownloadCmd() *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("creating output file: %w", err)
 			}
-			defer out.Close()
+			defer func() { _ = out.Close() }()
 
 			if _, err := out.ReadFrom(rc); err != nil {
 				return fmt.Errorf("writing file: %w", err)
 			}
 
-			fmt.Fprintf(os.Stdout, "Downloaded %s\n", outPath)
+			_, _ = fmt.Fprintf(os.Stdout, "Downloaded %s\n", outPath)
 			return nil
 		},
 	}

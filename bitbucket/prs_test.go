@@ -220,7 +220,7 @@ func TestBitbucketMergePR(t *testing.T) {
 func TestBitbucketDiffPR(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /2.0/repositories/atlassian/stash/pullrequests/1/diff", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("diff --git a/file.txt b/file.txt\n"))
+		_, _ = w.Write([]byte("diff --git a/file.txt b/file.txt\n"))
 	})
 
 	srv := httptest.NewServer(mux)

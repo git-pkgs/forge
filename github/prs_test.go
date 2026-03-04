@@ -269,7 +269,7 @@ func TestGitHubDiffPR(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/v3/repos/octocat/hello-world/pulls/1", func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("Accept") == "application/vnd.github.v3.diff" {
-			w.Write([]byte("diff --git a/file.txt b/file.txt\n"))
+			_, _ = w.Write([]byte("diff --git a/file.txt b/file.txt\n"))
 			return
 		}
 		_ = json.NewEncoder(w).Encode(github.PullRequest{Number: ptrInt(1)})

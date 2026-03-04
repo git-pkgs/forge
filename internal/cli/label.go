@@ -112,7 +112,7 @@ func labelCreateCmd() *cobra.Command {
 				return p.PrintJSON(label)
 			}
 
-			fmt.Fprintf(os.Stdout, "%s\n", label.Name)
+			_, _ = fmt.Fprintf(os.Stdout, "%s\n", label.Name)
 			return nil
 		},
 	}
@@ -163,7 +163,7 @@ func labelEditCmd() *cobra.Command {
 				return p.PrintJSON(label)
 			}
 
-			fmt.Fprintf(os.Stdout, "%s\n", label.Name)
+			_, _ = fmt.Fprintf(os.Stdout, "%s\n", label.Name)
 			return nil
 		},
 	}
@@ -199,7 +199,7 @@ func labelDeleteCmd() *cobra.Command {
 				return err
 			}
 
-			fmt.Fprintf(os.Stdout, "Deleted %s\n", labelName)
+			_, _ = fmt.Fprintf(os.Stdout, "Deleted %s\n", labelName)
 			return nil
 		},
 	}

@@ -161,7 +161,7 @@ func (s *gitHubPRService) List(ctx context.Context, owner, repo string, opts for
 		if resp.NextPage == 0 || (opts.Limit > 0 && len(all) >= opts.Limit) {
 			break
 		}
-		ghOpts.ListOptions.Page = resp.NextPage
+		ghOpts.Page = resp.NextPage
 	}
 
 	if opts.Limit > 0 && len(all) > opts.Limit {
@@ -192,21 +192,21 @@ func (s *gitHubPRService) Create(ctx context.Context, owner, repo string, opts f
 
 	// Add reviewers if requested
 	if len(opts.Reviewers) > 0 {
-		s.client.PullRequests.RequestReviewers(ctx, owner, repo, pr.GetNumber(), github.ReviewersRequest{
+		_, _, _ = s.client.PullRequests.RequestReviewers(ctx, owner, repo, pr.GetNumber(), github.ReviewersRequest{
 			Reviewers: opts.Reviewers,
 		})
 	}
 
 	// Add assignees if requested
 	if len(opts.Assignees) > 0 {
-		s.client.Issues.Edit(ctx, owner, repo, pr.GetNumber(), &github.IssueRequest{
+		_, _, _ = s.client.Issues.Edit(ctx, owner, repo, pr.GetNumber(), &github.IssueRequest{
 			Assignees: &opts.Assignees,
 		})
 	}
 
 	// Add labels if requested
 	if len(opts.Labels) > 0 {
-		s.client.Issues.Edit(ctx, owner, repo, pr.GetNumber(), &github.IssueRequest{
+		_, _, _ = s.client.Issues.Edit(ctx, owner, repo, pr.GetNumber(), &github.IssueRequest{
 			Labels: &opts.Labels,
 		})
 	}
@@ -215,7 +215,7 @@ func (s *gitHubPRService) Create(ctx context.Context, owner, repo string, opts f
 	if opts.Milestone != "" {
 		n, err := strconv.Atoi(opts.Milestone)
 		if err == nil {
-			s.client.Issues.Edit(ctx, owner, repo, pr.GetNumber(), &github.IssueRequest{
+			_, _, _ = s.client.Issues.Edit(ctx, owner, repo, pr.GetNumber(), &github.IssueRequest{
 				Milestone: &n,
 			})
 		}
@@ -303,7 +303,7 @@ func (s *gitHubPRService) Merge(ctx context.Context, owner, repo string, number 
 	}
 
 	if opts.Delete {
-		s.client.Git.DeleteRef(ctx, owner, repo, "heads/"+opts.Title)
+		_, _ = s.client.Git.DeleteRef(ctx, owner, repo, "heads/"+opts.Title)
 	}
 
 	return nil

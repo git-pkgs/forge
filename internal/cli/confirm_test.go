@@ -24,8 +24,8 @@ func TestConfirmWithPipedNo(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	w.WriteString("n\n")
-	w.Close()
+	_, _ = w.WriteString("n\n")
+	_ = w.Close()
 
 	old := os.Stdin
 	os.Stdin = r

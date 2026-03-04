@@ -88,10 +88,10 @@ func TestLoadMergesUserAndProject(t *testing.T) {
 
 	dir := t.TempDir()
 	userDir := filepath.Join(dir, "usercfg", "forge")
-	os.MkdirAll(userDir, 0700)
+	_ = os.MkdirAll(userDir, 0700)
 	userConfig := filepath.Join(userDir, "config")
 
-	os.WriteFile(userConfig, []byte(`
+	_ = os.WriteFile(userConfig, []byte(`
 [default]
 output = json
 
@@ -104,9 +104,9 @@ token = gitea_tok
 `), 0600)
 
 	projectDir := filepath.Join(dir, "project")
-	os.MkdirAll(projectDir, 0700)
+	_ = os.MkdirAll(projectDir, 0700)
 	projectConfig := filepath.Join(projectDir, ".forge")
-	os.WriteFile(projectConfig, []byte(`
+	_ = os.WriteFile(projectConfig, []byte(`
 [default]
 forge-type = gitlab
 
@@ -189,7 +189,7 @@ func TestFindProjectConfig(t *testing.T) {
 
 	// Create nested directories
 	nested := filepath.Join(dir, "a", "b", "c")
-	os.MkdirAll(nested, 0700)
+	_ = os.MkdirAll(nested, 0700)
 
 	// No .forge file yet
 	got := findProjectConfig(nested)
@@ -199,7 +199,7 @@ func TestFindProjectConfig(t *testing.T) {
 
 	// Create .forge in the middle
 	forgePath := filepath.Join(dir, "a", ".forge")
-	os.WriteFile(forgePath, []byte("[default]\n"), 0644)
+	_ = os.WriteFile(forgePath, []byte("[default]\n"), 0644)
 
 	got = findProjectConfig(nested)
 	if got != forgePath {
@@ -280,8 +280,8 @@ func TestSetDomainUpdatesExisting(t *testing.T) {
 
 	// Write initial config
 	cfgDir := filepath.Join(dir, "forge")
-	os.MkdirAll(cfgDir, 0700)
-	os.WriteFile(filepath.Join(cfgDir, "config"), []byte(`[github.com]
+	_ = os.MkdirAll(cfgDir, 0700)
+	_ = os.WriteFile(filepath.Join(cfgDir, "config"), []byte(`[github.com]
 token = old_token
 `), 0600)
 

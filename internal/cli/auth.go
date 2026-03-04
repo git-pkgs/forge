@@ -41,7 +41,7 @@ func authLoginCmd() *cobra.Command {
 				if !interactive {
 					return fmt.Errorf("--domain is required in non-interactive mode")
 				}
-				fmt.Fprint(os.Stderr, "Domain (default: github.com): ")
+				_, _ = fmt.Fprint(os.Stderr, "Domain (default: github.com): ")
 				line, _ := reader.ReadString('\n')
 				domain = strings.TrimSpace(line)
 				if domain == "" {
@@ -53,9 +53,9 @@ func authLoginCmd() *cobra.Command {
 				if !interactive {
 					return fmt.Errorf("--token is required in non-interactive mode")
 				}
-				fmt.Fprintf(os.Stderr, "Token for %s: ", domain)
+				_, _ = fmt.Fprintf(os.Stderr, "Token for %s: ", domain)
 				raw, err := term.ReadPassword(int(os.Stdin.Fd()))
-				fmt.Fprintln(os.Stderr) // newline after hidden input
+				_, _ = fmt.Fprintln(os.Stderr) // newline after hidden input
 				if err != nil {
 					return fmt.Errorf("reading token: %w", err)
 				}
@@ -69,7 +69,7 @@ func authLoginCmd() *cobra.Command {
 				return fmt.Errorf("saving config: %w", err)
 			}
 
-			fmt.Fprintf(os.Stderr, "Stored credentials for %s\n", domain)
+			_, _ = fmt.Fprintf(os.Stderr, "Stored credentials for %s\n", domain)
 			return nil
 		},
 	}
@@ -121,9 +121,9 @@ func authStatusCmd() *cobra.Command {
 
 				forgeType := cfgSection.Type
 				if forgeType != "" {
-					fmt.Fprintf(os.Stdout, "%s (%s): %s\n", d, forgeType, status)
+					_, _ = fmt.Fprintf(os.Stdout, "%s (%s): %s\n", d, forgeType, status)
 				} else {
-					fmt.Fprintf(os.Stdout, "%s: %s\n", d, status)
+					_, _ = fmt.Fprintf(os.Stdout, "%s: %s\n", d, status)
 				}
 			}
 

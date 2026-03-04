@@ -104,7 +104,7 @@ func secretSetCmd() *cobra.Command {
 				return err
 			}
 
-			fmt.Fprintf(os.Stdout, "Set %s\n", flagName)
+			_, _ = fmt.Fprintf(os.Stdout, "Set %s\n", flagName)
 			return nil
 		},
 	}
@@ -139,7 +139,7 @@ func secretDeleteCmd() *cobra.Command {
 				return err
 			}
 
-			fmt.Fprintf(os.Stdout, "Deleted %s\n", name)
+			_, _ = fmt.Fprintf(os.Stdout, "Deleted %s\n", name)
 			return nil
 		},
 	}

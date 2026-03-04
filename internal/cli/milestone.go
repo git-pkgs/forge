@@ -117,14 +117,14 @@ func milestoneViewCmd() *cobra.Command {
 				return p.PrintJSON(milestone)
 			}
 
-			fmt.Fprintf(os.Stdout, "#%d %s\n", milestone.Number, milestone.Title)
-			fmt.Fprintf(os.Stdout, "State:  %s\n", milestone.State)
+			_, _ = fmt.Fprintf(os.Stdout, "#%d %s\n", milestone.Number, milestone.Title)
+			_, _ = fmt.Fprintf(os.Stdout, "State:  %s\n", milestone.State)
 			if milestone.DueDate != nil {
-				fmt.Fprintf(os.Stdout, "Due:    %s\n", milestone.DueDate.Format("2006-01-02"))
+				_, _ = fmt.Fprintf(os.Stdout, "Due:    %s\n", milestone.DueDate.Format("2006-01-02"))
 			}
 			if milestone.Description != "" {
-				fmt.Fprintln(os.Stdout)
-				fmt.Fprintln(os.Stdout, milestone.Description)
+				_, _ = fmt.Fprintln(os.Stdout)
+				_, _ = fmt.Fprintln(os.Stdout, milestone.Description)
 			}
 
 			return nil
@@ -175,7 +175,7 @@ func milestoneCreateCmd() *cobra.Command {
 				return p.PrintJSON(milestone)
 			}
 
-			fmt.Fprintf(os.Stdout, "#%d %s\n", milestone.Number, milestone.Title)
+			_, _ = fmt.Fprintf(os.Stdout, "#%d %s\n", milestone.Number, milestone.Title)
 			return nil
 		},
 	}
@@ -233,7 +233,7 @@ func milestoneEditCmd() *cobra.Command {
 				return p.PrintJSON(milestone)
 			}
 
-			fmt.Fprintf(os.Stdout, "#%d %s\n", milestone.Number, milestone.Title)
+			_, _ = fmt.Fprintf(os.Stdout, "#%d %s\n", milestone.Number, milestone.Title)
 			return nil
 		},
 	}
@@ -264,7 +264,7 @@ func milestoneCloseCmd() *cobra.Command {
 				return err
 			}
 
-			fmt.Fprintf(os.Stdout, "Closed #%d\n", id)
+			_, _ = fmt.Fprintf(os.Stdout, "Closed #%d\n", id)
 			return nil
 		},
 	}
@@ -290,7 +290,7 @@ func milestoneReopenCmd() *cobra.Command {
 				return err
 			}
 
-			fmt.Fprintf(os.Stdout, "Reopened #%d\n", id)
+			_, _ = fmt.Fprintf(os.Stdout, "Reopened #%d\n", id)
 			return nil
 		},
 	}
@@ -324,7 +324,7 @@ func milestoneDeleteCmd() *cobra.Command {
 				return err
 			}
 
-			fmt.Fprintf(os.Stdout, "Deleted #%d\n", id)
+			_, _ = fmt.Fprintf(os.Stdout, "Deleted #%d\n", id)
 			return nil
 		},
 	}

@@ -180,10 +180,7 @@ func (s *giteaIssueService) Create(ctx context.Context, owner, repo string, opts
 	if len(opts.Assignees) > 0 {
 		gOpts.Assignees = opts.Assignees
 	}
-	if len(opts.Labels) > 0 {
-		// Gitea requires label IDs, not names. This is a limitation.
-		// For now, labels must be passed as numeric IDs.
-	}
+	// Gitea requires label IDs, not names -- labels must be passed as numeric IDs.
 
 	i, resp, err := s.client.CreateIssue(owner, repo, gOpts)
 	if err != nil {

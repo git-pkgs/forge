@@ -21,7 +21,7 @@ func TestGitHubBranchList(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/v3/repos/octocat/hello/branches", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprint(w, `[
+		_, _ = fmt.Fprint(w, `[
 			{
 				"name": "main",
 				"commit": {"sha": "abc123"},
@@ -58,7 +58,7 @@ func TestGitHubBranchCreate(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/v3/repos/octocat/hello/git/ref/heads/main", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprint(w, `{
+		_, _ = fmt.Fprint(w, `{
 			"ref": "refs/heads/main",
 			"object": {"sha": "abc123"}
 		}`)
@@ -66,7 +66,7 @@ func TestGitHubBranchCreate(t *testing.T) {
 	mux.HandleFunc("POST /api/v3/repos/octocat/hello/git/refs", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
-		fmt.Fprint(w, `{
+		_, _ = fmt.Fprint(w, `{
 			"ref": "refs/heads/new-branch",
 			"object": {"sha": "abc123"}
 		}`)
@@ -105,7 +105,7 @@ func TestGitHubBranchDeleteNotFound(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("DELETE /api/v3/repos/octocat/hello/git/refs/heads/nope", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
-		fmt.Fprint(w, `{"message": "Reference does not exist"}`)
+		_, _ = fmt.Fprint(w, `{"message": "Reference does not exist"}`)
 	})
 
 	srv := httptest.NewServer(mux)

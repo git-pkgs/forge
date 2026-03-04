@@ -77,7 +77,7 @@ func loadFile(cfg *Config, path string, allowTokens bool) error {
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	sections, err := parseINI(f)
 	if err != nil {
@@ -206,7 +206,7 @@ func SetDomain(domain, token, forgeType string) error {
 	sections := make(map[string]map[string]string)
 	if f, err := os.Open(path); err == nil {
 		sections, _ = parseINI(f)
-		f.Close()
+		_ = f.Close()
 	}
 
 	if _, ok := sections[domain]; !ok {
