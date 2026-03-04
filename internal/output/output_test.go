@@ -1,0 +1,79 @@
+package output
+
+import (
+	"bytes"
+	"strings"
+	"testing"
+)
+
+func TestParseFormat(t *testing.T) {
+	tests := []struct {
+		input string
+		want  Format
+	}{
+		{"json", JSON},
+		{"JSON", JSON},
+		{"plain", Plain},
+		{"table", Table},
+		{"anything", Table},
+		{"", Table},
+	}
+
+	for _, tt := range tests {
+		got := ParseFormat(tt.input)
+		if got != tt.want {
+			t.Errorf("ParseFormat(%q) = %q, want %q", tt.input, got, tt.want)
+		}
+	}
+}
+
+func TestPrintJSON(t *testing.T) {
+	var buf bytes.Buffer
+	p := &Printer{Format: JSON, Out: &buf}
+
+	data := map[string]string{"name": "test"}
+	if err := p.PrintJSON(data); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	got := buf.String()
+	if !strings.Contains(got, `"name": "test"`) {
+		t.Errorf("expected JSON with name field, got %q", got)
+	}
+}
+
+func TestPrintTable(t *testing.T) {
+	var buf bytes.Buffer
+	p := &Printer{Format: Table, Out: &buf}
+
+	p.PrintTable(
+		[]string{"NAME", "LANG"},
+		[][]string{
+			{"foo/bar", "Go"},
+			{"baz/qux", "Rust"},
+		},
+	)
+
+	got := buf.String()
+	if !strings.Contains(got, "NAME") {
+		t.Error("expected header in output")
+	}
+	if !strings.Contains(got, "foo/bar") {
+		t.Error("expected row data in output")
+	}
+}
+
+func TestPrintPlain(t *testing.T) {
+	var buf bytes.Buffer
+	p := &Printer{Format: Plain, Out: &buf}
+
+	p.PrintPlain([]string{"line1", "line2"})
+
+	got := buf.String()
+	if !strings.Contains(got, "line1\n") {
+		t.Error("expected line1 in output")
+	}
+	if !strings.Contains(got, "line2\n") {
+		t.Error("expected line2 in output")
+	}
+}

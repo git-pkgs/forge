@@ -11,11 +11,14 @@ import (
 	"github.com/git-pkgs/purl"
 )
 
-// ErrNotFound is returned when the requested repository does not exist.
-var ErrNotFound = errors.New("repository not found")
+// ErrNotFound is returned when the requested resource does not exist.
+var ErrNotFound = errors.New("not found")
 
 // ErrOwnerNotFound is returned when the requested owner (org or user) does not exist.
 var ErrOwnerNotFound = errors.New("owner not found")
+
+// ErrNotSupported is returned when a forge does not support an operation.
+var ErrNotSupported = errors.New("not supported by this forge")
 
 // HTTPError represents a non-OK HTTP response from a forge API.
 type HTTPError struct {
@@ -30,9 +33,16 @@ func (e *HTTPError) Error() string {
 
 // Forge is the interface each forge backend implements.
 type Forge interface {
-	FetchRepository(ctx context.Context, owner, repo string) (*Repository, error)
-	FetchTags(ctx context.Context, owner, repo string) ([]Tag, error)
-	ListRepositories(ctx context.Context, owner string, opts ListOptions) ([]Repository, error)
+	Repos() RepoService
+	Issues() IssueService
+	PullRequests() PullRequestService
+	Labels() LabelService
+	Milestones() MilestoneService
+	Releases() ReleaseService
+	CI() CIService
+	Branches() BranchService
+	DeployKeys() DeployKeyService
+	Secrets() SecretService
 }
 
 // Client routes requests to the appropriate Forge based on the URL domain.
@@ -146,7 +156,7 @@ func (c *Client) FetchRepository(ctx context.Context, repoURL string) (*Reposito
 	if err != nil {
 		return nil, err
 	}
-	return f.FetchRepository(ctx, owner, repo)
+	return f.Repos().Get(ctx, owner, repo)
 }
 
 // FetchRepositoryFromPURL fetches repository metadata using a PURL's
@@ -169,20 +179,20 @@ func (c *Client) FetchTags(ctx context.Context, repoURL string) ([]Tag, error) {
 	if err != nil {
 		return nil, err
 	}
-	return f.FetchTags(ctx, owner, repo)
+	return f.Repos().ListTags(ctx, owner, repo)
 }
 
 // ListRepositories lists all repositories for an owner on the given domain.
-func (c *Client) ListRepositories(ctx context.Context, domain, owner string, opts ListOptions) ([]Repository, error) {
+func (c *Client) ListRepositories(ctx context.Context, domain, owner string, opts ListRepoOpts) ([]Repository, error) {
 	f, err := c.forgeFor(domain)
 	if err != nil {
 		return nil, err
 	}
-	return f.ListRepositories(ctx, owner, opts)
+	return f.Repos().List(ctx, owner, opts)
 }
 
 // FilterRepos applies archived and fork filters to a slice of repositories.
-func FilterRepos(repos []Repository, opts ListOptions) []Repository {
+func FilterRepos(repos []Repository, opts ListRepoOpts) []Repository {
 	n := 0
 	for _, r := range repos {
 		switch opts.Archived {

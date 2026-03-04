@@ -25,6 +25,14 @@ func newGitHubForgeWithBase(baseURL, token string, hc *http.Client) *gitHubForge
 	return &gitHubForge{client: c}
 }
 
+type gitHubRepoService struct {
+	client *github.Client
+}
+
+func (f *gitHubForge) Repos() RepoService {
+	return &gitHubRepoService{client: f.client}
+}
+
 func convertGitHubRepo(r *github.Repository) Repository {
 	result := Repository{
 		FullName:            r.GetFullName(),
@@ -33,6 +41,8 @@ func convertGitHubRepo(r *github.Repository) Repository {
 		Description:         r.GetDescription(),
 		Homepage:            r.GetHomepage(),
 		HTMLURL:             r.GetHTMLURL(),
+		CloneURL:            r.GetCloneURL(),
+		SSHURL:              r.GetSSHURL(),
 		Language:            r.GetLanguage(),
 		DefaultBranch:       r.GetDefaultBranch(),
 		Fork:                r.GetFork(),
@@ -74,8 +84,8 @@ func convertGitHubRepo(r *github.Repository) Repository {
 	return result
 }
 
-func (f *gitHubForge) FetchRepository(ctx context.Context, owner, repo string) (*Repository, error) {
-	r, resp, err := f.client.Repositories.Get(ctx, owner, repo)
+func (s *gitHubRepoService) Get(ctx context.Context, owner, repo string) (*Repository, error) {
+	r, resp, err := s.client.Repositories.Get(ctx, owner, repo)
 	if err != nil {
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return nil, ErrNotFound
@@ -87,16 +97,16 @@ func (f *gitHubForge) FetchRepository(ctx context.Context, owner, repo string) (
 	return &result, nil
 }
 
-func (f *gitHubForge) ListRepositories(ctx context.Context, owner string, opts ListOptions) ([]Repository, error) {
+func (s *gitHubRepoService) List(ctx context.Context, owner string, opts ListRepoOpts) ([]Repository, error) {
 	perPage := opts.PerPage
 	if perPage <= 0 {
 		perPage = 100
 	}
 
 	// Try org endpoint first, fall back to user on 404.
-	repos, err := f.listOrgRepos(ctx, owner, perPage)
+	repos, err := s.listOrgRepos(ctx, owner, perPage)
 	if err != nil {
-		repos, err = f.listUserRepos(ctx, owner, perPage)
+		repos, err = s.listUserRepos(ctx, owner, perPage)
 		if err != nil {
 			return nil, err
 		}
@@ -105,13 +115,13 @@ func (f *gitHubForge) ListRepositories(ctx context.Context, owner string, opts L
 	return FilterRepos(repos, opts), nil
 }
 
-func (f *gitHubForge) listOrgRepos(ctx context.Context, owner string, perPage int) ([]Repository, error) {
+func (s *gitHubRepoService) listOrgRepos(ctx context.Context, owner string, perPage int) ([]Repository, error) {
 	var all []Repository
 	ghOpts := &github.RepositoryListByOrgOptions{
 		ListOptions: github.ListOptions{PerPage: perPage},
 	}
 	for {
-		ghRepos, resp, err := f.client.Repositories.ListByOrg(ctx, owner, ghOpts)
+		ghRepos, resp, err := s.client.Repositories.ListByOrg(ctx, owner, ghOpts)
 		if err != nil {
 			if resp != nil && resp.StatusCode == http.StatusNotFound {
 				return nil, ErrOwnerNotFound
@@ -129,13 +139,13 @@ func (f *gitHubForge) listOrgRepos(ctx context.Context, owner string, perPage in
 	return all, nil
 }
 
-func (f *gitHubForge) listUserRepos(ctx context.Context, owner string, perPage int) ([]Repository, error) {
+func (s *gitHubRepoService) listUserRepos(ctx context.Context, owner string, perPage int) ([]Repository, error) {
 	var all []Repository
 	ghOpts := &github.RepositoryListByUserOptions{
 		ListOptions: github.ListOptions{PerPage: perPage},
 	}
 	for {
-		ghRepos, resp, err := f.client.Repositories.ListByUser(ctx, owner, ghOpts)
+		ghRepos, resp, err := s.client.Repositories.ListByUser(ctx, owner, ghOpts)
 		if err != nil {
 			if resp != nil && resp.StatusCode == http.StatusNotFound {
 				return nil, ErrOwnerNotFound
@@ -153,11 +163,147 @@ func (f *gitHubForge) listUserRepos(ctx context.Context, owner string, perPage i
 	return all, nil
 }
 
-func (f *gitHubForge) FetchTags(ctx context.Context, owner, repo string) ([]Tag, error) {
+func (s *gitHubRepoService) Create(ctx context.Context, opts CreateRepoOpts) (*Repository, error) {
+	ghRepo := &github.Repository{
+		Name:        github.Ptr(opts.Name),
+		Description: github.Ptr(opts.Description),
+		AutoInit:    github.Ptr(opts.Init || opts.Readme),
+	}
+
+	switch opts.Visibility {
+	case VisibilityPrivate:
+		ghRepo.Private = github.Ptr(true)
+	case VisibilityInternal:
+		ghRepo.Visibility = github.Ptr("internal")
+	case VisibilityPublic:
+		ghRepo.Private = github.Ptr(false)
+	}
+
+	if opts.Gitignore != "" {
+		ghRepo.GitignoreTemplate = github.Ptr(opts.Gitignore)
+	}
+	if opts.License != "" {
+		ghRepo.LicenseTemplate = github.Ptr(opts.License)
+	}
+
+	var (
+		r    *github.Repository
+		resp *github.Response
+		err  error
+	)
+
+	if opts.Owner != "" {
+		r, resp, err = s.client.Repositories.Create(ctx, opts.Owner, ghRepo)
+	} else {
+		r, resp, err = s.client.Repositories.Create(ctx, "", ghRepo)
+	}
+
+	if err != nil {
+		if resp != nil && resp.StatusCode == http.StatusNotFound {
+			return nil, ErrOwnerNotFound
+		}
+		return nil, err
+	}
+
+	result := convertGitHubRepo(r)
+	return &result, nil
+}
+
+func (s *gitHubRepoService) Edit(ctx context.Context, owner, repo string, opts EditRepoOpts) (*Repository, error) {
+	ghRepo := &github.Repository{}
+	changed := false
+
+	if opts.Description != nil {
+		ghRepo.Description = opts.Description
+		changed = true
+	}
+	if opts.Homepage != nil {
+		ghRepo.Homepage = opts.Homepage
+		changed = true
+	}
+	if opts.DefaultBranch != nil {
+		ghRepo.DefaultBranch = opts.DefaultBranch
+		changed = true
+	}
+	if opts.HasIssues != nil {
+		ghRepo.HasIssues = opts.HasIssues
+		changed = true
+	}
+	if opts.HasPRs != nil {
+		// GitHub doesn't support disabling PRs via API, but we set it anyway
+		changed = true
+	}
+
+	switch opts.Visibility {
+	case VisibilityPrivate:
+		ghRepo.Private = github.Ptr(true)
+		changed = true
+	case VisibilityPublic:
+		ghRepo.Private = github.Ptr(false)
+		changed = true
+	case VisibilityInternal:
+		ghRepo.Visibility = github.Ptr("internal")
+		changed = true
+	}
+
+	if !changed {
+		return s.Get(ctx, owner, repo)
+	}
+
+	r, resp, err := s.client.Repositories.Edit(ctx, owner, repo, ghRepo)
+	if err != nil {
+		if resp != nil && resp.StatusCode == http.StatusNotFound {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+
+	result := convertGitHubRepo(r)
+	return &result, nil
+}
+
+func (s *gitHubRepoService) Delete(ctx context.Context, owner, repo string) error {
+	resp, err := s.client.Repositories.Delete(ctx, owner, repo)
+	if err != nil {
+		if resp != nil && resp.StatusCode == http.StatusNotFound {
+			return ErrNotFound
+		}
+		return err
+	}
+	return nil
+}
+
+func (s *gitHubRepoService) Fork(ctx context.Context, owner, repo string, opts ForkRepoOpts) (*Repository, error) {
+	ghOpts := &github.RepositoryCreateForkOptions{}
+	if opts.Owner != "" {
+		ghOpts.Organization = opts.Owner
+	}
+	if opts.Name != "" {
+		ghOpts.Name = opts.Name
+	}
+
+	r, resp, err := s.client.Repositories.CreateFork(ctx, owner, repo, ghOpts)
+	if err != nil {
+		// GitHub returns 202 Accepted for forks, go-github may return an AcceptedError
+		if _, ok := err.(*github.AcceptedError); ok && r != nil {
+			result := convertGitHubRepo(r)
+			return &result, nil
+		}
+		if resp != nil && resp.StatusCode == http.StatusNotFound {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+
+	result := convertGitHubRepo(r)
+	return &result, nil
+}
+
+func (s *gitHubRepoService) ListTags(ctx context.Context, owner, repo string) ([]Tag, error) {
 	var allTags []Tag
 	opts := &github.ListOptions{PerPage: 100}
 	for {
-		tags, resp, err := f.client.Repositories.ListTags(ctx, owner, repo, opts)
+		tags, resp, err := s.client.Repositories.ListTags(ctx, owner, repo, opts)
 		if err != nil {
 			if resp != nil && resp.StatusCode == http.StatusNotFound {
 				return nil, ErrNotFound
@@ -177,4 +323,35 @@ func (f *gitHubForge) FetchTags(ctx context.Context, owner, repo string) ([]Tag,
 		opts.Page = resp.NextPage
 	}
 	return allTags, nil
+}
+
+func (s *gitHubRepoService) Search(ctx context.Context, opts SearchRepoOpts) ([]Repository, error) {
+	perPage := opts.PerPage
+	if perPage <= 0 {
+		perPage = 30
+	}
+	page := opts.Page
+	if page <= 0 {
+		page = 1
+	}
+
+	ghOpts := &github.SearchOptions{
+		Sort:        opts.Sort,
+		Order:       opts.Order,
+		ListOptions: github.ListOptions{PerPage: perPage, Page: page},
+	}
+
+	result, resp, err := s.client.Search.Repositories(ctx, opts.Query, ghOpts)
+	if err != nil {
+		if resp != nil && resp.StatusCode == http.StatusNotFound {
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	var repos []Repository
+	for _, r := range result.Repositories {
+		repos = append(repos, convertGitHubRepo(r))
+	}
+	return repos, nil
 }

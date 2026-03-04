@@ -1,6 +1,7 @@
 package forges
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -25,6 +26,15 @@ func newBitbucketForge(token string, hc *http.Client) *bitbucketForge {
 		hc = http.DefaultClient
 	}
 	return &bitbucketForge{token: token, httpClient: hc}
+}
+
+type bitbucketRepoService struct {
+	token      string
+	httpClient *http.Client
+}
+
+func (f *bitbucketForge) Repos() RepoService {
+	return &bitbucketRepoService{token: f.token, httpClient: f.httpClient}
 }
 
 // Bitbucket API response types
@@ -57,6 +67,10 @@ type bbRepository struct {
 		Avatar struct {
 			Href string `json:"href"`
 		} `json:"avatar"`
+		Clone []struct {
+			Href string `json:"href"`
+			Name string `json:"name"`
+		} `json:"clone"`
 	} `json:"links"`
 	CreatedOn string `json:"created_on"`
 	UpdatedOn string `json:"updated_on"`
@@ -74,16 +88,33 @@ type bbTag struct {
 	} `json:"target"`
 }
 
-func (f *bitbucketForge) getJSON(ctx context.Context, url string, v any) error {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+type bbReposResponse struct {
+	Values []bbRepository `json:"values"`
+	Next   string         `json:"next"`
+}
+
+func (s *bitbucketRepoService) doJSON(ctx context.Context, method, url string, body any, v any) error {
+	var bodyReader io.Reader
+	if body != nil {
+		b, err := json.Marshal(body)
+		if err != nil {
+			return err
+		}
+		bodyReader = bytes.NewReader(b)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, method, url, bodyReader)
 	if err != nil {
 		return err
 	}
-	if f.token != "" {
-		req.Header.Set("Authorization", "Bearer "+f.token)
+	if s.token != "" {
+		req.Header.Set("Authorization", "Bearer "+s.token)
+	}
+	if body != nil {
+		req.Header.Set("Content-Type", "application/json")
 	}
 
-	resp, err := f.httpClient.Do(req)
+	resp, err := s.httpClient.Do(req)
 	if err != nil {
 		return err
 	}
@@ -92,12 +123,22 @@ func (f *bitbucketForge) getJSON(ctx context.Context, url string, v any) error {
 	if resp.StatusCode == http.StatusNotFound {
 		return ErrNotFound
 	}
-	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
-		return &HTTPError{StatusCode: resp.StatusCode, URL: url, Body: string(body)}
+	if resp.StatusCode == http.StatusNoContent {
+		return nil
+	}
+	if resp.StatusCode >= 400 {
+		respBody, _ := io.ReadAll(resp.Body)
+		return &HTTPError{StatusCode: resp.StatusCode, URL: url, Body: string(respBody)}
 	}
 
-	return json.NewDecoder(resp.Body).Decode(v)
+	if v != nil {
+		return json.NewDecoder(resp.Body).Decode(v)
+	}
+	return nil
+}
+
+func (s *bitbucketRepoService) getJSON(ctx context.Context, url string, v any) error {
+	return s.doJSON(ctx, http.MethodGet, url, nil, v)
 }
 
 func convertBitbucketRepo(bb bbRepository) Repository {
@@ -112,6 +153,15 @@ func convertBitbucketRepo(bb bbRepository) Repository {
 		HasIssues:   bb.HasIssues,
 		HTMLURL:     bb.Links.HTML.Href,
 		LogoURL:     bb.Links.Avatar.Href,
+	}
+
+	for _, c := range bb.Links.Clone {
+		switch c.Name {
+		case "https":
+			result.CloneURL = c.Href
+		case "ssh":
+			result.SSHURL = c.Href
+		}
 	}
 
 	if bb.Owner != nil {
@@ -137,10 +187,10 @@ func convertBitbucketRepo(bb bbRepository) Repository {
 	return result
 }
 
-func (f *bitbucketForge) FetchRepository(ctx context.Context, owner, repo string) (*Repository, error) {
+func (s *bitbucketRepoService) Get(ctx context.Context, owner, repo string) (*Repository, error) {
 	url := fmt.Sprintf("%s/repositories/%s/%s", bitbucketAPI, owner, repo)
 	var bb bbRepository
-	if err := f.getJSON(ctx, url, &bb); err != nil {
+	if err := s.getJSON(ctx, url, &bb); err != nil {
 		return nil, err
 	}
 
@@ -148,12 +198,7 @@ func (f *bitbucketForge) FetchRepository(ctx context.Context, owner, repo string
 	return &result, nil
 }
 
-type bbReposResponse struct {
-	Values []bbRepository `json:"values"`
-	Next   string         `json:"next"`
-}
-
-func (f *bitbucketForge) ListRepositories(ctx context.Context, owner string, opts ListOptions) ([]Repository, error) {
+func (s *bitbucketRepoService) List(ctx context.Context, owner string, opts ListRepoOpts) ([]Repository, error) {
 	perPage := opts.PerPage
 	if perPage <= 0 {
 		perPage = 100
@@ -164,7 +209,7 @@ func (f *bitbucketForge) ListRepositories(ctx context.Context, owner string, opt
 
 	for url != "" {
 		var page bbReposResponse
-		if err := f.getJSON(ctx, url, &page); err != nil {
+		if err := s.getJSON(ctx, url, &page); err != nil {
 			if errors.Is(err, ErrNotFound) {
 				return nil, ErrOwnerNotFound
 			}
@@ -179,13 +224,98 @@ func (f *bitbucketForge) ListRepositories(ctx context.Context, owner string, opt
 	return FilterRepos(all, opts), nil
 }
 
-func (f *bitbucketForge) FetchTags(ctx context.Context, owner, repo string) ([]Tag, error) {
+func (s *bitbucketRepoService) Create(ctx context.Context, opts CreateRepoOpts) (*Repository, error) {
+	owner := opts.Owner
+	if owner == "" {
+		return nil, fmt.Errorf("bitbucket: owner is required for repo creation")
+	}
+
+	body := map[string]any{
+		"scm": "git",
+	}
+	if opts.Description != "" {
+		body["description"] = opts.Description
+	}
+	if opts.Visibility == VisibilityPrivate {
+		body["is_private"] = true
+	} else {
+		body["is_private"] = false
+	}
+	url := fmt.Sprintf("%s/repositories/%s/%s", bitbucketAPI, owner, opts.Name)
+	var bb bbRepository
+	if err := s.doJSON(ctx, http.MethodPost, url, body, &bb); err != nil {
+		return nil, err
+	}
+
+	result := convertBitbucketRepo(bb)
+	return &result, nil
+}
+
+func (s *bitbucketRepoService) Edit(ctx context.Context, owner, repo string, opts EditRepoOpts) (*Repository, error) {
+	body := map[string]any{}
+
+	if opts.Description != nil {
+		body["description"] = *opts.Description
+	}
+	if opts.Homepage != nil {
+		body["website"] = *opts.Homepage
+	}
+	if opts.HasIssues != nil {
+		body["has_issues"] = *opts.HasIssues
+	}
+
+	switch opts.Visibility {
+	case VisibilityPrivate:
+		body["is_private"] = true
+	case VisibilityPublic:
+		body["is_private"] = false
+	}
+
+	if len(body) == 0 {
+		return s.Get(ctx, owner, repo)
+	}
+
+	url := fmt.Sprintf("%s/repositories/%s/%s", bitbucketAPI, owner, repo)
+	var bb bbRepository
+	if err := s.doJSON(ctx, http.MethodPut, url, body, &bb); err != nil {
+		return nil, err
+	}
+
+	result := convertBitbucketRepo(bb)
+	return &result, nil
+}
+
+func (s *bitbucketRepoService) Delete(ctx context.Context, owner, repo string) error {
+	url := fmt.Sprintf("%s/repositories/%s/%s", bitbucketAPI, owner, repo)
+	return s.doJSON(ctx, http.MethodDelete, url, nil, nil)
+}
+
+func (s *bitbucketRepoService) Fork(ctx context.Context, owner, repo string, opts ForkRepoOpts) (*Repository, error) {
+	body := map[string]any{}
+	if opts.Name != "" {
+		body["name"] = opts.Name
+	}
+	if opts.Owner != "" {
+		body["workspace"] = map[string]string{"slug": opts.Owner}
+	}
+
+	url := fmt.Sprintf("%s/repositories/%s/%s/forks", bitbucketAPI, owner, repo)
+	var bb bbRepository
+	if err := s.doJSON(ctx, http.MethodPost, url, body, &bb); err != nil {
+		return nil, err
+	}
+
+	result := convertBitbucketRepo(bb)
+	return &result, nil
+}
+
+func (s *bitbucketRepoService) ListTags(ctx context.Context, owner, repo string) ([]Tag, error) {
 	var allTags []Tag
 	url := fmt.Sprintf("%s/repositories/%s/%s/refs/tags?pagelen=100", bitbucketAPI, owner, repo)
 
 	for url != "" {
 		var page bbTagsResponse
-		if err := f.getJSON(ctx, url, &page); err != nil {
+		if err := s.getJSON(ctx, url, &page); err != nil {
 			return nil, err
 		}
 		for _, t := range page.Values {
@@ -197,4 +327,10 @@ func (f *bitbucketForge) FetchTags(ctx context.Context, owner, repo string) ([]T
 		url = page.Next
 	}
 	return allTags, nil
+}
+
+func (s *bitbucketRepoService) Search(ctx context.Context, opts SearchRepoOpts) ([]Repository, error) {
+	// Bitbucket doesn't have a global repo search API.
+	// The closest is searching within a workspace, which requires an owner.
+	return nil, ErrNotSupported
 }

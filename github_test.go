@@ -10,7 +10,13 @@ import (
 	"github.com/google/go-github/v82/github"
 )
 
-func TestGitHubFetchRepository(t *testing.T) {
+func newTestGitHubRepoService(srv *httptest.Server) *gitHubRepoService {
+	c := github.NewClient(nil)
+	c, _ = c.WithEnterpriseURLs(srv.URL+"/api/v3", srv.URL+"/api/v3")
+	return &gitHubRepoService{client: c}
+}
+
+func TestGitHubGetRepo(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/v3/repos/octocat/hello-world", func(w http.ResponseWriter, r *http.Request) {
 		_ = json.NewEncoder(w).Encode(github.Repository{
@@ -19,6 +25,8 @@ func TestGitHubFetchRepository(t *testing.T) {
 			Description:      ptr("My first repository"),
 			Homepage:         ptr("https://example.com"),
 			HTMLURL:          ptr("https://github.com/octocat/hello-world"),
+			CloneURL:         ptr("https://github.com/octocat/hello-world.git"),
+			SSHURL:           ptr("git@github.com:octocat/hello-world.git"),
 			Language:         ptr("Go"),
 			DefaultBranch:    ptr("main"),
 			Fork:             ptrBool(false),
@@ -51,11 +59,8 @@ func TestGitHubFetchRepository(t *testing.T) {
 	srv := httptest.NewServer(mux)
 	defer srv.Close()
 
-	c := github.NewClient(nil)
-	c, _ = c.WithEnterpriseURLs(srv.URL+"/api/v3", srv.URL+"/api/v3")
-	f := &gitHubForge{client: c}
-
-	repo, err := f.FetchRepository(context.Background(), "octocat", "hello-world")
+	s := newTestGitHubRepoService(srv)
+	repo, err := s.Get(context.Background(), "octocat", "hello-world")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -66,6 +71,8 @@ func TestGitHubFetchRepository(t *testing.T) {
 	assertEqual(t, "Description", "My first repository", repo.Description)
 	assertEqual(t, "Homepage", "https://example.com", repo.Homepage)
 	assertEqual(t, "HTMLURL", "https://github.com/octocat/hello-world", repo.HTMLURL)
+	assertEqual(t, "CloneURL", "https://github.com/octocat/hello-world.git", repo.CloneURL)
+	assertEqual(t, "SSHURL", "git@github.com:octocat/hello-world.git", repo.SSHURL)
 	assertEqual(t, "Language", "Go", repo.Language)
 	assertEqual(t, "License", "MIT", repo.License)
 	assertEqual(t, "DefaultBranch", "main", repo.DefaultBranch)
@@ -84,7 +91,7 @@ func TestGitHubFetchRepository(t *testing.T) {
 	assertSliceEqual(t, "Topics", []string{"go", "cli"}, repo.Topics)
 }
 
-func TestGitHubFetchRepositoryNotFound(t *testing.T) {
+func TestGitHubGetRepoNotFound(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/v3/repos/octocat/nonexistent", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
@@ -94,17 +101,14 @@ func TestGitHubFetchRepositoryNotFound(t *testing.T) {
 	srv := httptest.NewServer(mux)
 	defer srv.Close()
 
-	c := github.NewClient(nil)
-	c, _ = c.WithEnterpriseURLs(srv.URL+"/api/v3", srv.URL+"/api/v3")
-	f := &gitHubForge{client: c}
-
-	_, err := f.FetchRepository(context.Background(), "octocat", "nonexistent")
+	s := newTestGitHubRepoService(srv)
+	_, err := s.Get(context.Background(), "octocat", "nonexistent")
 	if err != ErrNotFound {
 		t.Fatalf("expected ErrNotFound, got %v", err)
 	}
 }
 
-func TestGitHubFetchRepositoryNoassertionLicense(t *testing.T) {
+func TestGitHubGetRepoNoassertionLicense(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/v3/repos/test/noassertion", func(w http.ResponseWriter, r *http.Request) {
 		_ = json.NewEncoder(w).Encode(github.Repository{
@@ -118,11 +122,8 @@ func TestGitHubFetchRepositoryNoassertionLicense(t *testing.T) {
 	srv := httptest.NewServer(mux)
 	defer srv.Close()
 
-	c := github.NewClient(nil)
-	c, _ = c.WithEnterpriseURLs(srv.URL+"/api/v3", srv.URL+"/api/v3")
-	f := &gitHubForge{client: c}
-
-	repo, err := f.FetchRepository(context.Background(), "test", "noassertion")
+	s := newTestGitHubRepoService(srv)
+	repo, err := s.Get(context.Background(), "test", "noassertion")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -131,7 +132,7 @@ func TestGitHubFetchRepositoryNoassertionLicense(t *testing.T) {
 	}
 }
 
-func TestGitHubListRepositories(t *testing.T) {
+func TestGitHubListRepos(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/v3/orgs/myorg/repos", func(w http.ResponseWriter, r *http.Request) {
 		_ = json.NewEncoder(w).Encode([]*github.Repository{
@@ -157,11 +158,8 @@ func TestGitHubListRepositories(t *testing.T) {
 	srv := httptest.NewServer(mux)
 	defer srv.Close()
 
-	c := github.NewClient(nil)
-	c, _ = c.WithEnterpriseURLs(srv.URL+"/api/v3", srv.URL+"/api/v3")
-	f := &gitHubForge{client: c}
-
-	repos, err := f.ListRepositories(context.Background(), "myorg", ListOptions{})
+	s := newTestGitHubRepoService(srv)
+	repos, err := s.List(context.Background(), "myorg", ListRepoOpts{})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -172,7 +170,7 @@ func TestGitHubListRepositories(t *testing.T) {
 	assertEqual(t, "repos[1].FullName", "myorg/repo-b", repos[1].FullName)
 }
 
-func TestGitHubListRepositoriesFallbackToUser(t *testing.T) {
+func TestGitHubListReposFallbackToUser(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/v3/orgs/someuser/repos", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
@@ -193,11 +191,8 @@ func TestGitHubListRepositoriesFallbackToUser(t *testing.T) {
 	srv := httptest.NewServer(mux)
 	defer srv.Close()
 
-	c := github.NewClient(nil)
-	c, _ = c.WithEnterpriseURLs(srv.URL+"/api/v3", srv.URL+"/api/v3")
-	f := &gitHubForge{client: c}
-
-	repos, err := f.ListRepositories(context.Background(), "someuser", ListOptions{})
+	s := newTestGitHubRepoService(srv)
+	repos, err := s.List(context.Background(), "someuser", ListRepoOpts{})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -207,7 +202,7 @@ func TestGitHubListRepositoriesFallbackToUser(t *testing.T) {
 	assertEqual(t, "repos[0].FullName", "someuser/personal", repos[0].FullName)
 }
 
-func TestGitHubListRepositoriesWithFilters(t *testing.T) {
+func TestGitHubListReposWithFilters(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/v3/orgs/myorg/repos", func(w http.ResponseWriter, r *http.Request) {
 		_ = json.NewEncoder(w).Encode([]*github.Repository{
@@ -238,11 +233,8 @@ func TestGitHubListRepositoriesWithFilters(t *testing.T) {
 	srv := httptest.NewServer(mux)
 	defer srv.Close()
 
-	c := github.NewClient(nil)
-	c, _ = c.WithEnterpriseURLs(srv.URL+"/api/v3", srv.URL+"/api/v3")
-	f := &gitHubForge{client: c}
-
-	repos, err := f.ListRepositories(context.Background(), "myorg", ListOptions{
+	s := newTestGitHubRepoService(srv)
+	repos, err := s.List(context.Background(), "myorg", ListRepoOpts{
 		Archived: ArchivedExclude,
 		Forks:    ForkExclude,
 	})
@@ -255,7 +247,7 @@ func TestGitHubListRepositoriesWithFilters(t *testing.T) {
 	assertEqual(t, "repos[0].FullName", "myorg/active", repos[0].FullName)
 }
 
-func TestGitHubFetchTags(t *testing.T) {
+func TestGitHubListTags(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/v3/repos/octocat/hello-world/tags", func(w http.ResponseWriter, r *http.Request) {
 		_ = json.NewEncoder(w).Encode([]github.RepositoryTag{
@@ -273,11 +265,8 @@ func TestGitHubFetchTags(t *testing.T) {
 	srv := httptest.NewServer(mux)
 	defer srv.Close()
 
-	c := github.NewClient(nil)
-	c, _ = c.WithEnterpriseURLs(srv.URL+"/api/v3", srv.URL+"/api/v3")
-	f := &gitHubForge{client: c}
-
-	tags, err := f.FetchTags(context.Background(), "octocat", "hello-world")
+	s := newTestGitHubRepoService(srv)
+	tags, err := s.ListTags(context.Background(), "octocat", "hello-world")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -288,4 +277,69 @@ func TestGitHubFetchTags(t *testing.T) {
 	assertEqual(t, "Tag[0].Commit", "abc123", tags[0].Commit)
 	assertEqual(t, "Tag[1].Name", "v0.9.0", tags[1].Name)
 	assertEqual(t, "Tag[1].Commit", "def456", tags[1].Commit)
+}
+
+func TestGitHubCreateRepo(t *testing.T) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("POST /api/v3/user/repos", func(w http.ResponseWriter, r *http.Request) {
+		var req github.Repository
+		_ = json.NewDecoder(r.Body).Decode(&req)
+		w.WriteHeader(http.StatusCreated)
+		_ = json.NewEncoder(w).Encode(github.Repository{
+			FullName:    ptr("octocat/" + req.GetName()),
+			Name:        req.Name,
+			Description: req.Description,
+			Owner:       &github.User{Login: ptr("octocat")},
+			HTMLURL:     ptr("https://github.com/octocat/" + req.GetName()),
+			Private:     req.Private,
+		})
+	})
+
+	srv := httptest.NewServer(mux)
+	defer srv.Close()
+
+	s := newTestGitHubRepoService(srv)
+	repo, err := s.Create(context.Background(), CreateRepoOpts{
+		Name:        "new-repo",
+		Description: "A new repo",
+		Visibility:  VisibilityPrivate,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	assertEqual(t, "FullName", "octocat/new-repo", repo.FullName)
+	assertEqualBool(t, "Private", true, repo.Private)
+}
+
+func TestGitHubDeleteRepo(t *testing.T) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("DELETE /api/v3/repos/octocat/doomed", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNoContent)
+	})
+
+	srv := httptest.NewServer(mux)
+	defer srv.Close()
+
+	s := newTestGitHubRepoService(srv)
+	err := s.Delete(context.Background(), "octocat", "doomed")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestGitHubDeleteRepoNotFound(t *testing.T) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("DELETE /api/v3/repos/octocat/ghost", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+		_ = json.NewEncoder(w).Encode(map[string]string{"message": "Not Found"})
+	})
+
+	srv := httptest.NewServer(mux)
+	defer srv.Close()
+
+	s := newTestGitHubRepoService(srv)
+	err := s.Delete(context.Background(), "octocat", "ghost")
+	if err != ErrNotFound {
+		t.Fatalf("expected ErrNotFound, got %v", err)
+	}
 }

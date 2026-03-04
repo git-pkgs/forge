@@ -9,12 +9,11 @@ import (
 	"time"
 )
 
-func TestGitLabFetchRepository(t *testing.T) {
+func TestGitLabGetRepo(t *testing.T) {
 	created := time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)
 	lastActivity := time.Date(2024, 6, 15, 12, 0, 0, 0, time.UTC)
 
 	mux := http.NewServeMux()
-	// GitLab SDK URL-encodes the project path: mygroup/myrepo -> mygroup%2Fmyrepo
 	mux.HandleFunc("GET /api/v4/projects/mygroup%2Fmyrepo", func(w http.ResponseWriter, r *http.Request) {
 		_ = json.NewEncoder(w).Encode(map[string]any{
 			"path_with_namespace":    "mygroup/myrepo",
@@ -50,7 +49,7 @@ func TestGitLabFetchRepository(t *testing.T) {
 
 	f := newGitLabForge(srv.URL, "test-token", nil)
 
-	repo, err := f.FetchRepository(context.Background(), "mygroup", "myrepo")
+	repo, err := f.Repos().Get(context.Background(), "mygroup", "myrepo")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -74,7 +73,7 @@ func TestGitLabFetchRepository(t *testing.T) {
 	assertSliceEqual(t, "Topics", []string{"rust", "wasm"}, repo.Topics)
 }
 
-func TestGitLabFetchRepositoryNotFound(t *testing.T) {
+func TestGitLabGetRepoNotFound(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/v4/projects/mygroup%2Fnonexistent", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
@@ -86,13 +85,13 @@ func TestGitLabFetchRepositoryNotFound(t *testing.T) {
 
 	f := newGitLabForge(srv.URL, "", nil)
 
-	_, err := f.FetchRepository(context.Background(), "mygroup", "nonexistent")
+	_, err := f.Repos().Get(context.Background(), "mygroup", "nonexistent")
 	if err != ErrNotFound {
 		t.Fatalf("expected ErrNotFound, got %v", err)
 	}
 }
 
-func TestGitLabListRepositories(t *testing.T) {
+func TestGitLabListRepos(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/v4/groups/mygroup/projects", func(w http.ResponseWriter, r *http.Request) {
 		_ = json.NewEncoder(w).Encode([]map[string]any{
@@ -124,7 +123,7 @@ func TestGitLabListRepositories(t *testing.T) {
 
 	f := newGitLabForge(srv.URL, "test-token", nil)
 
-	repos, err := f.ListRepositories(context.Background(), "mygroup", ListOptions{})
+	repos, err := f.Repos().List(context.Background(), "mygroup", ListRepoOpts{})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -136,7 +135,7 @@ func TestGitLabListRepositories(t *testing.T) {
 	assertEqualBool(t, "repos[1].Archived", true, repos[1].Archived)
 }
 
-func TestGitLabListRepositoriesFallbackToUser(t *testing.T) {
+func TestGitLabListReposFallbackToUser(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/v4/groups/someuser/projects", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
@@ -161,7 +160,7 @@ func TestGitLabListRepositoriesFallbackToUser(t *testing.T) {
 
 	f := newGitLabForge(srv.URL, "", nil)
 
-	repos, err := f.ListRepositories(context.Background(), "someuser", ListOptions{})
+	repos, err := f.Repos().List(context.Background(), "someuser", ListRepoOpts{})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -171,7 +170,7 @@ func TestGitLabListRepositoriesFallbackToUser(t *testing.T) {
 	assertEqual(t, "repos[0].FullName", "someuser/personal", repos[0].FullName)
 }
 
-func TestGitLabFetchTags(t *testing.T) {
+func TestGitLabListTags(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/v4/projects/mygroup%2Fmyrepo/repository/tags", func(w http.ResponseWriter, r *http.Request) {
 		_ = json.NewEncoder(w).Encode([]map[string]any{
@@ -191,7 +190,7 @@ func TestGitLabFetchTags(t *testing.T) {
 
 	f := newGitLabForge(srv.URL, "", nil)
 
-	tags, err := f.FetchTags(context.Background(), "mygroup", "myrepo")
+	tags, err := f.Repos().ListTags(context.Background(), "mygroup", "myrepo")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

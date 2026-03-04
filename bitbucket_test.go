@@ -8,10 +8,9 @@ import (
 	"testing"
 )
 
-func TestBitbucketFetchRepository(t *testing.T) {
+func TestBitbucketGetRepo(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /2.0/repositories/atlassian/stash-example-plugin", func(w http.ResponseWriter, r *http.Request) {
-		// Verify auth header
 		if auth := r.Header.Get("Authorization"); auth != "Bearer test-bb-token" {
 			t.Errorf("expected Bearer token, got %q", auth)
 		}
@@ -42,6 +41,10 @@ func TestBitbucketFetchRepository(t *testing.T) {
 				Avatar struct {
 					Href string `json:"href"`
 				} `json:"avatar"`
+				Clone []struct {
+					Href string `json:"href"`
+					Name string `json:"name"`
+				} `json:"clone"`
 			}{
 				HTML: struct {
 					Href string `json:"href"`
@@ -58,14 +61,13 @@ func TestBitbucketFetchRepository(t *testing.T) {
 	srv := httptest.NewServer(mux)
 	defer srv.Close()
 
-	// Override the bitbucket API base URL
 	origAPI := bitbucketAPI
 	defer func() { setBitbucketAPI(origAPI) }()
 	setBitbucketAPI(srv.URL + "/2.0")
 
 	f := newBitbucketForge("test-bb-token", nil)
 
-	repo, err := f.FetchRepository(context.Background(), "atlassian", "stash-example-plugin")
+	repo, err := f.Repos().Get(context.Background(), "atlassian", "stash-example-plugin")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -86,7 +88,7 @@ func TestBitbucketFetchRepository(t *testing.T) {
 	assertEqualBool(t, "HasIssues", true, repo.HasIssues)
 }
 
-func TestBitbucketFetchRepositoryNotFound(t *testing.T) {
+func TestBitbucketGetRepoNotFound(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /2.0/repositories/atlassian/nonexistent", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
@@ -101,13 +103,13 @@ func TestBitbucketFetchRepositoryNotFound(t *testing.T) {
 
 	f := newBitbucketForge("", nil)
 
-	_, err := f.FetchRepository(context.Background(), "atlassian", "nonexistent")
+	_, err := f.Repos().Get(context.Background(), "atlassian", "nonexistent")
 	if err != ErrNotFound {
 		t.Fatalf("expected ErrNotFound, got %v", err)
 	}
 }
 
-func TestBitbucketListRepositories(t *testing.T) {
+func TestBitbucketListRepos(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /2.0/repositories/atlassian", func(w http.ResponseWriter, r *http.Request) {
 		_ = json.NewEncoder(w).Encode(map[string]any{
@@ -143,7 +145,7 @@ func TestBitbucketListRepositories(t *testing.T) {
 
 	f := newBitbucketForge("test-token", nil)
 
-	repos, err := f.ListRepositories(context.Background(), "atlassian", ListOptions{})
+	repos, err := f.Repos().List(context.Background(), "atlassian", ListRepoOpts{})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -154,7 +156,7 @@ func TestBitbucketListRepositories(t *testing.T) {
 	assertEqual(t, "repos[1].FullName", "atlassian/repo-b", repos[1].FullName)
 }
 
-func TestBitbucketListRepositoriesNotFound(t *testing.T) {
+func TestBitbucketListReposNotFound(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /2.0/repositories/nonexistent", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
@@ -169,13 +171,13 @@ func TestBitbucketListRepositoriesNotFound(t *testing.T) {
 
 	f := newBitbucketForge("", nil)
 
-	_, err := f.ListRepositories(context.Background(), "nonexistent", ListOptions{})
+	_, err := f.Repos().List(context.Background(), "nonexistent", ListRepoOpts{})
 	if err != ErrOwnerNotFound {
 		t.Fatalf("expected ErrOwnerNotFound, got %v", err)
 	}
 }
 
-func TestBitbucketFetchTags(t *testing.T) {
+func TestBitbucketListTags(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /2.0/repositories/atlassian/myrepo/refs/tags", func(w http.ResponseWriter, r *http.Request) {
 		_ = json.NewEncoder(w).Encode(bbTagsResponse{
@@ -199,7 +201,7 @@ func TestBitbucketFetchTags(t *testing.T) {
 
 	f := newBitbucketForge("", nil)
 
-	tags, err := f.FetchTags(context.Background(), "atlassian", "myrepo")
+	tags, err := f.Repos().ListTags(context.Background(), "atlassian", "myrepo")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

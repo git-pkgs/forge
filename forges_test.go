@@ -3,17 +3,20 @@ package forges
 import (
 	"context"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 	"time"
 )
 
 // Test helpers
 
-func ptr(s string) *string    { return &s }
-func ptrBool(b bool) *bool    { return &b }
-func ptrInt(i int) *int       { return &i }
+func ptr(s string) *string   { return &s }
+func ptrBool(b bool) *bool   { return &b }
+func ptrInt(i int) *int      { return &i }
+func ptrInt64(i int64) *int64 { return &i }
 
 func parseTime(s string) time.Time {
 	t, _ := time.Parse(time.RFC3339, s)
@@ -58,9 +61,9 @@ func assertSliceEqual(t *testing.T, field string, want, got []string) {
 
 func TestParseRepoURL(t *testing.T) {
 	tests := []struct {
-		input              string
+		input               string
 		domain, owner, repo string
-		wantErr            bool
+		wantErr             bool
 	}{
 		{
 			input:  "https://github.com/octocat/hello-world",
@@ -143,9 +146,10 @@ func TestClientRouting(t *testing.T) {
 }
 
 func TestClientFetchRepositoryRoutes(t *testing.T) {
-	// Create a mock forge that records calls
 	mock := &mockForge{
-		repo: &Repository{FullName: "test/repo"},
+		repoService: &mockRepoService{
+			repo: &Repository{FullName: "test/repo"},
+		},
 	}
 	c := &Client{
 		forges: map[string]Forge{"example.com": mock},
@@ -159,14 +163,17 @@ func TestClientFetchRepositoryRoutes(t *testing.T) {
 	if repo.FullName != "test/repo" {
 		t.Errorf("expected test/repo, got %s", repo.FullName)
 	}
-	if mock.lastOwner != "test" || mock.lastRepo != "repo" {
-		t.Errorf("expected owner=test repo=repo, got owner=%s repo=%s", mock.lastOwner, mock.lastRepo)
+	ms := mock.repoService
+	if ms.lastOwner != "test" || ms.lastRepo != "repo" {
+		t.Errorf("expected owner=test repo=repo, got owner=%s repo=%s", ms.lastOwner, ms.lastRepo)
 	}
 }
 
 func TestClientFetchTagsRoutes(t *testing.T) {
 	mock := &mockForge{
-		tags: []Tag{{Name: "v1.0.0", Commit: "abc"}},
+		repoService: &mockRepoService{
+			tags: []Tag{{Name: "v1.0.0", Commit: "abc"}},
+		},
 	}
 	c := &Client{
 		forges: map[string]Forge{"example.com": mock},
@@ -204,7 +211,6 @@ func TestDetectForgeTypeHeaders(t *testing.T) {
 			}))
 			defer srv.Close()
 
-			// We need to override the URL scheme, so test detectFromHeaders directly
 			ft, err := detectFromHeaders(context.Background(), srv.URL)
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
@@ -222,7 +228,7 @@ func TestDetectForgeTypeGiteaAPI(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	})
 	mux.HandleFunc("GET /api/v1/version", func(w http.ResponseWriter, r *http.Request) {
-		_, _ = fmt.Fprintf(w,`{"version":"1.21.0"}`)
+		_, _ = fmt.Fprintf(w, `{"version":"1.21.0"}`)
 	})
 
 	srv := httptest.NewServer(mux)
@@ -243,7 +249,7 @@ func TestDetectForgeTypeForgejoAPI(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	})
 	mux.HandleFunc("GET /api/v1/version", func(w http.ResponseWriter, r *http.Request) {
-		_, _ = fmt.Fprintf(w,`{"version":"7.0.0+forgejo"}`)
+		_, _ = fmt.Fprintf(w, `{"version":"7.0.0+forgejo"}`)
 	})
 
 	srv := httptest.NewServer(mux)
@@ -267,7 +273,7 @@ func TestDetectForgeTypeGitLabAPI(t *testing.T) {
 		w.WriteHeader(http.StatusNotFound)
 	})
 	mux.HandleFunc("GET /api/v4/version", func(w http.ResponseWriter, r *http.Request) {
-		_, _ = fmt.Fprintf(w,`{"version":"16.0.0"}`)
+		_, _ = fmt.Fprintf(w, `{"version":"16.0.0"}`)
 	})
 
 	srv := httptest.NewServer(mux)
@@ -294,7 +300,7 @@ func TestDetectForgeTypeGitHubAPI(t *testing.T) {
 		w.WriteHeader(http.StatusNotFound)
 	})
 	mux.HandleFunc("GET /api/v3/meta", func(w http.ResponseWriter, r *http.Request) {
-		_, _ = fmt.Fprintf(w,`{"verifiable_password_authentication": true}`)
+		_, _ = fmt.Fprintf(w, `{"verifiable_password_authentication": true}`)
 	})
 
 	srv := httptest.NewServer(mux)
@@ -311,9 +317,11 @@ func TestDetectForgeTypeGitHubAPI(t *testing.T) {
 
 func TestClientListRepositoriesRoutes(t *testing.T) {
 	mock := &mockForge{
-		repos: []Repository{
-			{FullName: "org/repo-a"},
-			{FullName: "org/repo-b"},
+		repoService: &mockRepoService{
+			repos: []Repository{
+				{FullName: "org/repo-a"},
+				{FullName: "org/repo-b"},
+			},
 		},
 	}
 	c := &Client{
@@ -321,15 +329,15 @@ func TestClientListRepositoriesRoutes(t *testing.T) {
 		tokens: make(map[string]string),
 	}
 
-	repos, err := c.ListRepositories(context.Background(), "example.com", "org", ListOptions{})
+	repos, err := c.ListRepositories(context.Background(), "example.com", "org", ListRepoOpts{})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if len(repos) != 2 {
 		t.Fatalf("expected 2 repos, got %d", len(repos))
 	}
-	if mock.lastOwner != "org" {
-		t.Errorf("expected owner=org, got %s", mock.lastOwner)
+	if mock.repoService.lastOwner != "org" {
+		t.Errorf("expected owner=org, got %s", mock.repoService.lastOwner)
 	}
 }
 
@@ -343,20 +351,19 @@ func TestFilterRepos(t *testing.T) {
 
 	tests := []struct {
 		name string
-		opts ListOptions
+		opts ListRepoOpts
 		want []string
 	}{
-		{"include all", ListOptions{}, []string{"org/active", "org/archived", "org/fork", "org/archived-fork"}},
-		{"exclude archived", ListOptions{Archived: ArchivedExclude}, []string{"org/active", "org/fork"}},
-		{"only archived", ListOptions{Archived: ArchivedOnly}, []string{"org/archived", "org/archived-fork"}},
-		{"exclude forks", ListOptions{Forks: ForkExclude}, []string{"org/active", "org/archived"}},
-		{"only forks", ListOptions{Forks: ForkOnly}, []string{"org/fork", "org/archived-fork"}},
-		{"exclude both", ListOptions{Archived: ArchivedExclude, Forks: ForkExclude}, []string{"org/active"}},
+		{"include all", ListRepoOpts{}, []string{"org/active", "org/archived", "org/fork", "org/archived-fork"}},
+		{"exclude archived", ListRepoOpts{Archived: ArchivedExclude}, []string{"org/active", "org/fork"}},
+		{"only archived", ListRepoOpts{Archived: ArchivedOnly}, []string{"org/archived", "org/archived-fork"}},
+		{"exclude forks", ListRepoOpts{Forks: ForkExclude}, []string{"org/active", "org/archived"}},
+		{"only forks", ListRepoOpts{Forks: ForkOnly}, []string{"org/fork", "org/archived-fork"}},
+		{"exclude both", ListRepoOpts{Archived: ArchivedExclude, Forks: ForkExclude}, []string{"org/active"}},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Make a copy so we don't mutate across runs
 			input := make([]Repository, len(repos))
 			copy(input, repos)
 			got := FilterRepos(input, tt.opts)
@@ -372,6 +379,86 @@ func TestFilterRepos(t *testing.T) {
 // Mock forge for routing tests
 
 type mockForge struct {
+	repoService      *mockRepoService
+	issueService     *mockIssueService
+	prService        *mockPRService
+	labelService     *mockLabelService
+	milestoneService *mockMilestoneService
+	releaseService   *mockReleaseService
+	ciService        *mockCIService
+	branchService    *mockBranchService
+	deployKeyService *mockDeployKeyService
+	secretService    *mockSecretService
+}
+
+func (m *mockForge) Repos() RepoService {
+	return m.repoService
+}
+
+func (m *mockForge) Issues() IssueService {
+	if m.issueService != nil {
+		return m.issueService
+	}
+	return &mockIssueService{}
+}
+
+func (m *mockForge) PullRequests() PullRequestService {
+	if m.prService != nil {
+		return m.prService
+	}
+	return &mockPRService{}
+}
+
+func (m *mockForge) Labels() LabelService {
+	if m.labelService != nil {
+		return m.labelService
+	}
+	return &mockLabelService{}
+}
+
+func (m *mockForge) Milestones() MilestoneService {
+	if m.milestoneService != nil {
+		return m.milestoneService
+	}
+	return &mockMilestoneService{}
+}
+
+func (m *mockForge) Releases() ReleaseService {
+	if m.releaseService != nil {
+		return m.releaseService
+	}
+	return &mockReleaseService{}
+}
+
+func (m *mockForge) CI() CIService {
+	if m.ciService != nil {
+		return m.ciService
+	}
+	return &mockCIService{}
+}
+
+func (m *mockForge) Branches() BranchService {
+	if m.branchService != nil {
+		return m.branchService
+	}
+	return &mockBranchService{}
+}
+
+func (m *mockForge) DeployKeys() DeployKeyService {
+	if m.deployKeyService != nil {
+		return m.deployKeyService
+	}
+	return &mockDeployKeyService{}
+}
+
+func (m *mockForge) Secrets() SecretService {
+	if m.secretService != nil {
+		return m.secretService
+	}
+	return &mockSecretService{}
+}
+
+type mockRepoService struct {
 	repo      *Repository
 	repos     []Repository
 	tags      []Tag
@@ -379,19 +466,488 @@ type mockForge struct {
 	lastRepo  string
 }
 
-func (m *mockForge) FetchRepository(_ context.Context, owner, repo string) (*Repository, error) {
+func (m *mockRepoService) Get(_ context.Context, owner, repo string) (*Repository, error) {
 	m.lastOwner = owner
 	m.lastRepo = repo
 	return m.repo, nil
 }
 
-func (m *mockForge) FetchTags(_ context.Context, owner, repo string) ([]Tag, error) {
+func (m *mockRepoService) List(_ context.Context, owner string, opts ListRepoOpts) ([]Repository, error) {
+	m.lastOwner = owner
+	return m.repos, nil
+}
+
+func (m *mockRepoService) Create(_ context.Context, opts CreateRepoOpts) (*Repository, error) {
+	return m.repo, nil
+}
+
+func (m *mockRepoService) Edit(_ context.Context, owner, repo string, opts EditRepoOpts) (*Repository, error) {
+	m.lastOwner = owner
+	m.lastRepo = repo
+	return m.repo, nil
+}
+
+func (m *mockRepoService) Delete(_ context.Context, owner, repo string) error {
+	m.lastOwner = owner
+	m.lastRepo = repo
+	return nil
+}
+
+func (m *mockRepoService) Fork(_ context.Context, owner, repo string, opts ForkRepoOpts) (*Repository, error) {
+	m.lastOwner = owner
+	m.lastRepo = repo
+	return m.repo, nil
+}
+
+func (m *mockRepoService) ListTags(_ context.Context, owner, repo string) ([]Tag, error) {
 	m.lastOwner = owner
 	m.lastRepo = repo
 	return m.tags, nil
 }
 
-func (m *mockForge) ListRepositories(_ context.Context, owner string, opts ListOptions) ([]Repository, error) {
-	m.lastOwner = owner
+func (m *mockRepoService) Search(_ context.Context, opts SearchRepoOpts) ([]Repository, error) {
 	return m.repos, nil
+}
+
+type mockIssueService struct {
+	issue      *Issue
+	issues     []Issue
+	comment    *Comment
+	comments   []Comment
+	lastOwner  string
+	lastRepo   string
+	lastNumber int
+}
+
+func (m *mockIssueService) Get(_ context.Context, owner, repo string, number int) (*Issue, error) {
+	m.lastOwner = owner
+	m.lastRepo = repo
+	m.lastNumber = number
+	return m.issue, nil
+}
+
+func (m *mockIssueService) List(_ context.Context, owner, repo string, opts ListIssueOpts) ([]Issue, error) {
+	m.lastOwner = owner
+	m.lastRepo = repo
+	return m.issues, nil
+}
+
+func (m *mockIssueService) Create(_ context.Context, owner, repo string, opts CreateIssueOpts) (*Issue, error) {
+	m.lastOwner = owner
+	m.lastRepo = repo
+	return m.issue, nil
+}
+
+func (m *mockIssueService) Update(_ context.Context, owner, repo string, number int, opts UpdateIssueOpts) (*Issue, error) {
+	m.lastOwner = owner
+	m.lastRepo = repo
+	m.lastNumber = number
+	return m.issue, nil
+}
+
+func (m *mockIssueService) Close(_ context.Context, owner, repo string, number int) error {
+	m.lastOwner = owner
+	m.lastRepo = repo
+	m.lastNumber = number
+	return nil
+}
+
+func (m *mockIssueService) Reopen(_ context.Context, owner, repo string, number int) error {
+	m.lastOwner = owner
+	m.lastRepo = repo
+	m.lastNumber = number
+	return nil
+}
+
+func (m *mockIssueService) Delete(_ context.Context, owner, repo string, number int) error {
+	m.lastOwner = owner
+	m.lastRepo = repo
+	m.lastNumber = number
+	return nil
+}
+
+func (m *mockIssueService) CreateComment(_ context.Context, owner, repo string, number int, body string) (*Comment, error) {
+	m.lastOwner = owner
+	m.lastRepo = repo
+	m.lastNumber = number
+	return m.comment, nil
+}
+
+func (m *mockIssueService) ListComments(_ context.Context, owner, repo string, number int) ([]Comment, error) {
+	m.lastOwner = owner
+	m.lastRepo = repo
+	m.lastNumber = number
+	return m.comments, nil
+}
+
+type mockPRService struct {
+	pr         *PullRequest
+	prs        []PullRequest
+	comment    *Comment
+	comments   []Comment
+	diff       string
+	lastOwner  string
+	lastRepo   string
+	lastNumber int
+}
+
+func (m *mockPRService) Get(_ context.Context, owner, repo string, number int) (*PullRequest, error) {
+	m.lastOwner = owner
+	m.lastRepo = repo
+	m.lastNumber = number
+	return m.pr, nil
+}
+
+func (m *mockPRService) List(_ context.Context, owner, repo string, opts ListPROpts) ([]PullRequest, error) {
+	m.lastOwner = owner
+	m.lastRepo = repo
+	return m.prs, nil
+}
+
+func (m *mockPRService) Create(_ context.Context, owner, repo string, opts CreatePROpts) (*PullRequest, error) {
+	m.lastOwner = owner
+	m.lastRepo = repo
+	return m.pr, nil
+}
+
+func (m *mockPRService) Update(_ context.Context, owner, repo string, number int, opts UpdatePROpts) (*PullRequest, error) {
+	m.lastOwner = owner
+	m.lastRepo = repo
+	m.lastNumber = number
+	return m.pr, nil
+}
+
+func (m *mockPRService) Close(_ context.Context, owner, repo string, number int) error {
+	m.lastOwner = owner
+	m.lastRepo = repo
+	m.lastNumber = number
+	return nil
+}
+
+func (m *mockPRService) Reopen(_ context.Context, owner, repo string, number int) error {
+	m.lastOwner = owner
+	m.lastRepo = repo
+	m.lastNumber = number
+	return nil
+}
+
+func (m *mockPRService) Merge(_ context.Context, owner, repo string, number int, opts MergePROpts) error {
+	m.lastOwner = owner
+	m.lastRepo = repo
+	m.lastNumber = number
+	return nil
+}
+
+func (m *mockPRService) Diff(_ context.Context, owner, repo string, number int) (string, error) {
+	m.lastOwner = owner
+	m.lastRepo = repo
+	m.lastNumber = number
+	return m.diff, nil
+}
+
+func (m *mockPRService) CreateComment(_ context.Context, owner, repo string, number int, body string) (*Comment, error) {
+	m.lastOwner = owner
+	m.lastRepo = repo
+	m.lastNumber = number
+	return m.comment, nil
+}
+
+func (m *mockPRService) ListComments(_ context.Context, owner, repo string, number int) ([]Comment, error) {
+	m.lastOwner = owner
+	m.lastRepo = repo
+	m.lastNumber = number
+	return m.comments, nil
+}
+
+type mockLabelService struct {
+	label     *Label
+	labels    []Label
+	lastOwner string
+	lastRepo  string
+	lastName  string
+}
+
+func (m *mockLabelService) List(_ context.Context, owner, repo string, opts ListLabelOpts) ([]Label, error) {
+	m.lastOwner = owner
+	m.lastRepo = repo
+	return m.labels, nil
+}
+
+func (m *mockLabelService) Get(_ context.Context, owner, repo, name string) (*Label, error) {
+	m.lastOwner = owner
+	m.lastRepo = repo
+	m.lastName = name
+	return m.label, nil
+}
+
+func (m *mockLabelService) Create(_ context.Context, owner, repo string, opts CreateLabelOpts) (*Label, error) {
+	m.lastOwner = owner
+	m.lastRepo = repo
+	return m.label, nil
+}
+
+func (m *mockLabelService) Update(_ context.Context, owner, repo, name string, opts UpdateLabelOpts) (*Label, error) {
+	m.lastOwner = owner
+	m.lastRepo = repo
+	m.lastName = name
+	return m.label, nil
+}
+
+func (m *mockLabelService) Delete(_ context.Context, owner, repo, name string) error {
+	m.lastOwner = owner
+	m.lastRepo = repo
+	m.lastName = name
+	return nil
+}
+
+type mockMilestoneService struct {
+	milestone  *Milestone
+	milestones []Milestone
+	lastOwner  string
+	lastRepo   string
+	lastID     int
+}
+
+func (m *mockMilestoneService) List(_ context.Context, owner, repo string, opts ListMilestoneOpts) ([]Milestone, error) {
+	m.lastOwner = owner
+	m.lastRepo = repo
+	return m.milestones, nil
+}
+
+func (m *mockMilestoneService) Get(_ context.Context, owner, repo string, id int) (*Milestone, error) {
+	m.lastOwner = owner
+	m.lastRepo = repo
+	m.lastID = id
+	return m.milestone, nil
+}
+
+func (m *mockMilestoneService) Create(_ context.Context, owner, repo string, opts CreateMilestoneOpts) (*Milestone, error) {
+	m.lastOwner = owner
+	m.lastRepo = repo
+	return m.milestone, nil
+}
+
+func (m *mockMilestoneService) Update(_ context.Context, owner, repo string, id int, opts UpdateMilestoneOpts) (*Milestone, error) {
+	m.lastOwner = owner
+	m.lastRepo = repo
+	m.lastID = id
+	return m.milestone, nil
+}
+
+func (m *mockMilestoneService) Close(_ context.Context, owner, repo string, id int) error {
+	m.lastOwner = owner
+	m.lastRepo = repo
+	m.lastID = id
+	return nil
+}
+
+func (m *mockMilestoneService) Reopen(_ context.Context, owner, repo string, id int) error {
+	m.lastOwner = owner
+	m.lastRepo = repo
+	m.lastID = id
+	return nil
+}
+
+func (m *mockMilestoneService) Delete(_ context.Context, owner, repo string, id int) error {
+	m.lastOwner = owner
+	m.lastRepo = repo
+	m.lastID = id
+	return nil
+}
+
+type mockReleaseService struct {
+	release   *Release
+	releases  []Release
+	asset     *ReleaseAsset
+	lastOwner string
+	lastRepo  string
+	lastTag   string
+}
+
+func (m *mockReleaseService) List(_ context.Context, owner, repo string, opts ListReleaseOpts) ([]Release, error) {
+	m.lastOwner = owner
+	m.lastRepo = repo
+	return m.releases, nil
+}
+
+func (m *mockReleaseService) Get(_ context.Context, owner, repo, tag string) (*Release, error) {
+	m.lastOwner = owner
+	m.lastRepo = repo
+	m.lastTag = tag
+	return m.release, nil
+}
+
+func (m *mockReleaseService) GetLatest(_ context.Context, owner, repo string) (*Release, error) {
+	m.lastOwner = owner
+	m.lastRepo = repo
+	return m.release, nil
+}
+
+func (m *mockReleaseService) Create(_ context.Context, owner, repo string, opts CreateReleaseOpts) (*Release, error) {
+	m.lastOwner = owner
+	m.lastRepo = repo
+	return m.release, nil
+}
+
+func (m *mockReleaseService) Update(_ context.Context, owner, repo, tag string, opts UpdateReleaseOpts) (*Release, error) {
+	m.lastOwner = owner
+	m.lastRepo = repo
+	m.lastTag = tag
+	return m.release, nil
+}
+
+func (m *mockReleaseService) Delete(_ context.Context, owner, repo, tag string) error {
+	m.lastOwner = owner
+	m.lastRepo = repo
+	m.lastTag = tag
+	return nil
+}
+
+func (m *mockReleaseService) UploadAsset(_ context.Context, owner, repo, tag string, _ *os.File) (*ReleaseAsset, error) {
+	m.lastOwner = owner
+	m.lastRepo = repo
+	m.lastTag = tag
+	return m.asset, nil
+}
+
+func (m *mockReleaseService) DownloadAsset(_ context.Context, owner, repo string, _ int64) (io.ReadCloser, error) {
+	m.lastOwner = owner
+	m.lastRepo = repo
+	return nil, nil
+}
+
+type mockCIService struct {
+	run       *CIRun
+	runs      []CIRun
+	lastOwner string
+	lastRepo  string
+	lastRunID int64
+}
+
+func (m *mockCIService) ListRuns(_ context.Context, owner, repo string, opts ListCIRunOpts) ([]CIRun, error) {
+	m.lastOwner = owner
+	m.lastRepo = repo
+	return m.runs, nil
+}
+
+func (m *mockCIService) GetRun(_ context.Context, owner, repo string, runID int64) (*CIRun, error) {
+	m.lastOwner = owner
+	m.lastRepo = repo
+	m.lastRunID = runID
+	return m.run, nil
+}
+
+func (m *mockCIService) TriggerRun(_ context.Context, owner, repo string, opts TriggerCIRunOpts) error {
+	m.lastOwner = owner
+	m.lastRepo = repo
+	return nil
+}
+
+func (m *mockCIService) CancelRun(_ context.Context, owner, repo string, runID int64) error {
+	m.lastOwner = owner
+	m.lastRepo = repo
+	m.lastRunID = runID
+	return nil
+}
+
+func (m *mockCIService) RetryRun(_ context.Context, owner, repo string, runID int64) error {
+	m.lastOwner = owner
+	m.lastRepo = repo
+	m.lastRunID = runID
+	return nil
+}
+
+func (m *mockCIService) GetJobLog(_ context.Context, owner, repo string, jobID int64) (io.ReadCloser, error) {
+	m.lastOwner = owner
+	m.lastRepo = repo
+	return nil, nil
+}
+
+type mockBranchService struct {
+	branch    *Branch
+	branches  []Branch
+	lastOwner string
+	lastRepo  string
+	lastName  string
+}
+
+func (m *mockBranchService) List(_ context.Context, owner, repo string, opts ListBranchOpts) ([]Branch, error) {
+	m.lastOwner = owner
+	m.lastRepo = repo
+	return m.branches, nil
+}
+
+func (m *mockBranchService) Create(_ context.Context, owner, repo, name, from string) (*Branch, error) {
+	m.lastOwner = owner
+	m.lastRepo = repo
+	m.lastName = name
+	return m.branch, nil
+}
+
+func (m *mockBranchService) Delete(_ context.Context, owner, repo, name string) error {
+	m.lastOwner = owner
+	m.lastRepo = repo
+	m.lastName = name
+	return nil
+}
+
+type mockDeployKeyService struct {
+	key       *DeployKey
+	keys      []DeployKey
+	lastOwner string
+	lastRepo  string
+	lastID    int64
+}
+
+func (m *mockDeployKeyService) List(_ context.Context, owner, repo string, opts ListDeployKeyOpts) ([]DeployKey, error) {
+	m.lastOwner = owner
+	m.lastRepo = repo
+	return m.keys, nil
+}
+
+func (m *mockDeployKeyService) Get(_ context.Context, owner, repo string, id int64) (*DeployKey, error) {
+	m.lastOwner = owner
+	m.lastRepo = repo
+	m.lastID = id
+	return m.key, nil
+}
+
+func (m *mockDeployKeyService) Create(_ context.Context, owner, repo string, opts CreateDeployKeyOpts) (*DeployKey, error) {
+	m.lastOwner = owner
+	m.lastRepo = repo
+	return m.key, nil
+}
+
+func (m *mockDeployKeyService) Delete(_ context.Context, owner, repo string, id int64) error {
+	m.lastOwner = owner
+	m.lastRepo = repo
+	m.lastID = id
+	return nil
+}
+
+type mockSecretService struct {
+	secrets   []Secret
+	lastOwner string
+	lastRepo  string
+	lastName  string
+}
+
+func (m *mockSecretService) List(_ context.Context, owner, repo string, opts ListSecretOpts) ([]Secret, error) {
+	m.lastOwner = owner
+	m.lastRepo = repo
+	return m.secrets, nil
+}
+
+func (m *mockSecretService) Set(_ context.Context, owner, repo string, opts SetSecretOpts) error {
+	m.lastOwner = owner
+	m.lastRepo = repo
+	m.lastName = opts.Name
+	return nil
+}
+
+func (m *mockSecretService) Delete(_ context.Context, owner, repo, name string) error {
+	m.lastOwner = owner
+	m.lastRepo = repo
+	m.lastName = name
+	return nil
 }

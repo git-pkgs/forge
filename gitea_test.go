@@ -16,7 +16,7 @@ func giteaVersionHandler(w http.ResponseWriter, r *http.Request) {
 	_, _ = fmt.Fprintf(w, `{"version":"1.21.0"}`)
 }
 
-func TestGiteaFetchRepository(t *testing.T) {
+func TestGiteaGetRepo(t *testing.T) {
 	created := time.Date(2021, 3, 15, 10, 0, 0, 0, time.UTC)
 	updated := time.Date(2024, 5, 20, 8, 30, 0, 0, time.UTC)
 
@@ -65,7 +65,7 @@ func TestGiteaFetchRepository(t *testing.T) {
 
 	f := newGiteaForge(srv.URL, "test-token", nil)
 
-	repo, err := f.FetchRepository(context.Background(), "testorg", "testrepo")
+	repo, err := f.Repos().Get(context.Background(), "testorg", "testrepo")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -93,7 +93,7 @@ func TestGiteaFetchRepository(t *testing.T) {
 	assertSliceEqual(t, "Topics", []string{"python", "machine-learning"}, repo.Topics)
 }
 
-func TestGiteaFetchRepositoryNotFound(t *testing.T) {
+func TestGiteaGetRepoNotFound(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/v1/version", giteaVersionHandler)
 	mux.HandleFunc("GET /api/v1/repos/testorg/nonexistent", func(w http.ResponseWriter, r *http.Request) {
@@ -105,13 +105,13 @@ func TestGiteaFetchRepositoryNotFound(t *testing.T) {
 
 	f := newGiteaForge(srv.URL, "", nil)
 
-	_, err := f.FetchRepository(context.Background(), "testorg", "nonexistent")
+	_, err := f.Repos().Get(context.Background(), "testorg", "nonexistent")
 	if err != ErrNotFound {
 		t.Fatalf("expected ErrNotFound, got %v", err)
 	}
 }
 
-func TestGiteaListRepositories(t *testing.T) {
+func TestGiteaListRepos(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/v1/version", giteaVersionHandler)
 	mux.HandleFunc("GET /api/v1/orgs/testorg/repos", func(w http.ResponseWriter, r *http.Request) {
@@ -150,7 +150,7 @@ func TestGiteaListRepositories(t *testing.T) {
 
 	f := newGiteaForge(srv.URL, "test-token", nil)
 
-	repos, err := f.ListRepositories(context.Background(), "testorg", ListOptions{})
+	repos, err := f.Repos().List(context.Background(), "testorg", ListRepoOpts{})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -161,7 +161,7 @@ func TestGiteaListRepositories(t *testing.T) {
 	assertEqual(t, "repos[1].FullName", "testorg/repo-b", repos[1].FullName)
 }
 
-func TestGiteaListRepositoriesFallbackToUser(t *testing.T) {
+func TestGiteaListReposFallbackToUser(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/v1/version", giteaVersionHandler)
 	mux.HandleFunc("GET /api/v1/orgs/someuser/repos", func(w http.ResponseWriter, r *http.Request) {
@@ -189,7 +189,7 @@ func TestGiteaListRepositoriesFallbackToUser(t *testing.T) {
 
 	f := newGiteaForge(srv.URL, "", nil)
 
-	repos, err := f.ListRepositories(context.Background(), "someuser", ListOptions{})
+	repos, err := f.Repos().List(context.Background(), "someuser", ListRepoOpts{})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -199,7 +199,7 @@ func TestGiteaListRepositoriesFallbackToUser(t *testing.T) {
 	assertEqual(t, "repos[0].FullName", "someuser/personal", repos[0].FullName)
 }
 
-func TestGiteaFetchTags(t *testing.T) {
+func TestGiteaListTags(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/v1/version", giteaVersionHandler)
 	mux.HandleFunc("GET /api/v1/repos/testorg/testrepo/tags", func(w http.ResponseWriter, r *http.Request) {
@@ -222,7 +222,7 @@ func TestGiteaFetchTags(t *testing.T) {
 
 	f := newGiteaForge(srv.URL, "", nil)
 
-	tags, err := f.FetchTags(context.Background(), "testorg", "testrepo")
+	tags, err := f.Repos().ListTags(context.Background(), "testorg", "testrepo")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

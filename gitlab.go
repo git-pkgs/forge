@@ -22,12 +22,22 @@ func newGitLabForge(baseURL, token string, hc *http.Client) *gitLabForge {
 	return &gitLabForge{client: c}
 }
 
+type gitLabRepoService struct {
+	client *gitlab.Client
+}
+
+func (f *gitLabForge) Repos() RepoService {
+	return &gitLabRepoService{client: f.client}
+}
+
 func convertGitLabProject(p *gitlab.Project) Repository {
 	result := Repository{
 		FullName:            p.PathWithNamespace,
 		Name:                p.Name,
 		Description:         p.Description,
 		HTMLURL:             p.WebURL,
+		CloneURL:            p.HTTPURLToRepo,
+		SSHURL:              p.SSHURLToRepo,
 		DefaultBranch:       p.DefaultBranch,
 		Archived:            p.Archived,
 		Private:             p.Visibility == gitlab.PrivateVisibility,
@@ -63,10 +73,10 @@ func convertGitLabProject(p *gitlab.Project) Repository {
 	return result
 }
 
-func (f *gitLabForge) FetchRepository(ctx context.Context, owner, repo string) (*Repository, error) {
+func (s *gitLabRepoService) Get(ctx context.Context, owner, repo string) (*Repository, error) {
 	pid := owner + "/" + repo
 	license := true
-	p, resp, err := f.client.Projects.GetProject(pid, &gitlab.GetProjectOptions{
+	p, resp, err := s.client.Projects.GetProject(pid, &gitlab.GetProjectOptions{
 		License: &license,
 	})
 	if err != nil {
@@ -80,16 +90,16 @@ func (f *gitLabForge) FetchRepository(ctx context.Context, owner, repo string) (
 	return &result, nil
 }
 
-func (f *gitLabForge) ListRepositories(ctx context.Context, owner string, opts ListOptions) ([]Repository, error) {
+func (s *gitLabRepoService) List(ctx context.Context, owner string, opts ListRepoOpts) ([]Repository, error) {
 	perPage := opts.PerPage
 	if perPage <= 0 {
 		perPage = 100
 	}
 
 	// Try group endpoint first, fall back to user projects on 404.
-	repos, err := f.listGroupProjects(ctx, owner, perPage)
+	repos, err := s.listGroupProjects(ctx, owner, perPage)
 	if err != nil {
-		repos, err = f.listUserProjects(ctx, owner, perPage)
+		repos, err = s.listUserProjects(ctx, owner, perPage)
 		if err != nil {
 			return nil, err
 		}
@@ -98,13 +108,13 @@ func (f *gitLabForge) ListRepositories(ctx context.Context, owner string, opts L
 	return FilterRepos(repos, opts), nil
 }
 
-func (f *gitLabForge) listGroupProjects(ctx context.Context, group string, perPage int) ([]Repository, error) {
+func (s *gitLabRepoService) listGroupProjects(ctx context.Context, group string, perPage int) ([]Repository, error) {
 	var all []Repository
 	glOpts := &gitlab.ListGroupProjectsOptions{
 		ListOptions: gitlab.ListOptions{PerPage: int64(perPage)},
 	}
 	for {
-		projects, resp, err := f.client.Groups.ListGroupProjects(group, glOpts)
+		projects, resp, err := s.client.Groups.ListGroupProjects(group, glOpts)
 		if err != nil {
 			if resp != nil && resp.StatusCode == http.StatusNotFound {
 				return nil, ErrOwnerNotFound
@@ -122,13 +132,13 @@ func (f *gitLabForge) listGroupProjects(ctx context.Context, group string, perPa
 	return all, nil
 }
 
-func (f *gitLabForge) listUserProjects(ctx context.Context, user string, perPage int) ([]Repository, error) {
+func (s *gitLabRepoService) listUserProjects(ctx context.Context, user string, perPage int) ([]Repository, error) {
 	var all []Repository
 	glOpts := &gitlab.ListProjectsOptions{
 		ListOptions: gitlab.ListOptions{PerPage: int64(perPage)},
 	}
 	for {
-		projects, resp, err := f.client.Projects.ListUserProjects(user, glOpts)
+		projects, resp, err := s.client.Projects.ListUserProjects(user, glOpts)
 		if err != nil {
 			if resp != nil && resp.StatusCode == http.StatusNotFound {
 				return nil, ErrOwnerNotFound
@@ -146,14 +156,140 @@ func (f *gitLabForge) listUserProjects(ctx context.Context, user string, perPage
 	return all, nil
 }
 
-func (f *gitLabForge) FetchTags(ctx context.Context, owner, repo string) ([]Tag, error) {
+func (s *gitLabRepoService) Create(ctx context.Context, opts CreateRepoOpts) (*Repository, error) {
+	glOpts := &gitlab.CreateProjectOptions{
+		Name:        gitlab.Ptr(opts.Name),
+		Description: gitlab.Ptr(opts.Description),
+	}
+
+	switch opts.Visibility {
+	case VisibilityPrivate:
+		glOpts.Visibility = gitlab.Ptr(gitlab.PrivateVisibility)
+	case VisibilityPublic:
+		glOpts.Visibility = gitlab.Ptr(gitlab.PublicVisibility)
+	case VisibilityInternal:
+		glOpts.Visibility = gitlab.Ptr(gitlab.InternalVisibility)
+	}
+
+	if opts.Init || opts.Readme {
+		glOpts.InitializeWithReadme = gitlab.Ptr(true)
+	}
+	if opts.DefaultBranch != "" {
+		glOpts.DefaultBranch = gitlab.Ptr(opts.DefaultBranch)
+	}
+
+	if opts.Owner != "" {
+		// Look up namespace ID for the group
+		groups, _, err := s.client.Groups.ListGroups(&gitlab.ListGroupsOptions{
+			Search: gitlab.Ptr(opts.Owner),
+		})
+		if err == nil {
+			for _, g := range groups {
+				if g.Path == opts.Owner || g.FullPath == opts.Owner {
+					glOpts.NamespaceID = gitlab.Ptr(g.ID)
+					break
+				}
+			}
+		}
+	}
+
+	p, resp, err := s.client.Projects.CreateProject(glOpts)
+	if err != nil {
+		if resp != nil && resp.StatusCode == http.StatusNotFound {
+			return nil, ErrOwnerNotFound
+		}
+		return nil, err
+	}
+
+	result := convertGitLabProject(p)
+	return &result, nil
+}
+
+func (s *gitLabRepoService) Edit(ctx context.Context, owner, repo string, opts EditRepoOpts) (*Repository, error) {
+	pid := owner + "/" + repo
+	glOpts := &gitlab.EditProjectOptions{}
+	changed := false
+
+	if opts.Description != nil {
+		glOpts.Description = opts.Description
+		changed = true
+	}
+	if opts.DefaultBranch != nil {
+		glOpts.DefaultBranch = opts.DefaultBranch
+		changed = true
+	}
+
+	switch opts.Visibility {
+	case VisibilityPrivate:
+		glOpts.Visibility = gitlab.Ptr(gitlab.PrivateVisibility)
+		changed = true
+	case VisibilityPublic:
+		glOpts.Visibility = gitlab.Ptr(gitlab.PublicVisibility)
+		changed = true
+	case VisibilityInternal:
+		glOpts.Visibility = gitlab.Ptr(gitlab.InternalVisibility)
+		changed = true
+	}
+
+	if !changed {
+		return s.Get(ctx, owner, repo)
+	}
+
+	p, resp, err := s.client.Projects.EditProject(pid, glOpts)
+	if err != nil {
+		if resp != nil && resp.StatusCode == http.StatusNotFound {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+
+	result := convertGitLabProject(p)
+	return &result, nil
+}
+
+func (s *gitLabRepoService) Delete(ctx context.Context, owner, repo string) error {
+	pid := owner + "/" + repo
+	resp, err := s.client.Projects.DeleteProject(pid, nil)
+	if err != nil {
+		if resp != nil && resp.StatusCode == http.StatusNotFound {
+			return ErrNotFound
+		}
+		return err
+	}
+	return nil
+}
+
+func (s *gitLabRepoService) Fork(ctx context.Context, owner, repo string, opts ForkRepoOpts) (*Repository, error) {
+	pid := owner + "/" + repo
+	glOpts := &gitlab.ForkProjectOptions{}
+	if opts.Owner != "" {
+		glOpts.Namespace = gitlab.Ptr(opts.Owner)
+	}
+	if opts.Name != "" {
+		glOpts.Name = gitlab.Ptr(opts.Name)
+		glOpts.Path = gitlab.Ptr(opts.Name)
+	}
+
+	p, resp, err := s.client.Projects.ForkProject(pid, glOpts)
+	if err != nil {
+		if resp != nil && resp.StatusCode == http.StatusNotFound {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+
+	result := convertGitLabProject(p)
+	return &result, nil
+}
+
+func (s *gitLabRepoService) ListTags(ctx context.Context, owner, repo string) ([]Tag, error) {
 	pid := owner + "/" + repo
 	var allTags []Tag
 	opts := &gitlab.ListTagsOptions{
 		ListOptions: gitlab.ListOptions{PerPage: 100},
 	}
 	for {
-		tags, resp, err := f.client.Tags.ListTags(pid, opts)
+		tags, resp, err := s.client.Tags.ListTags(pid, opts)
 		if err != nil {
 			if resp != nil && resp.StatusCode == http.StatusNotFound {
 				return nil, ErrNotFound
@@ -173,4 +309,36 @@ func (f *gitLabForge) FetchTags(ctx context.Context, owner, repo string) ([]Tag,
 		opts.Page = resp.NextPage
 	}
 	return allTags, nil
+}
+
+func (s *gitLabRepoService) Search(ctx context.Context, opts SearchRepoOpts) ([]Repository, error) {
+	perPage := opts.PerPage
+	if perPage <= 0 {
+		perPage = 30
+	}
+	page := opts.Page
+	if page <= 0 {
+		page = 1
+	}
+
+	glOpts := &gitlab.ListProjectsOptions{
+		Search:      gitlab.Ptr(opts.Query),
+		OrderBy:     gitlab.Ptr(opts.Sort),
+		Sort:        gitlab.Ptr(opts.Order),
+		ListOptions: gitlab.ListOptions{PerPage: int64(perPage), Page: int64(page)},
+	}
+
+	projects, resp, err := s.client.Projects.ListProjects(glOpts)
+	if err != nil {
+		if resp != nil && resp.StatusCode == http.StatusNotFound {
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	var repos []Repository
+	for _, p := range projects {
+		repos = append(repos, convertGitLabProject(p))
+	}
+	return repos, nil
 }
