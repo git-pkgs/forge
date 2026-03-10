@@ -2,8 +2,10 @@ package gitea
 
 import (
 	"context"
+	"fmt"
 	forge "github.com/git-pkgs/forge"
 	"net/http"
+	"strings"
 
 	"code.gitea.io/sdk/gitea"
 )
@@ -86,6 +88,49 @@ func (s *giteaLabelService) findLabelByName(owner, repo, name string) (*gitea.La
 		page++
 	}
 	return nil, forge.ErrNotFound
+}
+
+// resolveLabelIDs maps label names to their numeric IDs by listing
+// all labels on the repo. Gitea's API requires IDs for issue/PR creation.
+func resolveLabelIDs(client *gitea.Client, owner, repo string, names []string) ([]int64, error) {
+	nameSet := make(map[string]struct{}, len(names))
+	for _, n := range names {
+		nameSet[n] = struct{}{}
+	}
+
+	ids := make([]int64, 0, len(names))
+	page := 1
+	for {
+		labels, resp, err := client.ListRepoLabels(owner, repo, gitea.ListLabelsOptions{
+			ListOptions: gitea.ListOptions{Page: page, PageSize: 50},
+		})
+		if err != nil {
+			if resp != nil && resp.StatusCode == http.StatusNotFound {
+				return nil, forge.ErrNotFound
+			}
+			return nil, err
+		}
+		for _, l := range labels {
+			if _, ok := nameSet[l.Name]; ok {
+				ids = append(ids, l.ID)
+				delete(nameSet, l.Name)
+			}
+		}
+		if len(nameSet) == 0 || len(labels) < 50 {
+			break
+		}
+		page++
+	}
+
+	if len(nameSet) > 0 {
+		missing := make([]string, 0, len(nameSet))
+		for n := range nameSet {
+			missing = append(missing, n)
+		}
+		return nil, fmt.Errorf("labels not found: %s", strings.Join(missing, ", "))
+	}
+
+	return ids, nil
 }
 
 func (s *giteaLabelService) Get(ctx context.Context, owner, repo, name string) (*forge.Label, error) {

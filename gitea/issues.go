@@ -2,6 +2,7 @@ package gitea
 
 import (
 	"context"
+	"fmt"
 	forge "github.com/git-pkgs/forge"
 	"net/http"
 
@@ -180,7 +181,13 @@ func (s *giteaIssueService) Create(ctx context.Context, owner, repo string, opts
 	if len(opts.Assignees) > 0 {
 		gOpts.Assignees = opts.Assignees
 	}
-	// Gitea requires label IDs, not names -- labels must be passed as numeric IDs.
+	if len(opts.Labels) > 0 {
+		ids, err := s.resolveLabelIDs(owner, repo, opts.Labels)
+		if err != nil {
+			return nil, fmt.Errorf("resolving labels: %w", err)
+		}
+		gOpts.Labels = ids
+	}
 
 	i, resp, err := s.client.CreateIssue(owner, repo, gOpts)
 	if err != nil {
@@ -278,6 +285,10 @@ func (s *giteaIssueService) CreateComment(ctx context.Context, owner, repo strin
 	}
 	result := convertGiteaComment(c)
 	return &result, nil
+}
+
+func (s *giteaIssueService) resolveLabelIDs(owner, repo string, names []string) ([]int64, error) {
+	return resolveLabelIDs(s.client, owner, repo, names)
 }
 
 func (s *giteaIssueService) ListComments(ctx context.Context, owner, repo string, number int) ([]forge.Comment, error) {

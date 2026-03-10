@@ -2,6 +2,7 @@ package gitea
 
 import (
 	"context"
+	"fmt"
 	forge "github.com/git-pkgs/forge"
 	"net/http"
 
@@ -183,7 +184,13 @@ func (s *giteaPRService) Create(ctx context.Context, owner, repo string, opts fo
 	if len(opts.Assignees) > 0 {
 		gOpts.Assignees = opts.Assignees
 	}
-	// Gitea requires label IDs, not names.
+	if len(opts.Labels) > 0 {
+		ids, err := resolveLabelIDs(s.client, owner, repo, opts.Labels)
+		if err != nil {
+			return nil, fmt.Errorf("resolving labels: %w", err)
+		}
+		gOpts.Labels = ids
+	}
 
 	pr, resp, err := s.client.CreatePullRequest(owner, repo, gOpts)
 	if err != nil {
