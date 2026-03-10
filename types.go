@@ -499,3 +499,42 @@ type ListSecretOpts struct {
 	Page    int // starting page; 0 or 1 = first page
 	PerPage int // results per API request; 0 = default
 }
+
+// NotificationSubjectType identifies the kind of resource a notification is about.
+type NotificationSubjectType string
+
+const (
+	NotificationSubjectIssue       NotificationSubjectType = "issue"
+	NotificationSubjectPullRequest NotificationSubjectType = "pull_request"
+	NotificationSubjectCommit      NotificationSubjectType = "commit"
+	NotificationSubjectRelease     NotificationSubjectType = "release"
+	NotificationSubjectRepository  NotificationSubjectType = "repository"
+	NotificationSubjectDiscussion  NotificationSubjectType = "discussion"
+)
+
+// Notification holds normalized metadata about a notification thread.
+type Notification struct {
+	ID          string                  `json:"id"`
+	Title       string                  `json:"title"`
+	SubjectType NotificationSubjectType `json:"subject_type"`
+	Repo        string                  `json:"repo"`
+	Unread      bool                    `json:"unread"`
+	Reason      string                  `json:"reason,omitempty"`
+	URL         string                  `json:"url,omitempty"`
+	UpdatedAt   time.Time               `json:"updated_at"`
+}
+
+// ListNotificationOpts holds options for listing notifications.
+type ListNotificationOpts struct {
+	Repo    string // filter by repo (owner/repo)
+	Unread  bool   // only unread
+	Limit   int    // max total results; 0 = unlimited
+	Page    int    // starting page; 0 or 1 = first page
+	PerPage int    // results per API request; 0 = default
+}
+
+// MarkNotificationOpts holds options for marking notifications as read.
+type MarkNotificationOpts struct {
+	ID   string // mark a single thread; empty = mark all
+	Repo string // mark all in a repo; empty = mark all
+}
