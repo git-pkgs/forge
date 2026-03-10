@@ -96,6 +96,13 @@ type SecretService interface {
 	Delete(ctx context.Context, owner, repo, name string) error
 }
 
+// NotificationService provides operations on user notifications.
+type NotificationService interface {
+	List(ctx context.Context, opts ListNotificationOpts) ([]Notification, error)
+	MarkRead(ctx context.Context, opts MarkNotificationOpts) error
+	Get(ctx context.Context, id string) (*Notification, error)
+}
+
 // ReviewService provides operations on pull request reviews.
 type ReviewService interface {
 	List(ctx context.Context, owner, repo string, number int, opts ListReviewOpts) ([]Review, error)

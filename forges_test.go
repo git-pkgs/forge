@@ -454,6 +454,22 @@ func (m *mockForge) Secrets() SecretService {
 	return &mockSecretService{}
 }
 
+func (m *mockForge) Notifications() NotificationService {
+	return &mockNotificationService{}
+}
+
+type mockNotificationService struct{}
+
+func (m *mockNotificationService) List(_ context.Context, opts ListNotificationOpts) ([]Notification, error) {
+	return nil, nil
+}
+func (m *mockNotificationService) MarkRead(_ context.Context, opts MarkNotificationOpts) error {
+	return nil
+}
+func (m *mockNotificationService) Get(_ context.Context, id string) (*Notification, error) {
+	return nil, nil
+}
+
 func (m *mockForge) Reviews() ReviewService {
 	if m.reviewService != nil {
 		return m.reviewService

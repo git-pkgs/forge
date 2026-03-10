@@ -43,6 +43,7 @@ type Forge interface {
 	Branches() BranchService
 	DeployKeys() DeployKeyService
 	Secrets() SecretService
+	Notifications() NotificationService
 	Reviews() ReviewService
 }
 
