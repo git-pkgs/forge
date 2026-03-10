@@ -1,0 +1,29 @@
+gitea/labels_test.go
+  f1b76254f514dac8 1-83
+gitea/labels.go
+  f1b76254f514dac8 5,8,93-135
+gitea/issues.go
+  f1b76254f514dac8 5,184-190,290-293
+gitea/prs.go
+  f1b76254f514dac8 5,187-193
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.10",
+  "base_commit_sha": "3c041605997de089264915fb998eac75d8653593",
+  "prompts": {
+    "f1b76254f514dac8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5d2a5960-d309-45f5-9912-c717b1345d83",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Andrew Nesbitt <andrewnez@gmail.com>",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 340,
+      "overriden_lines": 0
+    }
+  }
+}
