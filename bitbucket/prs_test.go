@@ -239,6 +239,56 @@ func TestBitbucketDiffPR(t *testing.T) {
 	}
 }
 
+func TestBitbucketDiffPRNotFound(t *testing.T) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /2.0/repositories/atlassian/stash/pullrequests/999/diff", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+	})
+
+	srv := httptest.NewServer(mux)
+	defer srv.Close()
+	origAPI := bitbucketAPI
+	setBitbucketAPI(srv.URL + "/2.0")
+	defer setBitbucketAPI(origAPI)
+
+	s := &bitbucketPRService{httpClient: srv.Client()}
+	_, err := s.Diff(context.Background(), "atlassian", "stash", 999)
+	if err != forge.ErrNotFound {
+		t.Fatalf("expected ErrNotFound, got %v", err)
+	}
+}
+
+func TestBitbucketDiffPRLargeResponse(t *testing.T) {
+	// Verify the diff reader has a size limit and doesn't grow unbounded.
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /2.0/repositories/atlassian/stash/pullrequests/1/diff", func(w http.ResponseWriter, r *http.Request) {
+		// Write more than 10 MB
+		chunk := make([]byte, 4096)
+		for i := range chunk {
+			chunk[i] = 'x'
+		}
+		for i := 0; i < 3000; i++ { // ~12 MB
+			_, _ = w.Write(chunk)
+		}
+	})
+
+	srv := httptest.NewServer(mux)
+	defer srv.Close()
+	origAPI := bitbucketAPI
+	setBitbucketAPI(srv.URL + "/2.0")
+	defer setBitbucketAPI(origAPI)
+
+	s := &bitbucketPRService{httpClient: srv.Client()}
+	diff, err := s.Diff(context.Background(), "atlassian", "stash", 1)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	// Should be capped at 10 MB
+	if len(diff) > 10<<20 {
+		t.Errorf("diff should be capped at 10MB, got %d bytes", len(diff))
+	}
+}
+
 func TestBitbucketPRCreateComment(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST /2.0/repositories/atlassian/stash/pullrequests/1/comments", func(w http.ResponseWriter, r *http.Request) {

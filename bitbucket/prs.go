@@ -3,9 +3,11 @@ package bitbucket
 import (
 	"context"
 	"fmt"
-	forge "github.com/git-pkgs/forge"
+	"io"
 	"net/http"
 	"time"
+
+	forge "github.com/git-pkgs/forge"
 )
 
 type bitbucketPRService struct {
@@ -268,20 +270,17 @@ func (s *bitbucketPRService) Merge(ctx context.Context, owner, repo string, numb
 }
 
 func (s *bitbucketPRService) Diff(ctx context.Context, owner, repo string, number int) (string, error) {
-	// Bitbucket returns diff as plain text; we use doJSON but it'll fail to decode.
-	// Use a direct GET instead.
 	url := fmt.Sprintf("%s/repositories/%s/%s/pullrequests/%d/diff", bitbucketAPI, owner, repo, number)
-	rs := &bitbucketRepoService{token: s.token, httpClient: s.httpClient}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return "", err
 	}
-	if rs.token != "" {
-		req.Header.Set("Authorization", "Bearer "+rs.token)
+	if s.token != "" {
+		req.Header.Set("Authorization", "Bearer "+s.token)
 	}
 
-	resp, err := rs.httpClient.Do(req)
+	resp, err := s.httpClient.Do(req)
 	if err != nil {
 		return "", err
 	}
@@ -291,19 +290,11 @@ func (s *bitbucketPRService) Diff(ctx context.Context, owner, repo string, numbe
 		return "", forge.ErrNotFound
 	}
 
-	var buf []byte
-	buf = make([]byte, 0, 1024*64)
-	tmp := make([]byte, 4096)
-	for {
-		n, readErr := resp.Body.Read(tmp)
-		if n > 0 {
-			buf = append(buf, tmp[:n]...)
-		}
-		if readErr != nil {
-			break
-		}
+	body, err := io.ReadAll(io.LimitReader(resp.Body, 10<<20)) // 10 MB max
+	if err != nil {
+		return "", err
 	}
-	return string(buf), nil
+	return string(body), nil
 }
 
 func (s *bitbucketPRService) CreateComment(ctx context.Context, owner, repo string, number int, body string) (*forge.Comment, error) {

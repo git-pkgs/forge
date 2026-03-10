@@ -3,11 +3,12 @@ package github
 import (
 	"context"
 	"encoding/json"
-	forge "github.com/git-pkgs/forge"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
+	forge "github.com/git-pkgs/forge"
 	"github.com/google/go-github/v82/github"
 )
 
@@ -344,4 +345,126 @@ func TestGitHubPRListComments(t *testing.T) {
 	}
 	assertEqual(t, "comments[0].Body", "First", comments[0].Body)
 	assertEqual(t, "comments[1].Body", "Second", comments[1].Body)
+}
+
+func TestGitHubMergePRDeletesBranch(t *testing.T) {
+	var deletedRef string
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /api/v3/repos/octocat/hello-world/pulls/1", func(w http.ResponseWriter, r *http.Request) {
+		_ = json.NewEncoder(w).Encode(github.PullRequest{
+			Number: ptrInt(1),
+			Title:  ptr("Fix bug"),
+			State:  ptr("open"),
+			User:   &github.User{Login: ptr("octocat")},
+			Head:   &github.PullRequestBranch{Ref: ptr("feature-branch")},
+			Base:   &github.PullRequestBranch{Ref: ptr("main")},
+		})
+	})
+	mux.HandleFunc("PUT /api/v3/repos/octocat/hello-world/pulls/1/merge", func(w http.ResponseWriter, r *http.Request) {
+		_ = json.NewEncoder(w).Encode(github.PullRequestMergeResult{
+			Merged: ptrBool(true),
+		})
+	})
+	mux.HandleFunc("DELETE /api/v3/repos/octocat/hello-world/git/refs/{ref...}", func(w http.ResponseWriter, r *http.Request) {
+		deletedRef = r.PathValue("ref")
+		w.WriteHeader(http.StatusNoContent)
+	})
+
+	srv := httptest.NewServer(mux)
+	defer srv.Close()
+
+	s := newTestGitHubPRService(srv)
+	err := s.Merge(context.Background(), "octocat", "hello-world", 1, forge.MergePROpts{
+		Method: "squash",
+		Title:  "Fix bug in parser",
+		Delete: true,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// The ref deleted should be the PR's head branch, not the commit title.
+	if deletedRef != "heads/feature-branch" {
+		t.Errorf("expected deleted ref 'heads/feature-branch', got %q", deletedRef)
+	}
+}
+
+func TestGitHubCreatePRWithReviewersError(t *testing.T) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("POST /api/v3/repos/octocat/hello-world/pulls", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusCreated)
+		_ = json.NewEncoder(w).Encode(github.PullRequest{
+			Number: ptrInt(10),
+			Title:  ptr("New feature"),
+			State:  ptr("open"),
+			User:   &github.User{Login: ptr("octocat")},
+			Head:   &github.PullRequestBranch{Ref: ptr("my-branch")},
+			Base:   &github.PullRequestBranch{Ref: ptr("main")},
+		})
+	})
+	mux.HandleFunc("POST /api/v3/repos/octocat/hello-world/pulls/10/requested_reviewers", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusUnprocessableEntity)
+		_, _ = w.Write([]byte(`{"message":"Reviews may not be requested from the following users: nonexistent"}`))
+	})
+
+	srv := httptest.NewServer(mux)
+	defer srv.Close()
+
+	s := newTestGitHubPRService(srv)
+	_, err := s.Create(context.Background(), "octocat", "hello-world", forge.CreatePROpts{
+		Title:     "New feature",
+		Head:      "my-branch",
+		Base:      "main",
+		Reviewers: []string{"nonexistent"},
+	})
+	if err == nil {
+		t.Fatal("expected error when reviewer request fails, got nil")
+	}
+	if !strings.Contains(err.Error(), "failed to add reviewers") {
+		t.Errorf("error should mention failed reviewers, got: %v", err)
+	}
+}
+
+func TestGitHubCreatePRWithLabelsAndAssignees(t *testing.T) {
+	var editedIssue github.IssueRequest
+	mux := http.NewServeMux()
+	mux.HandleFunc("POST /api/v3/repos/octocat/hello-world/pulls", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusCreated)
+		_ = json.NewEncoder(w).Encode(github.PullRequest{
+			Number: ptrInt(11),
+			Title:  ptr("Feature"),
+			State:  ptr("open"),
+			User:   &github.User{Login: ptr("octocat")},
+			Head:   &github.PullRequestBranch{Ref: ptr("feature")},
+			Base:   &github.PullRequestBranch{Ref: ptr("main")},
+		})
+	})
+	mux.HandleFunc("PATCH /api/v3/repos/octocat/hello-world/issues/11", func(w http.ResponseWriter, r *http.Request) {
+		_ = json.NewDecoder(r.Body).Decode(&editedIssue)
+		_ = json.NewEncoder(w).Encode(github.Issue{Number: ptrInt(11)})
+	})
+
+	srv := httptest.NewServer(mux)
+	defer srv.Close()
+
+	s := newTestGitHubPRService(srv)
+	pr, err := s.Create(context.Background(), "octocat", "hello-world", forge.CreatePROpts{
+		Title:     "Feature",
+		Head:      "feature",
+		Base:      "main",
+		Assignees: []string{"alice"},
+		Labels:    []string{"bug", "urgent"},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	assertEqualInt(t, "Number", 11, pr.Number)
+
+	// Verify assignees and labels were sent in a single edit
+	if editedIssue.Assignees == nil || len(*editedIssue.Assignees) != 1 {
+		t.Errorf("expected 1 assignee in edit request")
+	}
+	if editedIssue.Labels == nil || len(*editedIssue.Labels) != 2 {
+		t.Errorf("expected 2 labels in edit request")
+	}
 }

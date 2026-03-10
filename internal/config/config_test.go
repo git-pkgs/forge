@@ -274,6 +274,43 @@ func TestSetDomain(t *testing.T) {
 	}
 }
 
+func TestSetDomainPreservesExistingConfig(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", dir)
+
+	cfgDir := filepath.Join(dir, "forge")
+	_ = os.MkdirAll(cfgDir, 0700)
+	_ = os.WriteFile(filepath.Join(cfgDir, "config"), []byte(`[github.com]
+token = ghp_existing
+
+[gitlab.com]
+token = glpat_existing
+type = gitlab
+`), 0600)
+
+	// Add a new domain; existing entries should survive.
+	err := SetDomain("codeberg.org", "tok_new", "gitea")
+	if err != nil {
+		t.Fatalf("SetDomain: %v", err)
+	}
+
+	data, _ := os.ReadFile(filepath.Join(cfgDir, "config"))
+	content := string(data)
+
+	if !strings.Contains(content, "ghp_existing") {
+		t.Error("existing github.com token should be preserved")
+	}
+	if !strings.Contains(content, "glpat_existing") {
+		t.Error("existing gitlab.com token should be preserved")
+	}
+	if !strings.Contains(content, "[codeberg.org]") {
+		t.Error("new domain should be added")
+	}
+	if !strings.Contains(content, "tok_new") {
+		t.Error("new token should be present")
+	}
+}
+
 func TestSetDomainUpdatesExisting(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("XDG_CONFIG_HOME", dir)

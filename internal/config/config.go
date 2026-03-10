@@ -205,8 +205,12 @@ func SetDomain(domain, token, forgeType string) error {
 
 	sections := make(map[string]map[string]string)
 	if f, err := os.Open(path); err == nil {
-		sections, _ = parseINI(f)
+		var parseErr error
+		sections, parseErr = parseINI(f)
 		_ = f.Close()
+		if parseErr != nil {
+			return fmt.Errorf("parsing config %s: %w", path, parseErr)
+		}
 	}
 
 	if _, ok := sections[domain]; !ok {

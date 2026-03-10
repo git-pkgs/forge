@@ -44,7 +44,7 @@ func releaseListCmd() *cobra.Command {
 
 			releases, err := forge.Releases().List(cmd.Context(), owner, repoName, opts)
 			if err != nil {
-				return err
+				return notSupported(err, "releases")
 			}
 
 			p := printer()
@@ -100,7 +100,7 @@ func releaseViewCmd() *cobra.Command {
 
 			release, err := forge.Releases().Get(cmd.Context(), owner, repoName, tag)
 			if err != nil {
-				return err
+				return notSupported(err, "releases")
 			}
 
 			p := printer()
@@ -181,7 +181,7 @@ func releaseCreateCmd() *cobra.Command {
 
 			release, err := forge.Releases().Create(cmd.Context(), owner, repoName, opts)
 			if err != nil {
-				return err
+				return notSupported(err, "releases")
 			}
 
 			p := printer()
@@ -213,8 +213,8 @@ func releaseEditCmd() *cobra.Command {
 		flagBody       string
 		flagTarget     string
 		flagTagName    string
-		flagDraft      string
-		flagPrerelease string
+		flagDraft      bool
+		flagPrerelease bool
 	)
 
 	cmd := &cobra.Command{
@@ -243,17 +243,15 @@ func releaseEditCmd() *cobra.Command {
 				opts.TagName = &flagTagName
 			}
 			if cmd.Flags().Changed("draft") {
-				b := flagDraft == "true"
-				opts.Draft = &b
+				opts.Draft = &flagDraft
 			}
 			if cmd.Flags().Changed("prerelease") {
-				b := flagPrerelease == "true"
-				opts.Prerelease = &b
+				opts.Prerelease = &flagPrerelease
 			}
 
 			release, err := forge.Releases().Update(cmd.Context(), owner, repoName, tag, opts)
 			if err != nil {
-				return err
+				return notSupported(err, "releases")
 			}
 
 			p := printer()
@@ -270,8 +268,8 @@ func releaseEditCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&flagBody, "body", "b", "", "Set the description")
 	cmd.Flags().StringVar(&flagTarget, "target", "", "Set the target branch or commit")
 	cmd.Flags().StringVar(&flagTagName, "tag", "", "Set the tag name")
-	cmd.Flags().StringVar(&flagDraft, "draft", "", "Set draft status (true/false)")
-	cmd.Flags().StringVar(&flagPrerelease, "prerelease", "", "Set prerelease status (true/false)")
+	cmd.Flags().BoolVar(&flagDraft, "draft", false, "Set draft status")
+	cmd.Flags().BoolVar(&flagPrerelease, "prerelease", false, "Set prerelease status")
 	return cmd
 }
 
@@ -297,7 +295,7 @@ func releaseDeleteCmd() *cobra.Command {
 			}
 
 			if err := forge.Releases().Delete(cmd.Context(), owner, repoName, tag); err != nil {
-				return err
+				return notSupported(err, "releases")
 			}
 
 			_, _ = fmt.Fprintf(os.Stdout, "Deleted %s\n", tag)
@@ -331,7 +329,7 @@ func releaseUploadCmd() *cobra.Command {
 
 			asset, err := forge.Releases().UploadAsset(cmd.Context(), owner, repoName, tag, f)
 			if err != nil {
-				return err
+				return notSupported(err, "releases")
 			}
 
 			p := printer()
@@ -367,7 +365,7 @@ func releaseDownloadCmd() *cobra.Command {
 
 			release, err := forge.Releases().Get(cmd.Context(), owner, repoName, tag)
 			if err != nil {
-				return err
+				return notSupported(err, "releases")
 			}
 
 			var assetID int64
@@ -383,7 +381,7 @@ func releaseDownloadCmd() *cobra.Command {
 
 			rc, err := forge.Releases().DownloadAsset(cmd.Context(), owner, repoName, assetID)
 			if err != nil {
-				return err
+				return notSupported(err, "releases")
 			}
 			defer func() { _ = rc.Close() }()
 

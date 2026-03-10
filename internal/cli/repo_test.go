@@ -2,6 +2,7 @@ package cli
 
 import (
 	"bytes"
+	"strings"
 	"testing"
 )
 
@@ -49,6 +50,36 @@ func TestRootCmd(t *testing.T) {
 
 	if !bytes.Contains(buf.Bytes(), []byte("forge")) {
 		t.Error("help output should mention forge")
+	}
+}
+
+func TestRepoCreateMutuallyExclusiveVisibility(t *testing.T) {
+	var buf bytes.Buffer
+	rootCmd.SetOut(&buf)
+	rootCmd.SetErr(&buf)
+	rootCmd.SetArgs([]string{"repo", "create", "test-repo", "--private", "--public"})
+
+	err := rootCmd.Execute()
+	if err == nil {
+		t.Fatal("expected error for conflicting visibility flags")
+	}
+	if !strings.Contains(err.Error(), "mutually exclusive") {
+		t.Errorf("expected 'mutually exclusive' in error, got: %s", err)
+	}
+}
+
+func TestRepoEditMutuallyExclusiveVisibility(t *testing.T) {
+	var buf bytes.Buffer
+	rootCmd.SetOut(&buf)
+	rootCmd.SetErr(&buf)
+	rootCmd.SetArgs([]string{"repo", "edit", "owner/repo", "--private", "--public"})
+
+	err := rootCmd.Execute()
+	if err == nil {
+		t.Fatal("expected error for conflicting visibility flags")
+	}
+	if !strings.Contains(err.Error(), "mutually exclusive") {
+		t.Errorf("expected 'mutually exclusive' in error, got: %s", err)
 	}
 }
 

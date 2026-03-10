@@ -2,9 +2,11 @@ package github
 
 import (
 	"context"
-	forge "github.com/git-pkgs/forge"
+	"fmt"
 	"net/http"
 	"strconv"
+
+	forge "github.com/git-pkgs/forge"
 
 	"github.com/google/go-github/v82/github"
 )
@@ -192,32 +194,34 @@ func (s *gitHubPRService) Create(ctx context.Context, owner, repo string, opts f
 
 	// Add reviewers if requested
 	if len(opts.Reviewers) > 0 {
-		_, _, _ = s.client.PullRequests.RequestReviewers(ctx, owner, repo, pr.GetNumber(), github.ReviewersRequest{
+		if _, _, err := s.client.PullRequests.RequestReviewers(ctx, owner, repo, pr.GetNumber(), github.ReviewersRequest{
 			Reviewers: opts.Reviewers,
-		})
+		}); err != nil {
+			return nil, fmt.Errorf("PR created but failed to add reviewers: %w", err)
+		}
 	}
 
-	// Add assignees if requested
+	// Add assignees, labels, and milestone in a single edit if any are set.
+	issueReq := &github.IssueRequest{}
+	needsEdit := false
 	if len(opts.Assignees) > 0 {
-		_, _, _ = s.client.Issues.Edit(ctx, owner, repo, pr.GetNumber(), &github.IssueRequest{
-			Assignees: &opts.Assignees,
-		})
+		issueReq.Assignees = &opts.Assignees
+		needsEdit = true
 	}
-
-	// Add labels if requested
 	if len(opts.Labels) > 0 {
-		_, _, _ = s.client.Issues.Edit(ctx, owner, repo, pr.GetNumber(), &github.IssueRequest{
-			Labels: &opts.Labels,
-		})
+		issueReq.Labels = &opts.Labels
+		needsEdit = true
 	}
-
-	// Add milestone if requested
 	if opts.Milestone != "" {
 		n, err := strconv.Atoi(opts.Milestone)
 		if err == nil {
-			_, _, _ = s.client.Issues.Edit(ctx, owner, repo, pr.GetNumber(), &github.IssueRequest{
-				Milestone: &n,
-			})
+			issueReq.Milestone = &n
+			needsEdit = true
+		}
+	}
+	if needsEdit {
+		if _, _, err := s.client.Issues.Edit(ctx, owner, repo, pr.GetNumber(), issueReq); err != nil {
+			return nil, fmt.Errorf("PR created but failed to set assignees/labels/milestone: %w", err)
 		}
 	}
 
@@ -294,6 +298,15 @@ func (s *gitHubPRService) Merge(ctx context.Context, owner, repo string, number 
 		ghOpts.CommitTitle = opts.Title
 	}
 
+	// Fetch the PR first if we need to delete the branch, since we need the head ref name.
+	var headRef string
+	if opts.Delete {
+		pr, _, err := s.client.PullRequests.Get(ctx, owner, repo, number)
+		if err == nil && pr.GetHead() != nil {
+			headRef = pr.GetHead().GetRef()
+		}
+	}
+
 	_, resp, err := s.client.PullRequests.Merge(ctx, owner, repo, number, opts.Message, ghOpts)
 	if err != nil {
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
@@ -302,8 +315,10 @@ func (s *gitHubPRService) Merge(ctx context.Context, owner, repo string, number 
 		return err
 	}
 
-	if opts.Delete {
-		_, _ = s.client.Git.DeleteRef(ctx, owner, repo, "heads/"+opts.Title)
+	if opts.Delete && headRef != "" {
+		if _, err := s.client.Git.DeleteRef(ctx, owner, repo, "heads/"+headRef); err != nil {
+			return fmt.Errorf("merged successfully but failed to delete branch %q: %w", headRef, err)
+		}
 	}
 
 	return nil

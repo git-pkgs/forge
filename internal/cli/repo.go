@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -42,12 +41,7 @@ func repoViewCmd() *cobra.Command {
 				repo = args[0]
 			}
 
-			var overrideFlag string
-			if repo != "" {
-				overrideFlag = repo
-			}
-
-			forge, owner, repoName, _, err := resolve.Repo(overrideFlag, flagForgeType)
+			forge, owner, repoName, _, err := resolve.Repo(repo, flagForgeType)
 			if err != nil {
 				return err
 			}
@@ -227,6 +221,20 @@ func repoCreateCmd() *cobra.Command {
 				Owner:         flagOwner,
 			}
 
+			visCount := 0
+			if flagPrivate {
+				visCount++
+			}
+			if flagPublic {
+				visCount++
+			}
+			if flagInternal {
+				visCount++
+			}
+			if visCount > 1 {
+				return fmt.Errorf("--private, --public, and --internal are mutually exclusive")
+			}
+
 			if flagPrivate {
 				opts.Visibility = forges.VisibilityPrivate
 			} else if flagInternal {
@@ -291,12 +299,7 @@ func repoEditCmd() *cobra.Command {
 				repo = args[0]
 			}
 
-			var overrideFlag string
-			if repo != "" {
-				overrideFlag = repo
-			}
-
-			forge, owner, repoName, _, err := resolve.Repo(overrideFlag, flagForgeType)
+			forge, owner, repoName, _, err := resolve.Repo(repo, flagForgeType)
 			if err != nil {
 				return err
 			}
@@ -310,6 +313,9 @@ func repoEditCmd() *cobra.Command {
 			}
 			if cmd.Flags().Changed("default-branch") {
 				opts.DefaultBranch = &flagDefaultBranch
+			}
+			if flagPrivate && flagPublic {
+				return fmt.Errorf("--private and --public are mutually exclusive")
 			}
 			if flagPrivate {
 				opts.Visibility = forges.VisibilityPrivate
@@ -354,12 +360,7 @@ func repoDeleteCmd() *cobra.Command {
 				repo = args[0]
 			}
 
-			var overrideFlag string
-			if repo != "" {
-				overrideFlag = repo
-			}
-
-			forge, owner, repoName, _, err := resolve.Repo(overrideFlag, flagForgeType)
+			forge, owner, repoName, _, err := resolve.Repo(repo, flagForgeType)
 			if err != nil {
 				return err
 			}
@@ -400,12 +401,7 @@ func repoForkCmd() *cobra.Command {
 				repo = args[0]
 			}
 
-			var overrideFlag string
-			if repo != "" {
-				overrideFlag = repo
-			}
-
-			forge, owner, repoName, _, err := resolve.Repo(overrideFlag, flagForgeType)
+			forge, owner, repoName, _, err := resolve.Repo(repo, flagForgeType)
 			if err != nil {
 				return err
 			}
@@ -500,10 +496,7 @@ func repoSearchCmd() *cobra.Command {
 
 			repos, err := forge.Repos().Search(cmd.Context(), opts)
 			if err != nil {
-				if errors.Is(err, forges.ErrNotSupported) {
-					return fmt.Errorf("search is not supported for this forge")
-				}
-				return err
+				return notSupported(err, "repository search")
 			}
 
 			p := printer()

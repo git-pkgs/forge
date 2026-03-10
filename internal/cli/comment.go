@@ -35,7 +35,7 @@ var commentCmd = &cobra.Command{
 			var prErr error
 			comment, prErr = forge.PullRequests().CreateComment(cmd.Context(), owner, repoName, number, flagCommentBody)
 			if prErr != nil {
-				return fmt.Errorf("could not comment on issue (%v) or pull request (%v)", issueErr, prErr)
+				return fmt.Errorf("commenting on #%d: not found as issue or pull request", number)
 			}
 		}
 

@@ -96,12 +96,12 @@ var apiCmd = &cobra.Command{
 			_, _ = fmt.Fprintln(os.Stdout)
 		}
 
-		if !flagAPISilent {
-			respBody, err := io.ReadAll(resp.Body)
-			if err != nil {
-				return err
-			}
+		respBody, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return err
+		}
 
+		if !flagAPISilent {
 			// Try to pretty-print JSON
 			var pretty bytes.Buffer
 			if json.Indent(&pretty, respBody, "", "  ") == nil {
@@ -113,6 +113,13 @@ var apiCmd = &cobra.Command{
 		}
 
 		if resp.StatusCode >= 400 {
+			msg := strings.TrimSpace(string(respBody))
+			if len(msg) > 200 {
+				msg = msg[:200]
+			}
+			if msg != "" {
+				return fmt.Errorf("HTTP %d: %s", resp.StatusCode, msg)
+			}
 			return fmt.Errorf("HTTP %d", resp.StatusCode)
 		}
 
