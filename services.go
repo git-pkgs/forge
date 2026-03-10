@@ -96,6 +96,14 @@ type SecretService interface {
 	Delete(ctx context.Context, owner, repo, name string) error
 }
 
+// ReviewService provides operations on pull request reviews.
+type ReviewService interface {
+	List(ctx context.Context, owner, repo string, number int, opts ListReviewOpts) ([]Review, error)
+	Submit(ctx context.Context, owner, repo string, number int, opts SubmitReviewOpts) (*Review, error)
+	RequestReviewers(ctx context.Context, owner, repo string, number int, users []string) error
+	RemoveReviewers(ctx context.Context, owner, repo string, number int, users []string) error
+}
+
 // IssueService provides operations on issues.
 type IssueService interface {
 	Get(ctx context.Context, owner, repo string, number int) (*Issue, error)
