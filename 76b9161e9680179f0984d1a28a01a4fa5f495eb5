@@ -1,0 +1,25 @@
+internal/resolve/resolve_test.go
+  f1b76254f514dac8 14,46-73
+internal/resolve/resolve.go
+  f1b76254f514dac8 91-103,156,163-165,170,174-176,178-180,183-184
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.10",
+  "base_commit_sha": "76b9161e9680179f0984d1a28a01a4fa5f495eb5",
+  "prompts": {
+    "f1b76254f514dac8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5d2a5960-d309-45f5-9912-c717b1345d83",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Andrew Nesbitt <andrewnez@gmail.com>",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 159,
+      "overriden_lines": 0
+    }
+  }
+}
