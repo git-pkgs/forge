@@ -2,6 +2,7 @@ package gitlab
 
 import (
 	"context"
+	"fmt"
 	forge "github.com/git-pkgs/forge"
 	"net/http"
 	"time"
@@ -176,7 +177,9 @@ func (s *gitLabIssueService) Create(ctx context.Context, owner, repo string, opt
 		Title:       gitlab.Ptr(opts.Title),
 		Description: gitlab.Ptr(opts.Body),
 	}
-	// GitLab requires assignee IDs, not usernames -- skipping assignee assignment.
+	if len(opts.Assignees) > 0 {
+		return nil, fmt.Errorf("GitLab requires assignee IDs, not usernames; assignees cannot be set by username on create")
+	}
 	if len(opts.Labels) > 0 {
 		lbls := gitlab.LabelOptions(opts.Labels)
 		glOpts.Labels = &lbls
