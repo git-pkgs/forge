@@ -14,10 +14,15 @@ The CLI detects which forge to use from your git remote, or you can set it with 
 forge repo view
 forge issue list --state open
 forge pr create --title "Fix bug" --head fix-branch
+forge pr review approve 42
+forge pr reviewer request 42 alice bob
 forge release list
 forge ci list
+forge ci log 12345 --job 67890
 forge branch list
 forge label list
+forge notification list --unread
+forge notification read --id 123
 forge api repos/{owner}/{repo}
 ```
 
@@ -84,7 +89,7 @@ client := forges.NewClient(
 repo, err := client.FetchRepository(ctx, "https://github.com/octocat/hello-world")
 ```
 
-The `Forge` interface exposes services for repos, issues, pull requests, releases, CI, branches, labels, milestones, deploy keys, and secrets. Each backend implements these using its native SDK.
+The `Forge` interface exposes services for repos, issues, pull requests, reviews, releases, CI, branches, labels, milestones, deploy keys, secrets, and notifications. Each backend implements these using its native SDK.
 
 ```go
 f, _ := client.ForgeFor("github.com")
