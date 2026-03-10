@@ -1,0 +1,23 @@
+internal/config/config_test.go
+  f1b76254f514dac8 6,223,225,268-269,275-276
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.10",
+  "base_commit_sha": "2dca49ef13410f7496ab68db9de54567c8227f07",
+  "prompts": {
+    "f1b76254f514dac8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5d2a5960-d309-45f5-9912-c717b1345d83",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Andrew Nesbitt <andrewnez@gmail.com>",
+      "messages": [],
+      "total_additions": 12,
+      "total_deletions": 9,
+      "accepted_lines": 7,
+      "overriden_lines": 0
+    }
+  }
+}
