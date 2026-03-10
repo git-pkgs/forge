@@ -1,0 +1,47 @@
+gitea/notifications.go
+  b64cdc51717e49bf 1-9,11-175
+github/notifications.go
+  b64cdc51717e49bf 1-169
+types.go
+  b64cdc51717e49bf 502-540
+gitlab/notifications.go
+  b64cdc51717e49bf 1-161
+forge.go
+  b64cdc51717e49bf 46
+services.go
+  b64cdc51717e49bf 99-105
+bitbucket/notifications.go
+  b64cdc51717e49bf 1-26
+internal/cli/notification.go
+  b64cdc51717e49bf 1-144
+forges_test.go
+  b64cdc51717e49bf 456-471
+gitlab/notifications_test.go
+  b64cdc51717e49bf 1-122
+gitea/notifications_test.go
+  b64cdc51717e49bf 1-196
+bitbucket/notifications_test.go
+  b64cdc51717e49bf 1-28
+github/notifications_test.go
+  b64cdc51717e49bf 1-228
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.10",
+  "base_commit_sha": "31bd0085f718ec42066eb53f77bfb5128863798a",
+  "prompts": {
+    "b64cdc51717e49bf": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "6be44149-fbf9-4ea1-8b57-3b8ad0319c2e",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Andrew Nesbitt <andrewnez@gmail.com>",
+      "messages": [],
+      "total_additions": 1342,
+      "total_deletions": 29,
+      "accepted_lines": 1311,
+      "overriden_lines": 0
+    }
+  }
+}
