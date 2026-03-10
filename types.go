@@ -92,14 +92,19 @@ const (
 )
 
 // ListRepoOpts configures a repo list call.
+//
+// Pagination: Page and PerPage control the API page size and starting page.
+// Limit caps the total number of results returned across all pages. When
+// Limit is 0 all results are returned. PerPage defaults to a backend-specific
+// value (typically 30-50) when 0.
 type ListRepoOpts struct {
 	Archived ArchivedFilter
 	Forks    ForkFilter
 	Sort     string
 	Order    string
-	Limit    int
-	Page     int
-	PerPage  int
+	Limit    int // max total results; 0 = unlimited
+	Page     int // starting page; 0 or 1 = first page
+	PerPage  int // results per API request; 0 = default
 }
 
 // CreateRepoOpts holds options for creating a repository.
@@ -136,9 +141,9 @@ type SearchRepoOpts struct {
 	Query   string
 	Sort    string
 	Order   string
-	Limit   int
-	Page    int
-	PerPage int
+	Limit   int // max total results; 0 = unlimited
+	Page    int // starting page; 0 or 1 = first page
+	PerPage int // results per API request; 0 = default
 }
 
 // Label represents an issue or pull request label.
@@ -202,9 +207,9 @@ type ListIssueOpts struct {
 	Author   string
 	Sort     string
 	Order    string
-	Limit    int
-	Page     int
-	PerPage  int
+	Limit    int // max total results; 0 = unlimited
+	Page     int // starting page; 0 or 1 = first page
+	PerPage  int // results per API request; 0 = default
 }
 
 // UpdateIssueOpts holds options for updating an issue.
@@ -268,9 +273,9 @@ type ListPROpts struct {
 	Head     string
 	Sort     string
 	Order    string
-	Limit    int
-	Page     int
-	PerPage  int
+	Limit    int // max total results; 0 = unlimited
+	Page     int // starting page; 0 or 1 = first page
+	PerPage  int // results per API request; 0 = default
 }
 
 // UpdatePROpts holds options for updating a pull request.
@@ -301,9 +306,9 @@ type CreateLabelOpts struct {
 
 // ListLabelOpts holds options for listing labels.
 type ListLabelOpts struct {
-	Limit   int
-	Page    int
-	PerPage int
+	Limit   int // max total results; 0 = unlimited
+	Page    int // starting page; 0 or 1 = first page
+	PerPage int // results per API request; 0 = default
 }
 
 // UpdateLabelOpts holds options for updating a label.
@@ -323,9 +328,9 @@ type CreateMilestoneOpts struct {
 // ListMilestoneOpts holds options for listing milestones.
 type ListMilestoneOpts struct {
 	State   string // open, closed, all
-	Limit   int
-	Page    int
-	PerPage int
+	Limit   int    // max total results; 0 = unlimited
+	Page    int    // starting page; 0 or 1 = first page
+	PerPage int    // results per API request; 0 = default
 }
 
 // UpdateMilestoneOpts holds options for updating a milestone.
@@ -376,9 +381,9 @@ type CreateReleaseOpts struct {
 
 // ListReleaseOpts holds options for listing releases.
 type ListReleaseOpts struct {
-	Limit   int
-	Page    int
-	PerPage int
+	Limit   int // max total results; 0 = unlimited
+	Page    int // starting page; 0 or 1 = first page
+	PerPage int // results per API request; 0 = default
 }
 
 // UpdateReleaseOpts holds options for updating a release.
@@ -401,9 +406,9 @@ type Branch struct {
 
 // ListBranchOpts holds options for listing branches.
 type ListBranchOpts struct {
-	Limit   int
-	Page    int
-	PerPage int
+	Limit   int // max total results; 0 = unlimited
+	Page    int // starting page; 0 or 1 = first page
+	PerPage int // results per API request; 0 = default
 }
 
 // CIRun holds normalized metadata about a CI pipeline or workflow run.
@@ -440,9 +445,9 @@ type ListCIRunOpts struct {
 	Status   string
 	User     string
 	Workflow string
-	Limit    int
-	Page     int
-	PerPage  int
+	Limit    int // max total results; 0 = unlimited
+	Page     int // starting page; 0 or 1 = first page
+	PerPage  int // results per API request; 0 = default
 }
 
 // TriggerCIRunOpts holds options for triggering a CI run.
@@ -470,9 +475,9 @@ type CreateDeployKeyOpts struct {
 
 // ListDeployKeyOpts holds options for listing deploy keys.
 type ListDeployKeyOpts struct {
-	Limit   int
-	Page    int
-	PerPage int
+	Limit   int // max total results; 0 = unlimited
+	Page    int // starting page; 0 or 1 = first page
+	PerPage int // results per API request; 0 = default
 }
 
 // Secret holds normalized metadata about a repository secret.
@@ -490,7 +495,7 @@ type SetSecretOpts struct {
 
 // ListSecretOpts holds options for listing secrets.
 type ListSecretOpts struct {
-	Limit   int
-	Page    int
-	PerPage int
+	Limit   int // max total results; 0 = unlimited
+	Page    int // starting page; 0 or 1 = first page
+	PerPage int // results per API request; 0 = default
 }
