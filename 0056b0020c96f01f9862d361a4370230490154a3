@@ -1,0 +1,37 @@
+internal/cli/ci.go
+  f1b76254f514dac8 59,127,202,232,258,285
+internal/cli/milestone.go
+  f1b76254f514dac8 53,112,170,228,264,290,324
+internal/cli/root_test.go
+  f1b76254f514dac8 1-28
+internal/cli/secret.go
+  f1b76254f514dac8 43,104,139
+internal/cli/root.go
+  f1b76254f514dac8 4-5,8,45-53
+internal/cli/label.go
+  f1b76254f514dac8 44,107,158,199
+internal/cli/deploy_key.go
+  f1b76254f514dac8 43,107,151
+internal/cli/branch.go
+  f1b76254f514dac8 43,104,143
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.10",
+  "base_commit_sha": "0056b0020c96f01f9862d361a4370230490154a3",
+  "prompts": {
+    "f1b76254f514dac8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5d2a5960-d309-45f5-9912-c717b1345d83",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Andrew Nesbitt <andrewnez@gmail.com>",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 104,
+      "overriden_lines": 0
+    }
+  }
+}
