@@ -44,6 +44,7 @@ type Forge interface {
 	DeployKeys() DeployKeyService
 	Secrets() SecretService
 	Notifications() NotificationService
+	Reviews() ReviewService
 }
 
 // Client routes requests to the appropriate Forge based on the URL domain.

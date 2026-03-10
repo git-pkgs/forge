@@ -384,6 +384,7 @@ type mockForge struct {
 	branchService    *mockBranchService
 	deployKeyService *mockDeployKeyService
 	secretService    *mockSecretService
+	reviewService    *mockReviewService
 }
 
 func (m *mockForge) Repos() RepoService {
@@ -467,6 +468,13 @@ func (m *mockNotificationService) MarkRead(_ context.Context, opts MarkNotificat
 }
 func (m *mockNotificationService) Get(_ context.Context, id string) (*Notification, error) {
 	return nil, nil
+}
+
+func (m *mockForge) Reviews() ReviewService {
+	if m.reviewService != nil {
+		return m.reviewService
+	}
+	return &mockReviewService{}
 }
 
 type mockRepoService struct {
@@ -960,5 +968,41 @@ func (m *mockSecretService) Delete(_ context.Context, owner, repo, name string) 
 	m.lastOwner = owner
 	m.lastRepo = repo
 	m.lastName = name
+	return nil
+}
+
+type mockReviewService struct {
+	review     *Review
+	reviews    []Review
+	lastOwner  string
+	lastRepo   string
+	lastNumber int
+}
+
+func (m *mockReviewService) List(_ context.Context, owner, repo string, number int, opts ListReviewOpts) ([]Review, error) {
+	m.lastOwner = owner
+	m.lastRepo = repo
+	m.lastNumber = number
+	return m.reviews, nil
+}
+
+func (m *mockReviewService) Submit(_ context.Context, owner, repo string, number int, opts SubmitReviewOpts) (*Review, error) {
+	m.lastOwner = owner
+	m.lastRepo = repo
+	m.lastNumber = number
+	return m.review, nil
+}
+
+func (m *mockReviewService) RequestReviewers(_ context.Context, owner, repo string, number int, users []string) error {
+	m.lastOwner = owner
+	m.lastRepo = repo
+	m.lastNumber = number
+	return nil
+}
+
+func (m *mockReviewService) RemoveReviewers(_ context.Context, owner, repo string, number int, users []string) error {
+	m.lastOwner = owner
+	m.lastRepo = repo
+	m.lastNumber = number
 	return nil
 }

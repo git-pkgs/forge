@@ -538,3 +538,37 @@ type MarkNotificationOpts struct {
 	ID   string // mark a single thread; empty = mark all
 	Repo string // mark all in a repo; empty = mark all
 }
+
+// ReviewState represents the state of a pull request review.
+type ReviewState string
+
+const (
+	ReviewApproved         ReviewState = "approved"
+	ReviewChangesRequested ReviewState = "changes_requested"
+	ReviewCommented        ReviewState = "commented"
+	ReviewDismissed        ReviewState = "dismissed"
+	ReviewPending          ReviewState = "pending"
+)
+
+// Review holds normalized metadata about a pull request review.
+type Review struct {
+	ID          int64       `json:"id"`
+	State       ReviewState `json:"state"`
+	Body        string      `json:"body,omitempty"`
+	Author      User        `json:"author"`
+	HTMLURL     string      `json:"html_url,omitempty"`
+	SubmittedAt time.Time   `json:"submitted_at,omitzero"`
+}
+
+// ListReviewOpts holds options for listing reviews.
+type ListReviewOpts struct {
+	Limit   int // max total results; 0 = unlimited
+	Page    int // starting page; 0 or 1 = first page
+	PerPage int // results per API request; 0 = default
+}
+
+// SubmitReviewOpts holds options for submitting a review.
+type SubmitReviewOpts struct {
+	State ReviewState // approved, changes_requested, or commented
+	Body  string
+}
