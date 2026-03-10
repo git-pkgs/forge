@@ -1,0 +1,23 @@
+.github/workflows/ci.yml
+  f1b76254f514dac8 15-16,19,24,26,28-34,45,50,52,55
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.10",
+  "base_commit_sha": "51572c66f952ac07901fc83d4a770215c9c305e5",
+  "prompts": {
+    "f1b76254f514dac8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5d2a5960-d309-45f5-9912-c717b1345d83",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Andrew Nesbitt <andrewnez@gmail.com>",
+      "messages": [],
+      "total_additions": 103,
+      "total_deletions": 11,
+      "accepted_lines": 103,
+      "overriden_lines": 0
+    }
+  }
+}
