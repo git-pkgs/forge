@@ -1,0 +1,45 @@
+internal/cli/release_test.go
+  f1b76254f514dac8 3,5-43
+internal/cli/repo_test.go
+  f1b76254f514dac8 5,56-85
+internal/config/config.go
+  f1b76254f514dac8 208-209,211-213
+bitbucket/prs.go
+  f1b76254f514dac8 6,9-10,279-280,283,293-295,297
+internal/cli/api.go
+  f1b76254f514dac8 104,116-122
+github/prs.go
+  f1b76254f514dac8 5,9,197,199-201,204-206,208-209,212-213,218-224,301-309,318-321
+internal/cli/comment.go
+  f1b76254f514dac8 38
+bitbucket/prs_test.go
+  f1b76254f514dac8 242-291
+internal/cli/release.go
+  f1b76254f514dac8 47,103,184,216-217,246,249,254,271-272,298,332,368,384
+internal/config/config_test.go
+  f1b76254f514dac8 277-313
+github/prs_test.go
+  f1b76254f514dac8 8,11,349-470
+internal/cli/repo.go
+  f1b76254f514dac8 44,224-237,302,317-319,363,404,499
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.10",
+  "base_commit_sha": "a9ce658297996c38411d7a1ad0a2296c22c77415",
+  "prompts": {
+    "f1b76254f514dac8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5d2a5960-d309-45f5-9912-c717b1345d83",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Andrew Nesbitt <andrewnez@gmail.com>",
+      "messages": [],
+      "total_additions": 765,
+      "total_deletions": 194,
+      "accepted_lines": 760,
+      "overriden_lines": 0
+    }
+  }
+}
