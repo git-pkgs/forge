@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -219,9 +220,9 @@ func TestMissingFilesReturnEmptyConfig(t *testing.T) {
 }
 
 func TestUserConfigPath(t *testing.T) {
-	t.Setenv("XDG_CONFIG_HOME", "/tmp/testxdg")
+	t.Setenv("XDG_CONFIG_HOME", filepath.Join(os.TempDir(), "testxdg"))
 	got := UserConfigPath()
-	want := "/tmp/testxdg/forge/config"
+	want := filepath.Join(os.TempDir(), "testxdg", "forge", "config")
 	if got != want {
 		t.Errorf("expected %q, got %q", want, got)
 	}
@@ -264,13 +265,15 @@ func TestSetDomain(t *testing.T) {
 		t.Error("expected type in config")
 	}
 
-	// Verify file permissions
-	info, err := os.Stat(path)
-	if err != nil {
-		t.Fatalf("stat: %v", err)
-	}
-	if info.Mode().Perm() != 0600 {
-		t.Errorf("expected 0600 permissions, got %o", info.Mode().Perm())
+	// Verify file permissions (skip on Windows, which doesn't support Unix perms)
+	if runtime.GOOS != "windows" {
+		info, err := os.Stat(path)
+		if err != nil {
+			t.Fatalf("stat: %v", err)
+		}
+		if info.Mode().Perm() != 0600 {
+			t.Errorf("expected 0600 permissions, got %o", info.Mode().Perm())
+		}
 	}
 }
 
