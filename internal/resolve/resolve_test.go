@@ -11,7 +11,7 @@ func TestTokenForDomain(t *testing.T) {
 		t.Errorf("expected empty token, got %q", got)
 	}
 
-	// FORGE_TOKEN takes priority
+	// FORGE_TOKEN is a fallback for any domain
 	t.Setenv("FORGE_TOKEN", "forge-tok")
 	got = TokenForDomain("github.com")
 	if got != "forge-tok" {
@@ -41,6 +41,34 @@ func TestTokenForDomain(t *testing.T) {
 		t.Errorf("expected gl-tok, got %q", got)
 	}
 	t.Setenv("GITLAB_TOKEN", "")
+}
+
+func TestTokenForDomainEnvSpecificOverridesFallback(t *testing.T) {
+	t.Setenv("GITHUB_TOKEN", "gh-specific")
+	t.Setenv("FORGE_TOKEN", "forge-fallback")
+
+	got := TokenForDomainEnv("github.com")
+	if got != "gh-specific" {
+		t.Errorf("expected domain-specific GITHUB_TOKEN to win, got %q", got)
+	}
+}
+
+func TestTokenForDomainEnvFallbackToForgeToken(t *testing.T) {
+	t.Setenv("FORGE_TOKEN", "forge-fallback")
+
+	got := TokenForDomainEnv("github.com")
+	if got != "forge-fallback" {
+		t.Errorf("expected FORGE_TOKEN fallback, got %q", got)
+	}
+}
+
+func TestTokenForDomainEnvFallbackForUnknownDomain(t *testing.T) {
+	t.Setenv("FORGE_TOKEN", "forge-fallback")
+
+	got := TokenForDomainEnv("custom.example.com")
+	if got != "forge-fallback" {
+		t.Errorf("expected FORGE_TOKEN for unknown domain, got %q", got)
+	}
 }
 
 func TestDomainFromForgeType(t *testing.T) {

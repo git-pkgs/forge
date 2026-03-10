@@ -88,8 +88,19 @@ func newClient(domain string) *forges.Client {
 		opts = append(opts, forges.WithToken(domain, token))
 	}
 
-	// If the config knows this domain's forge type, register it directly
-	// so we skip auto-detection.
+	// Register default forges first, so config-based registrations override them.
+	defaults := map[string]forges.Forge{
+		"github.com":    ghforge.New(TokenForDomain("github.com"), nil),
+		"gitlab.com":    glforge.New("https://gitlab.com", TokenForDomain("gitlab.com"), nil),
+		"codeberg.org":  gitea.New("https://codeberg.org", TokenForDomain("codeberg.org"), nil),
+		"bitbucket.org": bitbucket.New(TokenForDomain("bitbucket.org"), nil),
+	}
+	for d, f := range defaults {
+		opts = append(opts, forges.WithForge(d, f))
+	}
+
+	// If the config knows this domain's forge type, register it after defaults
+	// so it takes precedence.
 	if ft := configForgeType(domain); ft != "" {
 		switch ft {
 		case "gitea", "forgejo":
@@ -98,14 +109,6 @@ func newClient(domain string) *forges.Client {
 			opts = append(opts, forges.WithForge(domain, glforge.New("https://"+domain, token, nil)))
 		}
 	}
-
-	// Register default forges.
-	opts = append(opts,
-		forges.WithForge("github.com", ghforge.New(TokenForDomain("github.com"), nil)),
-		forges.WithForge("gitlab.com", glforge.New("https://gitlab.com", TokenForDomain("gitlab.com"), nil)),
-		forges.WithForge("codeberg.org", gitea.New("https://codeberg.org", TokenForDomain("codeberg.org"), nil)),
-		forges.WithForge("bitbucket.org", bitbucket.New(TokenForDomain("bitbucket.org"), nil)),
-	)
 
 	return forges.NewClient(opts...)
 }
@@ -150,30 +153,35 @@ func TokenForDomain(domain string) string {
 }
 
 // TokenForDomainEnv looks up a token from environment variables only.
-// Checks FORGE_TOKEN first, then forge-specific variables.
+// Checks domain-specific variables first, then falls back to FORGE_TOKEN.
 func TokenForDomainEnv(domain string) string {
-	if t := os.Getenv("FORGE_TOKEN"); t != "" {
-		return t
-	}
-
 	switch domain {
 	case "github.com":
 		if t := os.Getenv("GITHUB_TOKEN"); t != "" {
 			return t
 		}
-		return os.Getenv("GH_TOKEN")
+		if t := os.Getenv("GH_TOKEN"); t != "" {
+			return t
+		}
 	case "gitlab.com":
 		if t := os.Getenv("GITLAB_TOKEN"); t != "" {
 			return t
 		}
-		return os.Getenv("GLAB_TOKEN")
+		if t := os.Getenv("GLAB_TOKEN"); t != "" {
+			return t
+		}
 	case "codeberg.org":
-		return os.Getenv("GITEA_TOKEN")
+		if t := os.Getenv("GITEA_TOKEN"); t != "" {
+			return t
+		}
 	case "bitbucket.org":
-		return os.Getenv("BITBUCKET_TOKEN")
+		if t := os.Getenv("BITBUCKET_TOKEN"); t != "" {
+			return t
+		}
 	}
 
-	return ""
+	// FORGE_TOKEN is a fallback for any domain without a specific token.
+	return os.Getenv("FORGE_TOKEN")
 }
 
 // ForgeForDomain returns a Forge instance for the given domain.
