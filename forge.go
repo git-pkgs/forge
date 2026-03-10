@@ -43,6 +43,7 @@ type Forge interface {
 	Branches() BranchService
 	DeployKeys() DeployKeyService
 	Secrets() SecretService
+	Reviews() ReviewService
 }
 
 // Client routes requests to the appropriate Forge based on the URL domain.
