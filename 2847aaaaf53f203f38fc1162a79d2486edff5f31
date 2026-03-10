@@ -1,0 +1,25 @@
+gitlab/issues.go
+  f1b76254f514dac8 5,180-182
+gitlab/issues_test.go
+  f1b76254f514dac8 1-29
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.10",
+  "base_commit_sha": "2847aaaaf53f203f38fc1162a79d2486edff5f31",
+  "prompts": {
+    "f1b76254f514dac8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5d2a5960-d309-45f5-9912-c717b1345d83",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Andrew Nesbitt <andrewnez@gmail.com>",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 192,
+      "overriden_lines": 0
+    }
+  }
+}
