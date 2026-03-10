@@ -1,0 +1,25 @@
+.github/workflows/release.yml
+  f1b76254f514dac8 1-32
+.goreleaser.yml
+  f1b76254f514dac8 1-54
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.10",
+  "base_commit_sha": "8295e0133a87c8127ffb9e4ff63ccdd8d24930b3",
+  "prompts": {
+    "f1b76254f514dac8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5d2a5960-d309-45f5-9912-c717b1345d83",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Andrew Nesbitt <andrewnez@gmail.com>",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 86,
+      "overriden_lines": 0
+    }
+  }
+}
