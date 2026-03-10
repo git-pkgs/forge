@@ -56,7 +56,7 @@ func ciListCmd() *cobra.Command {
 
 			runs, err := forge.CI().ListRuns(cmd.Context(), owner, repoName, opts)
 			if err != nil {
-				return err
+				return notSupported(err, "CI pipelines")
 			}
 
 			p := printer()
@@ -124,7 +124,7 @@ func ciViewCmd() *cobra.Command {
 
 			run, err := forge.CI().GetRun(cmd.Context(), owner, repoName, runID)
 			if err != nil {
-				return err
+				return notSupported(err, "CI pipelines")
 			}
 
 			p := printer()
@@ -199,7 +199,7 @@ func ciRunCmd() *cobra.Command {
 			}
 
 			if err := forge.CI().TriggerRun(cmd.Context(), owner, repoName, opts); err != nil {
-				return err
+				return notSupported(err, "CI pipelines")
 			}
 
 			_, _ = fmt.Fprintln(os.Stdout, "Triggered workflow run")
@@ -229,7 +229,7 @@ func ciCancelCmd() *cobra.Command {
 			}
 
 			if err := forge.CI().CancelRun(cmd.Context(), owner, repoName, runID); err != nil {
-				return err
+				return notSupported(err, "CI pipelines")
 			}
 
 			_, _ = fmt.Fprintf(os.Stdout, "Cancelled run %d\n", runID)
@@ -255,7 +255,7 @@ func ciRetryCmd() *cobra.Command {
 			}
 
 			if err := forge.CI().RetryRun(cmd.Context(), owner, repoName, runID); err != nil {
-				return err
+				return notSupported(err, "CI pipelines")
 			}
 
 			_, _ = fmt.Fprintf(os.Stdout, "Retried run %d\n", runID)
@@ -282,7 +282,7 @@ func ciLogCmd() *cobra.Command {
 
 			rc, err := forge.CI().GetJobLog(cmd.Context(), owner, repoName, jobID)
 			if err != nil {
-				return err
+				return notSupported(err, "CI pipelines")
 			}
 			defer func() { _ = rc.Close() }()
 

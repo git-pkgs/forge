@@ -40,7 +40,7 @@ func secretListCmd() *cobra.Command {
 
 			secrets, err := forge.Secrets().List(cmd.Context(), owner, repoName, opts)
 			if err != nil {
-				return err
+				return notSupported(err, "secrets")
 			}
 
 			p := printer()
@@ -101,7 +101,7 @@ func secretSetCmd() *cobra.Command {
 				Name:  flagName,
 				Value: flagValue,
 			}); err != nil {
-				return err
+				return notSupported(err, "secrets")
 			}
 
 			_, _ = fmt.Fprintf(os.Stdout, "Set %s\n", flagName)
@@ -136,7 +136,7 @@ func secretDeleteCmd() *cobra.Command {
 			}
 
 			if err := forge.Secrets().Delete(cmd.Context(), owner, repoName, name); err != nil {
-				return err
+				return notSupported(err, "secrets")
 			}
 
 			_, _ = fmt.Fprintf(os.Stdout, "Deleted %s\n", name)

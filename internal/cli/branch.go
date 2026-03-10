@@ -40,7 +40,7 @@ func branchListCmd() *cobra.Command {
 
 			branches, err := forge.Branches().List(cmd.Context(), owner, repoName, opts)
 			if err != nil {
-				return err
+				return notSupported(err, "branches")
 			}
 
 			p := printer()
@@ -101,7 +101,7 @@ func branchCreateCmd() *cobra.Command {
 
 			branch, err := forge.Branches().Create(cmd.Context(), owner, repoName, name, from)
 			if err != nil {
-				return err
+				return notSupported(err, "branches")
 			}
 
 			p := printer()
@@ -140,7 +140,7 @@ func branchDeleteCmd() *cobra.Command {
 			}
 
 			if err := forge.Branches().Delete(cmd.Context(), owner, repoName, name); err != nil {
-				return err
+				return notSupported(err, "branches")
 			}
 
 			_, _ = fmt.Fprintf(os.Stdout, "Deleted %s\n", name)

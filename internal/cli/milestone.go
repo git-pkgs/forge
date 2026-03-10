@@ -50,7 +50,7 @@ func milestoneListCmd() *cobra.Command {
 
 			milestones, err := forge.Milestones().List(cmd.Context(), owner, repoName, opts)
 			if err != nil {
-				return err
+				return notSupported(err, "milestones")
 			}
 
 			p := printer()
@@ -109,7 +109,7 @@ func milestoneViewCmd() *cobra.Command {
 
 			milestone, err := forge.Milestones().Get(cmd.Context(), owner, repoName, id)
 			if err != nil {
-				return err
+				return notSupported(err, "milestones")
 			}
 
 			p := printer()
@@ -167,7 +167,7 @@ func milestoneCreateCmd() *cobra.Command {
 
 			milestone, err := forge.Milestones().Create(cmd.Context(), owner, repoName, opts)
 			if err != nil {
-				return err
+				return notSupported(err, "milestones")
 			}
 
 			p := printer()
@@ -225,7 +225,7 @@ func milestoneEditCmd() *cobra.Command {
 
 			milestone, err := forge.Milestones().Update(cmd.Context(), owner, repoName, id, opts)
 			if err != nil {
-				return err
+				return notSupported(err, "milestones")
 			}
 
 			p := printer()
@@ -261,7 +261,7 @@ func milestoneCloseCmd() *cobra.Command {
 			}
 
 			if err := forge.Milestones().Close(cmd.Context(), owner, repoName, id); err != nil {
-				return err
+				return notSupported(err, "milestones")
 			}
 
 			_, _ = fmt.Fprintf(os.Stdout, "Closed #%d\n", id)
@@ -287,7 +287,7 @@ func milestoneReopenCmd() *cobra.Command {
 			}
 
 			if err := forge.Milestones().Reopen(cmd.Context(), owner, repoName, id); err != nil {
-				return err
+				return notSupported(err, "milestones")
 			}
 
 			_, _ = fmt.Fprintf(os.Stdout, "Reopened #%d\n", id)
@@ -321,7 +321,7 @@ func milestoneDeleteCmd() *cobra.Command {
 			}
 
 			if err := forge.Milestones().Delete(cmd.Context(), owner, repoName, id); err != nil {
-				return err
+				return notSupported(err, "milestones")
 			}
 
 			_, _ = fmt.Fprintf(os.Stdout, "Deleted #%d\n", id)

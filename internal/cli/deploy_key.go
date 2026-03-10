@@ -40,7 +40,7 @@ func deployKeyListCmd() *cobra.Command {
 
 			keys, err := forge.DeployKeys().List(cmd.Context(), owner, repoName, opts)
 			if err != nil {
-				return err
+				return notSupported(err, "deploy keys")
 			}
 
 			p := printer()
@@ -104,7 +104,7 @@ func deployKeyAddCmd() *cobra.Command {
 				ReadOnly: flagReadOnly,
 			})
 			if err != nil {
-				return err
+				return notSupported(err, "deploy keys")
 			}
 
 			p := printer()
@@ -148,7 +148,7 @@ func deployKeyDeleteCmd() *cobra.Command {
 			}
 
 			if err := forge.DeployKeys().Delete(cmd.Context(), owner, repoName, id); err != nil {
-				return err
+				return notSupported(err, "deploy keys")
 			}
 
 			_, _ = fmt.Fprintf(os.Stdout, "Deleted key %d\n", id)

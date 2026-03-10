@@ -41,7 +41,7 @@ func labelListCmd() *cobra.Command {
 
 			labels, err := forge.Labels().List(cmd.Context(), owner, repoName, opts)
 			if err != nil {
-				return err
+				return notSupported(err, "labels")
 			}
 
 			p := printer()
@@ -104,7 +104,7 @@ func labelCreateCmd() *cobra.Command {
 
 			label, err := forge.Labels().Create(cmd.Context(), owner, repoName, opts)
 			if err != nil {
-				return err
+				return notSupported(err, "labels")
 			}
 
 			p := printer()
@@ -155,7 +155,7 @@ func labelEditCmd() *cobra.Command {
 
 			label, err := forge.Labels().Update(cmd.Context(), owner, repoName, labelName, opts)
 			if err != nil {
-				return err
+				return notSupported(err, "labels")
 			}
 
 			p := printer()
@@ -196,7 +196,7 @@ func labelDeleteCmd() *cobra.Command {
 			}
 
 			if err := forge.Labels().Delete(cmd.Context(), owner, repoName, labelName); err != nil {
-				return err
+				return notSupported(err, "labels")
 			}
 
 			_, _ = fmt.Fprintf(os.Stdout, "Deleted %s\n", labelName)
