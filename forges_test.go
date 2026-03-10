@@ -168,6 +168,24 @@ func TestClientFetchTagsRoutes(t *testing.T) {
 
 // Detection tests
 
+func TestDetectForgeTypeUsesProvidedClient(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("X-GitHub-Request-Id", "abc123")
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
+
+	// Using a custom client should work.
+	customClient := srv.Client()
+	ft, err := detectFromHeaders(context.Background(), customClient, srv.URL)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if ft != GitHub {
+		t.Errorf("expected GitHub, got %s", ft)
+	}
+}
+
 func TestDetectForgeTypeHeaders(t *testing.T) {
 	tests := []struct {
 		header string
@@ -188,7 +206,7 @@ func TestDetectForgeTypeHeaders(t *testing.T) {
 			}))
 			defer srv.Close()
 
-			ft, err := detectFromHeaders(context.Background(), srv.URL)
+			ft, err := detectFromHeaders(context.Background(), http.DefaultClient, srv.URL)
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
@@ -211,7 +229,7 @@ func TestDetectForgeTypeGiteaAPI(t *testing.T) {
 	srv := httptest.NewServer(mux)
 	defer srv.Close()
 
-	ft, err := detectFromAPI(context.Background(), srv.URL)
+	ft, err := detectFromAPI(context.Background(), http.DefaultClient, srv.URL)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -232,7 +250,7 @@ func TestDetectForgeTypeForgejoAPI(t *testing.T) {
 	srv := httptest.NewServer(mux)
 	defer srv.Close()
 
-	ft, err := detectFromAPI(context.Background(), srv.URL)
+	ft, err := detectFromAPI(context.Background(), http.DefaultClient, srv.URL)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -256,7 +274,7 @@ func TestDetectForgeTypeGitLabAPI(t *testing.T) {
 	srv := httptest.NewServer(mux)
 	defer srv.Close()
 
-	ft, err := detectFromAPI(context.Background(), srv.URL)
+	ft, err := detectFromAPI(context.Background(), http.DefaultClient, srv.URL)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -283,7 +301,7 @@ func TestDetectForgeTypeGitHubAPI(t *testing.T) {
 	srv := httptest.NewServer(mux)
 	defer srv.Close()
 
-	ft, err := detectFromAPI(context.Background(), srv.URL)
+	ft, err := detectFromAPI(context.Background(), http.DefaultClient, srv.URL)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

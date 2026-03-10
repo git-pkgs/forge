@@ -10,24 +10,29 @@ import (
 
 // DetectForgeType probes a domain to identify which forge software it runs.
 // It checks HTTP response headers first, then falls back to API endpoints.
-func DetectForgeType(ctx context.Context, domain string) (ForgeType, error) {
+// If hc is nil, http.DefaultClient is used.
+func DetectForgeType(ctx context.Context, domain string, hc ...*http.Client) (ForgeType, error) {
+	client := http.DefaultClient
+	if len(hc) > 0 && hc[0] != nil {
+		client = hc[0]
+	}
 	baseURL := "https://" + domain
 
-	ft, err := detectFromHeaders(ctx, baseURL)
+	ft, err := detectFromHeaders(ctx, client, baseURL)
 	if err == nil && ft != Unknown {
 		return ft, nil
 	}
 
-	return detectFromAPI(ctx, baseURL)
+	return detectFromAPI(ctx, client, baseURL)
 }
 
-func detectFromHeaders(ctx context.Context, baseURL string) (ForgeType, error) {
+func detectFromHeaders(ctx context.Context, client *http.Client, baseURL string) (ForgeType, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, baseURL, nil)
 	if err != nil {
 		return Unknown, err
 	}
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := client.Do(req)
 	if err != nil {
 		return Unknown, err
 	}
@@ -49,32 +54,32 @@ func detectFromHeaders(ctx context.Context, baseURL string) (ForgeType, error) {
 	return Unknown, nil
 }
 
-func detectFromAPI(ctx context.Context, baseURL string) (ForgeType, error) {
+func detectFromAPI(ctx context.Context, client *http.Client, baseURL string) (ForgeType, error) {
 	// Try Gitea/Forgejo /api/v1/version
-	if ft, err := probeGiteaAPI(ctx, baseURL); err == nil {
+	if ft, err := probeGiteaAPI(ctx, client, baseURL); err == nil {
 		return ft, nil
 	}
 
 	// Try GitLab /api/v4/version
-	if ok, err := probeURL(ctx, baseURL+"/api/v4/version"); err == nil && ok {
+	if ok, err := probeURL(ctx, client, baseURL+"/api/v4/version"); err == nil && ok {
 		return GitLab, nil
 	}
 
 	// Try GitHub Enterprise /api/v3/meta
-	if ok, err := probeURL(ctx, baseURL+"/api/v3/meta"); err == nil && ok {
+	if ok, err := probeURL(ctx, client, baseURL+"/api/v3/meta"); err == nil && ok {
 		return GitHub, nil
 	}
 
 	return Unknown, fmt.Errorf("could not detect forge type for %s", baseURL)
 }
 
-func probeGiteaAPI(ctx context.Context, baseURL string) (ForgeType, error) {
+func probeGiteaAPI(ctx context.Context, client *http.Client, baseURL string) (ForgeType, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, baseURL+"/api/v1/version", nil)
 	if err != nil {
 		return Unknown, err
 	}
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := client.Do(req)
 	if err != nil {
 		return Unknown, err
 	}
@@ -97,13 +102,13 @@ func probeGiteaAPI(ctx context.Context, baseURL string) (ForgeType, error) {
 	return Gitea, nil
 }
 
-func probeURL(ctx context.Context, url string) (bool, error) {
+func probeURL(ctx context.Context, client *http.Client, url string) (bool, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return false, err
 	}
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := client.Do(req)
 	if err != nil {
 		return false, err
 	}

@@ -101,7 +101,7 @@ func (c *Client) HTTPClient() *http.Client {
 // RegisterDomain detects the forge type for a domain and registers the
 // appropriate Forge using the provided builder functions.
 func (c *Client) RegisterDomain(ctx context.Context, domain, token string, builders ForgeBuilders) error {
-	ft, err := DetectForgeType(ctx, domain)
+	ft, err := DetectForgeType(ctx, domain, c.httpClient)
 	if err != nil {
 		return fmt.Errorf("detecting forge type for %s: %w", domain, err)
 	}
