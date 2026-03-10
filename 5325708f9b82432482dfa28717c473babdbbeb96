@@ -1,0 +1,43 @@
+forge.go
+  d311c6090bd269cf 46
+forges_test.go
+  d311c6090bd269cf 387,457-463,957-992
+internal/cli/review_test.go
+  d311c6090bd269cf 1-69
+types.go
+  d311c6090bd269cf 502-535
+internal/cli/review.go
+  d311c6090bd269cf 1-229
+github/reviews_test.go
+  d311c6090bd269cf 1-173
+bitbucket/reviews.go
+  d311c6090bd269cf 1-134
+services.go
+  d311c6090bd269cf 99-106
+github/reviews.go
+  d311c6090bd269cf 1-151
+gitea/reviews.go
+  d311c6090bd269cf 1-147
+gitlab/reviews.go
+  d311c6090bd269cf 1-169
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.10",
+  "base_commit_sha": "5325708f9b82432482dfa28717c473babdbbeb96",
+  "prompts": {
+    "d311c6090bd269cf": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "936c121d-8de6-493e-b045-27f3141bfbc7",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Andrew Nesbitt <andrewnez@gmail.com>",
+      "messages": [],
+      "total_additions": 1175,
+      "total_deletions": 16,
+      "accepted_lines": 1159,
+      "overriden_lines": 0
+    }
+  }
+}
