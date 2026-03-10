@@ -1,0 +1,25 @@
+gitea/ci.go
+  4b3d8efd95044707 4,7-11,15,19,22-50,53-80,82-117,119-135,137,152-160
+gitea/ci_test.go
+  4b3d8efd95044707 1-234
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.10",
+  "base_commit_sha": "d39525c5d62b2d5865ce27333da6ad36489b97a7",
+  "prompts": {
+    "4b3d8efd95044707": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f30d1d23-b48d-4f6f-8133-beb2a84e93f8",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Andrew Nesbitt <andrewnez@gmail.com>",
+      "messages": [],
+      "total_additions": 369,
+      "total_deletions": 11,
+      "accepted_lines": 365,
+      "overriden_lines": 0
+    }
+  }
+}
