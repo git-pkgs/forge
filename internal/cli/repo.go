@@ -7,9 +7,9 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/git-pkgs/forge"
 	"github.com/git-pkgs/forge/internal/output"
 	"github.com/git-pkgs/forge/internal/resolve"
-	"github.com/git-pkgs/forge"
 	"github.com/spf13/cobra"
 )
 
@@ -100,11 +100,11 @@ func repoViewCmd() *cobra.Command {
 
 func repoListCmd() *cobra.Command {
 	var (
-		flagLimit          int
-		flagNoArchived     bool
-		flagNoForks        bool
-		flagArchivedOnly   bool
-		flagForksOnly      bool
+		flagLimit        int
+		flagNoArchived   bool
+		flagNoForks      bool
+		flagArchivedOnly bool
+		flagForksOnly    bool
 	)
 
 	cmd := &cobra.Command{

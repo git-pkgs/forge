@@ -223,31 +223,31 @@ type UpdateIssueOpts struct {
 
 // PullRequest holds normalized metadata about a pull request (or merge request).
 type PullRequest struct {
-	Number         int        `json:"number"`
-	Title          string     `json:"title"`
-	Body           string     `json:"body"`
-	State          string     `json:"state"` // "open", "closed", or "merged"
-	Draft          bool       `json:"draft"`
-	Author         User       `json:"author"`
-	Assignees      []User     `json:"assignees,omitempty"`
-	Reviewers      []User     `json:"reviewers,omitempty"`
-	Labels         []Label    `json:"labels,omitempty"`
-	Milestone      *Milestone `json:"milestone,omitempty"`
-	Head           string     `json:"head"`            // head branch
-	Base           string     `json:"base"`            // base branch
-	Mergeable      bool       `json:"mergeable"`
-	Merged         bool       `json:"merged"`
-	MergedBy       *User      `json:"merged_by,omitempty"`
-	Comments       int        `json:"comments"`
-	Additions      int        `json:"additions"`
-	Deletions      int        `json:"deletions"`
-	ChangedFiles   int        `json:"changed_files"`
-	HTMLURL        string     `json:"html_url"`
-	DiffURL        string     `json:"diff_url,omitempty"`
-	CreatedAt      time.Time  `json:"created_at"`
-	UpdatedAt      time.Time  `json:"updated_at"`
-	MergedAt       *time.Time `json:"merged_at,omitempty"`
-	ClosedAt       *time.Time `json:"closed_at,omitempty"`
+	Number       int        `json:"number"`
+	Title        string     `json:"title"`
+	Body         string     `json:"body"`
+	State        string     `json:"state"` // "open", "closed", or "merged"
+	Draft        bool       `json:"draft"`
+	Author       User       `json:"author"`
+	Assignees    []User     `json:"assignees,omitempty"`
+	Reviewers    []User     `json:"reviewers,omitempty"`
+	Labels       []Label    `json:"labels,omitempty"`
+	Milestone    *Milestone `json:"milestone,omitempty"`
+	Head         string     `json:"head"` // head branch
+	Base         string     `json:"base"` // base branch
+	Mergeable    bool       `json:"mergeable"`
+	Merged       bool       `json:"merged"`
+	MergedBy     *User      `json:"merged_by,omitempty"`
+	Comments     int        `json:"comments"`
+	Additions    int        `json:"additions"`
+	Deletions    int        `json:"deletions"`
+	ChangedFiles int        `json:"changed_files"`
+	HTMLURL      string     `json:"html_url"`
+	DiffURL      string     `json:"diff_url,omitempty"`
+	CreatedAt    time.Time  `json:"created_at"`
+	UpdatedAt    time.Time  `json:"updated_at"`
+	MergedAt     *time.Time `json:"merged_at,omitempty"`
+	ClosedAt     *time.Time `json:"closed_at,omitempty"`
 }
 
 // CreatePROpts holds options for creating a pull request.
@@ -370,12 +370,12 @@ type ReleaseAsset struct {
 
 // CreateReleaseOpts holds options for creating a release.
 type CreateReleaseOpts struct {
-	TagName      string
-	Target       string
-	Title        string
-	Body         string
-	Draft        bool
-	Prerelease   bool
+	TagName       string
+	Target        string
+	Title         string
+	Body          string
+	Draft         bool
+	Prerelease    bool
 	GenerateNotes bool
 }
 

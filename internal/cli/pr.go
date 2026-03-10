@@ -6,9 +6,9 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/git-pkgs/forge"
 	"github.com/git-pkgs/forge/internal/output"
 	"github.com/git-pkgs/forge/internal/resolve"
-	"github.com/git-pkgs/forge"
 	"github.com/spf13/cobra"
 )
 

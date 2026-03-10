@@ -18,9 +18,9 @@ var (
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "forge",
-	Short: "Work with git forges from the command line",
-	Long:  "Supports GitHub, GitLab, Gitea, and Forgejo through a single interface.",
+	Use:          "forge",
+	Short:        "Work with git forges from the command line",
+	Long:         "Supports GitHub, GitLab, Gitea, and Forgejo through a single interface.",
 	SilenceUsage: true,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		if !cmd.Flags().Changed("output") {
