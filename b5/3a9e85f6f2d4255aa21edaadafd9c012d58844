@@ -1,0 +1,51 @@
+gitea/reactions.go
+  be48c415ae06d00a 1-74
+internal/cli/reaction_test.go
+  be48c415ae06d00a 1-63
+bitbucket/reactions.go
+  be48c415ae06d00a 1-24
+bitbucket/reactions_test.go
+  be48c415ae06d00a 1-33
+forges_test.go
+  be48c415ae06d00a 480-483,606-613,693-700
+gitlab/reactions.go
+  be48c415ae06d00a 1-79
+gitlab/reactions_test.go
+  be48c415ae06d00a 1-133
+services.go
+  be48c415ae06d00a 33-34,127-128
+types.go
+  be48c415ae06d00a 575-588
+github/reactions_test.go
+  be48c415ae06d00a 1-136
+internal/cli/pr.go
+  be48c415ae06d00a 32-33
+gitea/reactions_test.go
+  be48c415ae06d00a 1-113
+github/reactions.go
+  be48c415ae06d00a 1-93
+internal/cli/issue.go
+  be48c415ae06d00a 30-31
+internal/cli/reaction.go
+  be48c415ae06d00a 1-203
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.10",
+  "base_commit_sha": "b53a9e85f6f2d4255aa21edaadafd9c012d58844",
+  "prompts": {
+    "be48c415ae06d00a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9113898a-70f6-483c-b96f-4dd73900e225",
+        "model": "<synthetic>"
+      },
+      "human_author": "Andrew Nesbitt <andrewnez@gmail.com>",
+      "messages": [],
+      "total_additions": 1,
+      "total_deletions": 1,
+      "accepted_lines": 993,
+      "overriden_lines": 0
+    }
+  }
+}
