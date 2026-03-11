@@ -45,6 +45,7 @@ type Forge interface {
 	Secrets() SecretService
 	Notifications() NotificationService
 	Reviews() ReviewService
+	GetRateLimit(ctx context.Context) (*RateLimit, error)
 }
 
 // Client routes requests to the appropriate Forge based on the URL domain.

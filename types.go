@@ -572,3 +572,10 @@ type SubmitReviewOpts struct {
 	State ReviewState // approved, changes_requested, or commented
 	Body  string
 }
+
+// RateLimit holds normalized rate limit information for the current token.
+type RateLimit struct {
+	Limit     int       `json:"limit"`
+	Remaining int       `json:"remaining"`
+	Reset     time.Time `json:"reset"`
+}
