@@ -603,6 +603,14 @@ func (m *mockIssueService) ListComments(_ context.Context, owner, repo string, n
 	return m.comments, nil
 }
 
+func (m *mockIssueService) ListReactions(_ context.Context, owner, repo string, number int, commentID int64) ([]Reaction, error) {
+	return nil, nil
+}
+
+func (m *mockIssueService) AddReaction(_ context.Context, owner, repo string, number int, commentID int64, reaction string) (*Reaction, error) {
+	return nil, nil
+}
+
 type mockPRService struct {
 	pr         *PullRequest
 	prs        []PullRequest
@@ -680,6 +688,14 @@ func (m *mockPRService) ListComments(_ context.Context, owner, repo string, numb
 	m.lastRepo = repo
 	m.lastNumber = number
 	return m.comments, nil
+}
+
+func (m *mockPRService) ListReactions(_ context.Context, owner, repo string, number int, commentID int64) ([]Reaction, error) {
+	return nil, nil
+}
+
+func (m *mockPRService) AddReaction(_ context.Context, owner, repo string, number int, commentID int64, reaction string) (*Reaction, error) {
+	return nil, nil
 }
 
 type mockLabelService struct {

@@ -27,6 +27,8 @@ func init() {
 	issueCmd.AddCommand(issueEditCmd())
 	issueCmd.AddCommand(issueDeleteCmd())
 	issueCmd.AddCommand(issueCommentCmd())
+	issueCmd.AddCommand(issueReactionsCmd())
+	issueCmd.AddCommand(issueReactCmd())
 }
 
 func issueViewCmd() *cobra.Command {
