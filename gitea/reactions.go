@@ -4,8 +4,8 @@ import (
 	"context"
 	"net/http"
 
-	forge "github.com/git-pkgs/forge"
 	"code.gitea.io/sdk/gitea"
+	forge "github.com/git-pkgs/forge"
 )
 
 func convertGiteaReaction(r *gitea.Reaction) forge.Reaction {
