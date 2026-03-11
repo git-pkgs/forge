@@ -477,6 +477,10 @@ func (m *mockForge) Reviews() ReviewService {
 	return &mockReviewService{}
 }
 
+func (m *mockForge) GetRateLimit(_ context.Context) (*RateLimit, error) {
+	return nil, ErrNotSupported
+}
+
 type mockRepoService struct {
 	repo      *Repository
 	repos     []Repository

@@ -9,7 +9,10 @@ import (
 )
 
 type giteaForge struct {
-	client *gitea.Client
+	client     *gitea.Client
+	baseURL    string
+	token      string
+	httpClient *http.Client
 }
 
 // New creates a Gitea/Forgejo forge backend.
@@ -22,7 +25,7 @@ func New(baseURL, token string, hc *http.Client) forge.Forge {
 		opts = append(opts, gitea.SetHTTPClient(hc))
 	}
 	c, _ := gitea.NewClient(baseURL, opts...)
-	return &giteaForge{client: c}
+	return &giteaForge{client: c, baseURL: baseURL, token: token, httpClient: hc}
 }
 
 type giteaRepoService struct {
