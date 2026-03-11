@@ -29,6 +29,8 @@ func init() {
 	prCmd.AddCommand(prMergeCmd())
 	prCmd.AddCommand(prDiffCmd())
 	prCmd.AddCommand(prCommentCmd())
+	prCmd.AddCommand(prReactionsCmd())
+	prCmd.AddCommand(prReactCmd())
 }
 
 func prViewCmd() *cobra.Command {

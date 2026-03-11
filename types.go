@@ -579,3 +579,10 @@ type RateLimit struct {
 	Remaining int       `json:"remaining"`
 	Reset     time.Time `json:"reset"`
 }
+
+// Reaction holds normalized metadata about a comment reaction.
+type Reaction struct {
+	ID      int64  `json:"id"`
+	User    string `json:"user"`
+	Content string `json:"content"` // +1, -1, laugh, hooray, confused, heart, rocket, eyes
+}

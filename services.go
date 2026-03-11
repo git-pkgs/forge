@@ -30,6 +30,8 @@ type PullRequestService interface {
 	Diff(ctx context.Context, owner, repo string, number int) (string, error)
 	CreateComment(ctx context.Context, owner, repo string, number int, body string) (*Comment, error)
 	ListComments(ctx context.Context, owner, repo string, number int) ([]Comment, error)
+	ListReactions(ctx context.Context, owner, repo string, number int, commentID int64) ([]Reaction, error)
+	AddReaction(ctx context.Context, owner, repo string, number int, commentID int64, reaction string) (*Reaction, error)
 }
 
 // LabelService provides operations on repository labels.
@@ -122,4 +124,6 @@ type IssueService interface {
 	Delete(ctx context.Context, owner, repo string, number int) error
 	CreateComment(ctx context.Context, owner, repo string, number int, body string) (*Comment, error)
 	ListComments(ctx context.Context, owner, repo string, number int) ([]Comment, error)
+	ListReactions(ctx context.Context, owner, repo string, number int, commentID int64) ([]Reaction, error)
+	AddReaction(ctx context.Context, owner, repo string, number int, commentID int64, reaction string) (*Reaction, error)
 }
