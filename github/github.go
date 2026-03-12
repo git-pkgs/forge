@@ -302,6 +302,46 @@ func (s *gitHubRepoService) Fork(ctx context.Context, owner, repo string, opts f
 	return &result, nil
 }
 
+func (s *gitHubRepoService) ListForks(ctx context.Context, owner, repo string, opts forge.ListForksOpts) ([]forge.Repository, error) {
+	perPage := opts.PerPage
+	if perPage <= 0 {
+		perPage = 100
+	}
+	page := opts.Page
+	if page <= 0 {
+		page = 1
+	}
+
+	ghOpts := &github.RepositoryListForksOptions{
+		Sort:        opts.Sort,
+		ListOptions: github.ListOptions{PerPage: perPage, Page: page},
+	}
+
+	var all []forge.Repository
+	for {
+		forks, resp, err := s.client.Repositories.ListForks(ctx, owner, repo, ghOpts)
+		if err != nil {
+			if resp != nil && resp.StatusCode == http.StatusNotFound {
+				return nil, forge.ErrNotFound
+			}
+			return nil, err
+		}
+		for _, r := range forks {
+			all = append(all, convertGitHubRepo(r))
+		}
+		if resp.NextPage == 0 || (opts.Limit > 0 && len(all) >= opts.Limit) {
+			break
+		}
+		ghOpts.Page = resp.NextPage
+	}
+
+	if opts.Limit > 0 && len(all) > opts.Limit {
+		all = all[:opts.Limit]
+	}
+
+	return all, nil
+}
+
 func (s *gitHubRepoService) ListTags(ctx context.Context, owner, repo string) ([]forge.Tag, error) {
 	var allTags []forge.Tag
 	opts := &github.ListOptions{PerPage: 100}

@@ -136,6 +136,14 @@ type ForkRepoOpts struct {
 	Name  string // new name; empty = keep original
 }
 
+// ListForksOpts holds options for listing forks of a repository.
+type ListForksOpts struct {
+	Sort    string // newest, oldest, stargazers, watchers
+	Limit   int    // max total results; 0 = unlimited
+	Page    int    // starting page; 0 or 1 = first page
+	PerPage int    // results per API request; 0 = default
+}
+
 // SearchRepoOpts holds options for searching repositories.
 type SearchRepoOpts struct {
 	Query   string

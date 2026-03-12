@@ -522,6 +522,12 @@ func (m *mockRepoService) Fork(_ context.Context, owner, repo string, opts ForkR
 	return m.repo, nil
 }
 
+func (m *mockRepoService) ListForks(_ context.Context, owner, repo string, opts ListForksOpts) ([]Repository, error) {
+	m.lastOwner = owner
+	m.lastRepo = repo
+	return m.repos, nil
+}
+
 func (m *mockRepoService) ListTags(_ context.Context, owner, repo string) ([]Tag, error) {
 	m.lastOwner = owner
 	m.lastRepo = repo
