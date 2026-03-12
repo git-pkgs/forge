@@ -45,6 +45,7 @@ type Forge interface {
 	Secrets() SecretService
 	Notifications() NotificationService
 	Reviews() ReviewService
+	Files() FileService
 	GetRateLimit(ctx context.Context) (*RateLimit, error)
 }
 

@@ -580,6 +580,22 @@ type RateLimit struct {
 	Reset     time.Time `json:"reset"`
 }
 
+// FileContent holds file content retrieved from a repository.
+type FileContent struct {
+	Name    string `json:"name"`
+	Path    string `json:"path"`
+	Content []byte `json:"content"`
+	SHA     string `json:"sha,omitempty"`
+}
+
+// FileEntry holds metadata about a directory entry in a repository.
+type FileEntry struct {
+	Name string `json:"name"`
+	Path string `json:"path"`
+	Type string `json:"type"` // file, dir, symlink
+	Size int64  `json:"size"`
+}
+
 // Reaction holds normalized metadata about a comment reaction.
 type Reaction struct {
 	ID      int64  `json:"id"`

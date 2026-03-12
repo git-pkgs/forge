@@ -113,6 +113,12 @@ type ReviewService interface {
 	RemoveReviewers(ctx context.Context, owner, repo string, number int, users []string) error
 }
 
+// FileService provides operations on file content within a repository.
+type FileService interface {
+	Get(ctx context.Context, owner, repo, path, ref string) (*FileContent, error)
+	List(ctx context.Context, owner, repo, path, ref string) ([]FileEntry, error)
+}
+
 // IssueService provides operations on issues.
 type IssueService interface {
 	Get(ctx context.Context, owner, repo string, number int) (*Issue, error)
