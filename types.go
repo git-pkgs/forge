@@ -580,6 +580,24 @@ type RateLimit struct {
 	Reset     time.Time `json:"reset"`
 }
 
+// Collaborator holds normalized metadata about a repository collaborator.
+type Collaborator struct {
+	Login      string `json:"login"`
+	Permission string `json:"permission"` // read, write, admin
+}
+
+// AddCollaboratorOpts holds options for adding a collaborator.
+type AddCollaboratorOpts struct {
+	Permission string // pull, push, admin (GitHub/Gitea); guest, reporter, developer, maintainer, owner (GitLab)
+}
+
+// ListCollaboratorOpts holds options for listing collaborators.
+type ListCollaboratorOpts struct {
+	Limit   int // max total results; 0 = unlimited
+	Page    int // starting page; 0 or 1 = first page
+	PerPage int // results per API request; 0 = default
+}
+
 // Reaction holds normalized metadata about a comment reaction.
 type Reaction struct {
 	ID      int64  `json:"id"`

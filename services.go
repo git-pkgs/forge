@@ -113,6 +113,13 @@ type ReviewService interface {
 	RemoveReviewers(ctx context.Context, owner, repo string, number int, users []string) error
 }
 
+// CollaboratorService provides operations on repository collaborators.
+type CollaboratorService interface {
+	List(ctx context.Context, owner, repo string, opts ListCollaboratorOpts) ([]Collaborator, error)
+	Add(ctx context.Context, owner, repo, username string, opts AddCollaboratorOpts) error
+	Remove(ctx context.Context, owner, repo, username string) error
+}
+
 // IssueService provides operations on issues.
 type IssueService interface {
 	Get(ctx context.Context, owner, repo string, number int) (*Issue, error)
