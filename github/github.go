@@ -368,6 +368,35 @@ func (s *gitHubRepoService) ListTags(ctx context.Context, owner, repo string) ([
 	return allTags, nil
 }
 
+func (s *gitHubRepoService) ListContributors(ctx context.Context, owner, repo string) ([]forge.Contributor, error) {
+	var all []forge.Contributor
+	opts := &github.ListContributorsOptions{
+		ListOptions: github.ListOptions{PerPage: 100},
+	}
+	for {
+		contributors, resp, err := s.client.Repositories.ListContributors(ctx, owner, repo, opts)
+		if err != nil {
+			if resp != nil && resp.StatusCode == http.StatusNotFound {
+				return nil, forge.ErrNotFound
+			}
+			return nil, err
+		}
+		for _, c := range contributors {
+			all = append(all, forge.Contributor{
+				Login:         c.GetLogin(),
+				Contributions: c.GetContributions(),
+				Email:         c.GetEmail(),
+				Name:          c.GetName(),
+			})
+		}
+		if resp.NextPage == 0 {
+			break
+		}
+		opts.Page = resp.NextPage
+	}
+	return all, nil
+}
+
 func (s *gitHubRepoService) Search(ctx context.Context, opts forge.SearchRepoOpts) ([]forge.Repository, error) {
 	perPage := opts.PerPage
 	if perPage <= 0 {

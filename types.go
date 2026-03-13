@@ -622,6 +622,14 @@ type ListCollaboratorOpts struct {
 	PerPage int // results per API request; 0 = default
 }
 
+// Contributor holds normalized metadata about a repository contributor.
+type Contributor struct {
+	Login         string `json:"login"`
+	Contributions int    `json:"contributions"`
+	Email         string `json:"email,omitempty"`
+	Name          string `json:"name,omitempty"`
+}
+
 // Reaction holds normalized metadata about a comment reaction.
 type Reaction struct {
 	ID      int64  `json:"id"`

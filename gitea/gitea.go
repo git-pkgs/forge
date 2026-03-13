@@ -358,6 +358,10 @@ func (s *giteaRepoService) ListTags(ctx context.Context, owner, repo string) ([]
 	return allTags, nil
 }
 
+func (s *giteaRepoService) ListContributors(ctx context.Context, owner, repo string) ([]forge.Contributor, error) {
+	return nil, forge.ErrNotSupported
+}
+
 func (s *giteaRepoService) Search(ctx context.Context, opts forge.SearchRepoOpts) ([]forge.Repository, error) {
 	perPage := opts.PerPage
 	if perPage <= 0 {

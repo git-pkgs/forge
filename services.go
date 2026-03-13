@@ -16,6 +16,7 @@ type RepoService interface {
 	Fork(ctx context.Context, owner, repo string, opts ForkRepoOpts) (*Repository, error)
 	ListForks(ctx context.Context, owner, repo string, opts ListForksOpts) ([]Repository, error)
 	ListTags(ctx context.Context, owner, repo string) ([]Tag, error)
+	ListContributors(ctx context.Context, owner, repo string) ([]Contributor, error)
 	Search(ctx context.Context, opts SearchRepoOpts) ([]Repository, error)
 }
 
