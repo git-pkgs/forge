@@ -27,6 +27,7 @@ func init() {
 	repoCmd.AddCommand(repoDeleteCmd())
 	repoCmd.AddCommand(repoForkCmd())
 	repoCmd.AddCommand(repoCloneCmd())
+	repoCmd.AddCommand(repoForksCmd())
 	repoCmd.AddCommand(repoSearchCmd())
 }
 
@@ -467,6 +468,74 @@ func repoCloneCmd() *cobra.Command {
 			return cloneCmd.Run()
 		},
 	}
+}
+
+func repoForksCmd() *cobra.Command {
+	var (
+		flagLimit int
+		flagSort  string
+	)
+
+	cmd := &cobra.Command{
+		Use:   "forks [OWNER/REPO]",
+		Short: "List forks of a repository",
+		Args:  cobra.MaximumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			repo := flagRepo
+			if len(args) > 0 {
+				repo = args[0]
+			}
+
+			forge, owner, repoName, _, err := resolve.Repo(repo, flagForgeType)
+			if err != nil {
+				return err
+			}
+
+			opts := forges.ListForksOpts{
+				Sort:  flagSort,
+				Limit: flagLimit,
+			}
+
+			forks, err := forge.Repos().ListForks(cmd.Context(), owner, repoName, opts)
+			if err != nil {
+				return notSupported(err, "list forks")
+			}
+
+			p := printer()
+			if p.Format == output.JSON {
+				return p.PrintJSON(forks)
+			}
+
+			if p.Format == output.Plain {
+				lines := make([]string, len(forks))
+				for i, r := range forks {
+					lines[i] = r.FullName
+				}
+				p.PrintPlain(lines)
+				return nil
+			}
+
+			headers := []string{"NAME", "DESCRIPTION", "STARS"}
+			rows := make([][]string, len(forks))
+			for i, r := range forks {
+				desc := r.Description
+				if len(desc) > 60 {
+					desc = desc[:57] + "..."
+				}
+				rows[i] = []string{
+					r.FullName,
+					desc,
+					strconv.Itoa(r.StargazersCount),
+				}
+			}
+			p.PrintTable(headers, rows)
+			return nil
+		},
+	}
+
+	cmd.Flags().IntVarP(&flagLimit, "limit", "L", 30, "Maximum number of forks")
+	cmd.Flags().StringVar(&flagSort, "sort", "", "Sort order (newest, oldest, stargazers, watchers)")
+	return cmd
 }
 
 func repoSearchCmd() *cobra.Command {

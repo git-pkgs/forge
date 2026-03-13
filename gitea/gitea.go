@@ -293,6 +293,43 @@ func (s *giteaRepoService) Fork(ctx context.Context, owner, repo string, opts fo
 	return &result, nil
 }
 
+func (s *giteaRepoService) ListForks(ctx context.Context, owner, repo string, opts forge.ListForksOpts) ([]forge.Repository, error) {
+	perPage := opts.PerPage
+	if perPage <= 0 {
+		perPage = 50
+	}
+	page := opts.Page
+	if page <= 0 {
+		page = 1
+	}
+
+	var all []forge.Repository
+	for {
+		forks, resp, err := s.client.ListForks(owner, repo, gitea.ListForksOptions{
+			ListOptions: gitea.ListOptions{Page: page, PageSize: perPage},
+		})
+		if err != nil {
+			if resp != nil && resp.StatusCode == http.StatusNotFound {
+				return nil, forge.ErrNotFound
+			}
+			return nil, err
+		}
+		for _, r := range forks {
+			all = append(all, convertGiteaRepo(r))
+		}
+		if len(forks) < perPage || (opts.Limit > 0 && len(all) >= opts.Limit) {
+			break
+		}
+		page++
+	}
+
+	if opts.Limit > 0 && len(all) > opts.Limit {
+		all = all[:opts.Limit]
+	}
+
+	return all, nil
+}
+
 func (s *giteaRepoService) ListTags(ctx context.Context, owner, repo string) ([]forge.Tag, error) {
 	var allTags []forge.Tag
 	page := 1

@@ -311,6 +311,36 @@ func (s *bitbucketRepoService) Fork(ctx context.Context, owner, repo string, opt
 	return &result, nil
 }
 
+func (s *bitbucketRepoService) ListForks(ctx context.Context, owner, repo string, opts forge.ListForksOpts) ([]forge.Repository, error) {
+	perPage := opts.PerPage
+	if perPage <= 0 {
+		perPage = 100
+	}
+
+	var all []forge.Repository
+	url := fmt.Sprintf("%s/repositories/%s/%s/forks?pagelen=%d", bitbucketAPI, owner, repo, perPage)
+
+	for url != "" {
+		var page bbReposResponse
+		if err := s.getJSON(ctx, url, &page); err != nil {
+			return nil, err
+		}
+		for _, bb := range page.Values {
+			all = append(all, convertBitbucketRepo(bb))
+		}
+		if opts.Limit > 0 && len(all) >= opts.Limit {
+			break
+		}
+		url = page.Next
+	}
+
+	if opts.Limit > 0 && len(all) > opts.Limit {
+		all = all[:opts.Limit]
+	}
+
+	return all, nil
+}
+
 func (s *bitbucketRepoService) ListTags(ctx context.Context, owner, repo string) ([]forge.Tag, error) {
 	var allTags []forge.Tag
 	url := fmt.Sprintf("%s/repositories/%s/%s/refs/tags?pagelen=100", bitbucketAPI, owner, repo)
