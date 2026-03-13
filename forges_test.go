@@ -481,6 +481,10 @@ func (m *mockForge) Files() FileService {
 	return &mockFileService{}
 }
 
+func (m *mockForge) Collaborators() CollaboratorService {
+	return &mockCollaboratorService{}
+}
+
 func (m *mockForge) GetRateLimit(_ context.Context) (*RateLimit, error) {
 	return nil, ErrNotSupported
 }
@@ -493,6 +497,20 @@ func (m *mockFileService) Get(_ context.Context, _, _, _, _ string) (*FileConten
 
 func (m *mockFileService) List(_ context.Context, _, _, _, _ string) ([]FileEntry, error) {
 	return nil, nil
+}
+
+type mockCollaboratorService struct{}
+
+func (m *mockCollaboratorService) List(_ context.Context, _, _ string, _ ListCollaboratorOpts) ([]Collaborator, error) {
+	return nil, nil
+}
+
+func (m *mockCollaboratorService) Add(_ context.Context, _, _, _ string, _ AddCollaboratorOpts) error {
+	return nil
+}
+
+func (m *mockCollaboratorService) Remove(_ context.Context, _, _, _ string) error {
+	return nil
 }
 
 type mockRepoService struct {
@@ -534,6 +552,12 @@ func (m *mockRepoService) Fork(_ context.Context, owner, repo string, opts ForkR
 	m.lastOwner = owner
 	m.lastRepo = repo
 	return m.repo, nil
+}
+
+func (m *mockRepoService) ListForks(_ context.Context, owner, repo string, opts ListForksOpts) ([]Repository, error) {
+	m.lastOwner = owner
+	m.lastRepo = repo
+	return m.repos, nil
 }
 
 func (m *mockRepoService) ListTags(_ context.Context, owner, repo string) ([]Tag, error) {

@@ -14,6 +14,7 @@ type RepoService interface {
 	Edit(ctx context.Context, owner, repo string, opts EditRepoOpts) (*Repository, error)
 	Delete(ctx context.Context, owner, repo string) error
 	Fork(ctx context.Context, owner, repo string, opts ForkRepoOpts) (*Repository, error)
+	ListForks(ctx context.Context, owner, repo string, opts ListForksOpts) ([]Repository, error)
 	ListTags(ctx context.Context, owner, repo string) ([]Tag, error)
 	Search(ctx context.Context, opts SearchRepoOpts) ([]Repository, error)
 }
@@ -117,6 +118,13 @@ type ReviewService interface {
 type FileService interface {
 	Get(ctx context.Context, owner, repo, path, ref string) (*FileContent, error)
 	List(ctx context.Context, owner, repo, path, ref string) ([]FileEntry, error)
+}
+
+// CollaboratorService provides operations on repository collaborators.
+type CollaboratorService interface {
+	List(ctx context.Context, owner, repo string, opts ListCollaboratorOpts) ([]Collaborator, error)
+	Add(ctx context.Context, owner, repo, username string, opts AddCollaboratorOpts) error
+	Remove(ctx context.Context, owner, repo, username string) error
 }
 
 // IssueService provides operations on issues.

@@ -284,6 +284,49 @@ func (s *gitLabRepoService) Fork(ctx context.Context, owner, repo string, opts f
 	return &result, nil
 }
 
+func (s *gitLabRepoService) ListForks(ctx context.Context, owner, repo string, opts forge.ListForksOpts) ([]forge.Repository, error) {
+	pid := owner + "/" + repo
+	perPage := opts.PerPage
+	if perPage <= 0 {
+		perPage = 100
+	}
+	page := opts.Page
+	if page <= 0 {
+		page = 1
+	}
+
+	glOpts := &gitlab.ListProjectsOptions{
+		ListOptions: gitlab.ListOptions{PerPage: int64(perPage), Page: int64(page)},
+	}
+	if opts.Sort != "" {
+		glOpts.OrderBy = gitlab.Ptr(opts.Sort)
+	}
+
+	var all []forge.Repository
+	for {
+		projects, resp, err := s.client.Projects.ListProjectForks(pid, glOpts)
+		if err != nil {
+			if resp != nil && resp.StatusCode == http.StatusNotFound {
+				return nil, forge.ErrNotFound
+			}
+			return nil, err
+		}
+		for _, p := range projects {
+			all = append(all, convertGitLabProject(p))
+		}
+		if resp.NextPage == 0 || (opts.Limit > 0 && len(all) >= opts.Limit) {
+			break
+		}
+		glOpts.Page = int64(resp.NextPage)
+	}
+
+	if opts.Limit > 0 && len(all) > opts.Limit {
+		all = all[:opts.Limit]
+	}
+
+	return all, nil
+}
+
 func (s *gitLabRepoService) ListTags(ctx context.Context, owner, repo string) ([]forge.Tag, error) {
 	pid := owner + "/" + repo
 	var allTags []forge.Tag
