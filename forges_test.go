@@ -477,12 +477,26 @@ func (m *mockForge) Reviews() ReviewService {
 	return &mockReviewService{}
 }
 
+func (m *mockForge) Files() FileService {
+	return &mockFileService{}
+}
+
 func (m *mockForge) Collaborators() CollaboratorService {
 	return &mockCollaboratorService{}
 }
 
 func (m *mockForge) GetRateLimit(_ context.Context) (*RateLimit, error) {
 	return nil, ErrNotSupported
+}
+
+type mockFileService struct{}
+
+func (m *mockFileService) Get(_ context.Context, _, _, _, _ string) (*FileContent, error) {
+	return nil, nil
+}
+
+func (m *mockFileService) List(_ context.Context, _, _, _, _ string) ([]FileEntry, error) {
+	return nil, nil
 }
 
 type mockCollaboratorService struct{}

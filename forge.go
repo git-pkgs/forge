@@ -45,6 +45,7 @@ type Forge interface {
 	Secrets() SecretService
 	Notifications() NotificationService
 	Reviews() ReviewService
+	Files() FileService
 	Collaborators() CollaboratorService
 	GetRateLimit(ctx context.Context) (*RateLimit, error)
 }
