@@ -29,6 +29,7 @@ func init() {
 	repoCmd.AddCommand(repoCloneCmd())
 	repoCmd.AddCommand(repoForksCmd())
 	repoCmd.AddCommand(repoSearchCmd())
+	repoCmd.AddCommand(repoContributorsCmd())
 }
 
 func repoViewCmd() *cobra.Command {
@@ -603,6 +604,62 @@ func repoSearchCmd() *cobra.Command {
 	cmd.Flags().IntVarP(&flagLimit, "limit", "L", 30, "Maximum number of results")
 	cmd.Flags().StringVar(&flagSort, "sort", "", "Sort field (stars, forks, updated)")
 	cmd.Flags().StringVar(&flagOrder, "order", "", "Sort order (asc, desc)")
+	return cmd
+}
+
+func repoContributorsCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "contributors [OWNER/REPO]",
+		Short: "List repository contributors",
+		Args:  cobra.MaximumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			repo := flagRepo
+			if len(args) > 0 {
+				repo = args[0]
+			}
+
+			f, owner, repoName, _, err := resolve.Repo(repo, flagForgeType)
+			if err != nil {
+				return err
+			}
+
+			contributors, err := f.Repos().ListContributors(cmd.Context(), owner, repoName)
+			if err != nil {
+				return notSupported(err, "list contributors")
+			}
+
+			p := printer()
+			if p.Format == output.JSON {
+				return p.PrintJSON(contributors)
+			}
+
+			if p.Format == output.Plain {
+				lines := make([]string, len(contributors))
+				for i, c := range contributors {
+					name := c.Login
+					if name == "" {
+						name = c.Name
+					}
+					lines[i] = name
+				}
+				p.PrintPlain(lines)
+				return nil
+			}
+
+			headers := []string{"LOGIN", "CONTRIBUTIONS", "NAME", "EMAIL"}
+			rows := make([][]string, len(contributors))
+			for i, c := range contributors {
+				rows[i] = []string{
+					c.Login,
+					strconv.Itoa(c.Contributions),
+					c.Name,
+					c.Email,
+				}
+			}
+			p.PrintTable(headers, rows)
+			return nil
+		},
+	}
 	return cmd
 }
 

@@ -356,6 +356,35 @@ func (s *gitLabRepoService) ListTags(ctx context.Context, owner, repo string) ([
 	return allTags, nil
 }
 
+func (s *gitLabRepoService) ListContributors(ctx context.Context, owner, repo string) ([]forge.Contributor, error) {
+	pid := owner + "/" + repo
+	var all []forge.Contributor
+	opts := &gitlab.ListContributorsOptions{
+		ListOptions: gitlab.ListOptions{PerPage: 100},
+	}
+	for {
+		contributors, resp, err := s.client.Repositories.Contributors(pid, opts)
+		if err != nil {
+			if resp != nil && resp.StatusCode == http.StatusNotFound {
+				return nil, forge.ErrNotFound
+			}
+			return nil, err
+		}
+		for _, c := range contributors {
+			all = append(all, forge.Contributor{
+				Name:          c.Name,
+				Email:         c.Email,
+				Contributions: int(c.Commits),
+			})
+		}
+		if resp.NextPage == 0 {
+			break
+		}
+		opts.Page = resp.NextPage
+	}
+	return all, nil
+}
+
 func (s *gitLabRepoService) Search(ctx context.Context, opts forge.SearchRepoOpts) ([]forge.Repository, error) {
 	perPage := opts.PerPage
 	if perPage <= 0 {

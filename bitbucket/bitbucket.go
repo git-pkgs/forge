@@ -361,6 +361,10 @@ func (s *bitbucketRepoService) ListTags(ctx context.Context, owner, repo string)
 	return allTags, nil
 }
 
+func (s *bitbucketRepoService) ListContributors(ctx context.Context, owner, repo string) ([]forge.Contributor, error) {
+	return nil, forge.ErrNotSupported
+}
+
 func (s *bitbucketRepoService) Search(ctx context.Context, opts forge.SearchRepoOpts) ([]forge.Repository, error) {
 	// Bitbucket doesn't have a global repo search API.
 	// The closest is searching within a workspace, which requires an owner.

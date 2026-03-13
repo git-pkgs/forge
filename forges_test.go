@@ -566,6 +566,12 @@ func (m *mockRepoService) ListTags(_ context.Context, owner, repo string) ([]Tag
 	return m.tags, nil
 }
 
+func (m *mockRepoService) ListContributors(_ context.Context, owner, repo string) ([]Contributor, error) {
+	m.lastOwner = owner
+	m.lastRepo = repo
+	return nil, nil
+}
+
 func (m *mockRepoService) Search(_ context.Context, opts SearchRepoOpts) ([]Repository, error) {
 	return m.repos, nil
 }
