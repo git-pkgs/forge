@@ -1,0 +1,47 @@
+bitbucket/commit_statuses.go
+  2abfedb8ddfc1e06 1-21
+github/commit_statuses.go
+  2abfedb8ddfc1e06 1-82
+gitlab/commit_statuses.go
+  2abfedb8ddfc1e06 1-82
+services.go
+  2abfedb8ddfc1e06 131-136
+types.go
+  2abfedb8ddfc1e06 625-650
+internal/cli/status.go
+  2abfedb8ddfc1e06 1-121
+bitbucket/commit_statuses_test.go
+  2abfedb8ddfc1e06 1-23
+forges_test.go
+  2abfedb8ddfc1e06 488-491,520-529,583-588
+gitea/commit_statuses_test.go
+  2abfedb8ddfc1e06 1-91
+forge.go
+  2abfedb8ddfc1e06 50
+github/commit_statuses_test.go
+  2abfedb8ddfc1e06 1-105
+gitlab/commit_statuses_test.go
+  2abfedb8ddfc1e06 1-98
+gitea/commit_statuses.go
+  2abfedb8ddfc1e06 1-78
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.12",
+  "base_commit_sha": "9c555406dafa446fc92d4b9fe3c0e89d851c1d79",
+  "prompts": {
+    "2abfedb8ddfc1e06": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a73eb3dd-7211-41c6-8f7d-23cfd9067110",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Andrew Nesbitt <andrewnez@gmail.com>",
+      "messages": [],
+      "total_additions": 740,
+      "total_deletions": 0,
+      "accepted_lines": 754,
+      "overriden_lines": 0
+    }
+  }
+}
