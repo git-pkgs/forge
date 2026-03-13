@@ -47,6 +47,7 @@ type Forge interface {
 	Reviews() ReviewService
 	Files() FileService
 	Collaborators() CollaboratorService
+	CommitStatuses() CommitStatusService
 	GetRateLimit(ctx context.Context) (*RateLimit, error)
 }
 

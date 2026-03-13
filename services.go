@@ -128,6 +128,12 @@ type CollaboratorService interface {
 	Remove(ctx context.Context, owner, repo, username string) error
 }
 
+// CommitStatusService provides operations on commit statuses.
+type CommitStatusService interface {
+	List(ctx context.Context, owner, repo, sha string) ([]CommitStatus, error)
+	Set(ctx context.Context, owner, repo, sha string, opts SetCommitStatusOpts) (*CommitStatus, error)
+}
+
 // IssueService provides operations on issues.
 type IssueService interface {
 	Get(ctx context.Context, owner, repo string, number int) (*Issue, error)

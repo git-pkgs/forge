@@ -630,6 +630,24 @@ type Contributor struct {
 	Name          string `json:"name,omitempty"`
 }
 
+// CommitStatus holds normalized metadata about a commit status.
+type CommitStatus struct {
+	State       string    `json:"state"`       // success, failure, pending, error
+	Context     string    `json:"context"`     // e.g. "my-check"
+	Description string    `json:"description"` // short summary
+	TargetURL   string    `json:"target_url"`  // link to details
+	Creator     string    `json:"creator"`     // login of who created it
+	CreatedAt   time.Time `json:"created_at"`
+}
+
+// SetCommitStatusOpts holds options for creating a commit status.
+type SetCommitStatusOpts struct {
+	State       string // success, failure, pending, error
+	Context     string // e.g. "my-check"
+	Description string
+	TargetURL   string
+}
+
 // Reaction holds normalized metadata about a comment reaction.
 type Reaction struct {
 	ID      int64  `json:"id"`
