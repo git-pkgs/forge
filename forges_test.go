@@ -485,6 +485,10 @@ func (m *mockForge) Collaborators() CollaboratorService {
 	return &mockCollaboratorService{}
 }
 
+func (m *mockForge) CommitStatuses() CommitStatusService {
+	return &mockCommitStatusService{}
+}
+
 func (m *mockForge) GetRateLimit(_ context.Context) (*RateLimit, error) {
 	return nil, ErrNotSupported
 }
@@ -511,6 +515,16 @@ func (m *mockCollaboratorService) Add(_ context.Context, _, _, _ string, _ AddCo
 
 func (m *mockCollaboratorService) Remove(_ context.Context, _, _, _ string) error {
 	return nil
+}
+
+type mockCommitStatusService struct{}
+
+func (m *mockCommitStatusService) List(_ context.Context, _, _, _ string) ([]CommitStatus, error) {
+	return nil, nil
+}
+
+func (m *mockCommitStatusService) Set(_ context.Context, _, _, _ string, _ SetCommitStatusOpts) (*CommitStatus, error) {
+	return nil, nil
 }
 
 type mockRepoService struct {
