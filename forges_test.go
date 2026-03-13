@@ -477,8 +477,26 @@ func (m *mockForge) Reviews() ReviewService {
 	return &mockReviewService{}
 }
 
+func (m *mockForge) Collaborators() CollaboratorService {
+	return &mockCollaboratorService{}
+}
+
 func (m *mockForge) GetRateLimit(_ context.Context) (*RateLimit, error) {
 	return nil, ErrNotSupported
+}
+
+type mockCollaboratorService struct{}
+
+func (m *mockCollaboratorService) List(_ context.Context, _, _ string, _ ListCollaboratorOpts) ([]Collaborator, error) {
+	return nil, nil
+}
+
+func (m *mockCollaboratorService) Add(_ context.Context, _, _, _ string, _ AddCollaboratorOpts) error {
+	return nil
+}
+
+func (m *mockCollaboratorService) Remove(_ context.Context, _, _, _ string) error {
+	return nil
 }
 
 type mockRepoService struct {
