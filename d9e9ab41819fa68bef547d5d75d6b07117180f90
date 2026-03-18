@@ -1,0 +1,113 @@
+internal/cli/api.go
+  99ee4f36a2d94bf0 16-17,117,119-120
+bitbucket/issues.go
+  99ee4f36a2d94bf0 11-15,112-113,115,191,193,271
+bitbucket/prs.go
+  99ee4f36a2d94bf0 13-14,295
+internal/cli/ci.go
+  99ee4f36a2d94bf0 16-17,107,146
+gitea/labels.go
+  99ee4f36a2d94bf0 32,72,85,105,119
+internal/cli/release.go
+  99ee4f36a2d94bf0 13-17,89,319,361
+internal/cli/pr.go
+  99ee4f36a2d94bf0 9,15-19,69,91-130,207
+github/github.go
+  99ee4f36a2d94bf0 11-12,108,310,349,376
+internal/config/config_test.go
+  99ee4f36a2d94bf0 11-12,35-36,38-39,69,171
+internal/resolve/resolve.go
+  99ee4f36a2d94bf0 18-19,37-38,52
+gitlab/milestones.go
+  99ee4f36a2d94bf0 12-15,53,135
+gitlab/prs.go
+  99ee4f36a2d94bf0 12-15,41,127,205,208-209,414
+github/milestones.go
+  99ee4f36a2d94bf0 142,155
+gitea/notifications.go
+  99ee4f36a2d94bf0 13-14,77,82,85-86,88,98-102,113-114,119-120,122-126,134-135
+internal/cli/notification.go
+  99ee4f36a2d94bf0 13-18,107
+github/issues.go
+  99ee4f36a2d94bf0 12-16,248,261,295
+github/secrets.go
+  99ee4f36a2d94bf0 15-16,111-112
+gitlab/gitlab.go
+  99ee4f36a2d94bf0 113,137,334,363
+internal/cli/milestone.go
+  99ee4f36a2d94bf0 15-16,92
+gitea/rate_limit.go
+  99ee4f36a2d94bf0 47
+internal/output/output.go
+  99ee4f36a2d94bf0 18-19,50
+forge.go
+  99ee4f36a2d94bf0 244-245,268-269,274
+github/prs.go
+  99ee4f36a2d94bf0 148,265,279,355
+gitea/commit_statuses.go
+  99ee4f36a2d94bf0 11-12,26,47
+github/notifications.go
+  99ee4f36a2d94bf0 12-13,81,84-86,89-90,92,102-105,114-115,120-121,123-127,132-133,154-155
+internal/cli/label.go
+  99ee4f36a2d94bf0 13-14,67
+gitea/prs.go
+  99ee4f36a2d94bf0 42-43,45-48,139,141,143,326,337
+gitlab/commit_statuses.go
+  99ee4f36a2d94bf0 11-12,25
+internal/cli/search.go
+  99ee4f36a2d94bf0 12-13,71,86
+internal/cli/repo.go
+  99ee4f36a2d94bf0 16-23,172-173,187,248-249,251,253,532-533,546,599-600,613
+gitlab/issues.go
+  99ee4f36a2d94bf0 13-16,133,298
+bitbucket/bitbucket.go
+  99ee4f36a2d94bf0 131
+gitea/releases.go
+  99ee4f36a2d94bf0 14-15,111
+internal/cli/branch.go
+  99ee4f36a2d94bf0 13-14
+gitea/issues.go
+  99ee4f36a2d94bf0 31,33,137,139,141,299,310
+internal/cli/issue.go
+  99ee4f36a2d94bf0 15-20,194
+github/ci.go
+  99ee4f36a2d94bf0 12-13,197
+internal/cli/release_test.go
+  99ee4f36a2d94bf0 9-10,19,27,39
+gitea/gitea.go
+  99ee4f36a2d94bf0 99,299,338,353
+github/commit_statuses.go
+  99ee4f36a2d94bf0 21
+internal/cli/review.go
+  99ee4f36a2d94bf0 14-19,83,97,189,215
+gitlab/notifications.go
+  99ee4f36a2d94bf0 147
+internal/config/config.go
+  99ee4f36a2d94bf0 13-17,207,248
+gitea/milestones.go
+  99ee4f36a2d94bf0 11-16,54,56,58,135,138
+github/collaborators.go
+  99ee4f36a2d94bf0 11-16,26,28-29,31,36-41
+github/reactions.go
+  99ee4f36a2d94bf0 25,62
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.12",
+  "base_commit_sha": "d9e9ab41819fa68bef547d5d75d6b07117180f90",
+  "prompts": {
+    "99ee4f36a2d94bf0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "53b5f877-035a-4b81-bd0c-e9cfebb6d242",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Andrew Nesbitt <andrewnez@gmail.com>",
+      "messages": [],
+      "total_additions": 414,
+      "total_deletions": 268,
+      "accepted_lines": 351,
+      "overriden_lines": 0
+    }
+  }
+}
