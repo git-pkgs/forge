@@ -10,6 +10,10 @@ import (
 	gitlab "gitlab.com/gitlab-org/api/client-go"
 )
 
+const (
+	stateAll = "all"
+)
+
 type gitLabIssueService struct {
 	client *gitlab.Client
 }
@@ -126,7 +130,7 @@ func (s *gitLabIssueService) List(ctx context.Context, owner, repo string, opts 
 		ListOptions: gitlab.ListOptions{PerPage: int64(perPage), Page: int64(page)},
 	}
 
-	if opts.State != "" && opts.State != "all" {
+	if opts.State != "" && opts.State != stateAll {
 		glOpts.State = gitlab.Ptr(opts.State)
 	}
 	if opts.Assignee != "" {
@@ -291,7 +295,7 @@ func (s *gitLabIssueService) ListComments(ctx context.Context, owner, repo strin
 	pid := owner + "/" + repo
 	var all []forge.Comment
 	glOpts := &gitlab.ListIssueNotesOptions{
-		ListOptions: gitlab.ListOptions{PerPage: 100},
+		ListOptions: gitlab.ListOptions{PerPage: defaultPageSize},
 	}
 	for {
 		notes, resp, err := s.client.Notes.ListIssueNotes(pid, int64(number), glOpts)

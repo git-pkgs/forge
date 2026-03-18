@@ -9,6 +9,8 @@ import (
 	"github.com/google/go-github/v82/github"
 )
 
+const maxLogRedirects = 4
+
 type gitHubCIService struct {
 	client *github.Client
 }
@@ -192,7 +194,7 @@ func (s *gitHubCIService) RetryRun(ctx context.Context, owner, repo string, runI
 }
 
 func (s *gitHubCIService) GetJobLog(ctx context.Context, owner, repo string, jobID int64) (io.ReadCloser, error) {
-	url, resp, err := s.client.Actions.GetWorkflowJobLogs(ctx, owner, repo, jobID, 4)
+	url, resp, err := s.client.Actions.GetWorkflowJobLogs(ctx, owner, repo, jobID, maxLogRedirects)
 	if err != nil {
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return nil, forge.ErrNotFound

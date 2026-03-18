@@ -9,6 +9,8 @@ import (
 	"github.com/google/go-github/v82/github"
 )
 
+const ownerRepoParts = 2
+
 type gitHubNotificationService struct {
 	client *github.Client
 }
@@ -76,47 +78,63 @@ func (s *gitHubNotificationService) List(ctx context.Context, opts forge.ListNot
 	}
 
 	var all []forge.Notification
+	var err error
 
 	if opts.Repo != "" {
-		parts := strings.SplitN(opts.Repo, "/", 2)
-		if len(parts) == 2 {
-			for {
-				notifications, resp, err := s.client.Activity.ListRepositoryNotifications(ctx, parts[0], parts[1], ghOpts)
-				if err != nil {
-					if resp != nil && resp.StatusCode == http.StatusNotFound {
-						return nil, forge.ErrNotFound
-					}
-					return nil, err
-				}
-				for _, n := range notifications {
-					all = append(all, convertGitHubNotification(n))
-				}
-				if resp.NextPage == 0 || (opts.Limit > 0 && len(all) >= opts.Limit) {
-					break
-				}
-				ghOpts.Page = resp.NextPage
-			}
+		parts := strings.SplitN(opts.Repo, "/", ownerRepoParts)
+		if len(parts) == ownerRepoParts {
+			all, err = s.listRepoNotifications(ctx, parts[0], parts[1], ghOpts, opts.Limit)
 		}
 	} else {
-		for {
-			notifications, resp, err := s.client.Activity.ListNotifications(ctx, ghOpts)
-			if err != nil {
-				return nil, err
-			}
-			for _, n := range notifications {
-				all = append(all, convertGitHubNotification(n))
-			}
-			if resp.NextPage == 0 || (opts.Limit > 0 && len(all) >= opts.Limit) {
-				break
-			}
-			ghOpts.Page = resp.NextPage
-		}
+		all, err = s.listAllNotifications(ctx, ghOpts, opts.Limit)
+	}
+	if err != nil {
+		return nil, err
 	}
 
 	if opts.Limit > 0 && len(all) > opts.Limit {
 		all = all[:opts.Limit]
 	}
 
+	return all, nil
+}
+
+func (s *gitHubNotificationService) listRepoNotifications(ctx context.Context, owner, repo string, ghOpts *github.NotificationListOptions, limit int) ([]forge.Notification, error) {
+	var all []forge.Notification
+	for {
+		notifications, resp, err := s.client.Activity.ListRepositoryNotifications(ctx, owner, repo, ghOpts)
+		if err != nil {
+			if resp != nil && resp.StatusCode == http.StatusNotFound {
+				return nil, forge.ErrNotFound
+			}
+			return nil, err
+		}
+		for _, n := range notifications {
+			all = append(all, convertGitHubNotification(n))
+		}
+		if resp.NextPage == 0 || (limit > 0 && len(all) >= limit) {
+			break
+		}
+		ghOpts.Page = resp.NextPage
+	}
+	return all, nil
+}
+
+func (s *gitHubNotificationService) listAllNotifications(ctx context.Context, ghOpts *github.NotificationListOptions, limit int) ([]forge.Notification, error) {
+	var all []forge.Notification
+	for {
+		notifications, resp, err := s.client.Activity.ListNotifications(ctx, ghOpts)
+		if err != nil {
+			return nil, err
+		}
+		for _, n := range notifications {
+			all = append(all, convertGitHubNotification(n))
+		}
+		if resp.NextPage == 0 || (limit > 0 && len(all) >= limit) {
+			break
+		}
+		ghOpts.Page = resp.NextPage
+	}
 	return all, nil
 }
 
@@ -133,8 +151,8 @@ func (s *gitHubNotificationService) MarkRead(ctx context.Context, opts forge.Mar
 	}
 
 	if opts.Repo != "" {
-		parts := strings.SplitN(opts.Repo, "/", 2)
-		if len(parts) == 2 {
+		parts := strings.SplitN(opts.Repo, "/", ownerRepoParts)
+		if len(parts) == ownerRepoParts {
 			resp, err := s.client.Activity.MarkRepositoryNotificationsRead(ctx, parts[0], parts[1], github.Timestamp{})
 			if err != nil {
 				if resp != nil && resp.StatusCode == http.StatusNotFound {

@@ -139,7 +139,7 @@ func (s *gitHubMilestoneService) Update(ctx context.Context, owner, repo string,
 }
 
 func (s *gitHubMilestoneService) Close(ctx context.Context, owner, repo string, id int) error {
-	state := "closed"
+	state := stateClosed
 	ghMilestone := &github.Milestone{State: &state}
 	_, resp, err := s.client.Issues.EditMilestone(ctx, owner, repo, id, ghMilestone)
 	if err != nil {
@@ -152,7 +152,7 @@ func (s *gitHubMilestoneService) Close(ctx context.Context, owner, repo string, 
 }
 
 func (s *gitHubMilestoneService) Reopen(ctx context.Context, owner, repo string, id int) error {
-	state := "open"
+	state := stateOpen
 	ghMilestone := &github.Milestone{State: &state}
 	_, resp, err := s.client.Issues.EditMilestone(ctx, owner, repo, id, ghMilestone)
 	if err != nil {

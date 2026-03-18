@@ -10,6 +10,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const shortSHALength = 7
+
 var branchCmd = &cobra.Command{
 	Use:   "branch",
 	Short: "Manage branches",
@@ -61,8 +63,8 @@ func branchListCmd() *cobra.Command {
 			rows := make([][]string, len(branches))
 			for i, b := range branches {
 				sha := b.SHA
-				if len(sha) > 7 {
-					sha = sha[:7]
+				if len(sha) > shortSHALength {
+					sha = sha[:shortSHALength]
 				}
 				rows[i] = []string{
 					b.Name,

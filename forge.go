@@ -241,8 +241,8 @@ func ParseRepoURL(rawURL string) (domain, owner, repo string, err error) {
 	}
 
 	// Handle git@ SSH URLs: git@github.com:owner/repo.git
-	if strings.HasPrefix(rawURL, "git@") {
-		rawURL = strings.TrimPrefix(rawURL, "git@")
+	if after, found := strings.CutPrefix(rawURL, "git@"); found {
+		rawURL = after
 		colonIdx := strings.Index(rawURL, ":")
 		if colonIdx < 0 {
 			return "", "", "", fmt.Errorf("invalid SSH URL: missing colon")
@@ -265,11 +265,13 @@ func ParseRepoURL(rawURL string) (domain, owner, repo string, err error) {
 	return splitOwnerRepo(domain, u.Path)
 }
 
+const minOwnerRepoParts = 2
+
 func splitOwnerRepo(domain, path string) (string, string, string, error) {
 	path = strings.TrimSuffix(path, ".git")
 	path = strings.Trim(path, "/")
 	parts := strings.Split(path, "/")
-	if len(parts) < 2 {
+	if len(parts) < minOwnerRepoParts {
 		return "", "", "", fmt.Errorf("URL path must contain owner/repo, got %q", path)
 	}
 	return domain, parts[0], parts[1], nil

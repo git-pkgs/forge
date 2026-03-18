@@ -13,6 +13,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const defaultCIRunLimit = 20
+
 var ciCmd = &cobra.Command{
 	Use:   "ci",
 	Short: "Manage CI/CD pipelines",
@@ -102,7 +104,7 @@ func ciListCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&flagStatus, "status", "s", "", "Filter by status")
 	cmd.Flags().StringVarP(&flagUser, "user", "u", "", "Filter by user")
 	cmd.Flags().StringVar(&flagWorkflow, "workflow", "", "Filter by workflow name or file")
-	cmd.Flags().IntVarP(&flagLimit, "limit", "L", 20, "Maximum number of runs")
+	cmd.Flags().IntVarP(&flagLimit, "limit", "L", defaultCIRunLimit, "Maximum number of runs")
 	return cmd
 }
 
@@ -141,7 +143,7 @@ func ciViewCmd() *cobra.Command {
 			_, _ = fmt.Fprintf(os.Stdout, "Status:  %s\n", status)
 			_, _ = fmt.Fprintf(os.Stdout, "Branch:  %s\n", run.Branch)
 			if run.SHA != "" {
-				_, _ = fmt.Fprintf(os.Stdout, "SHA:     %s\n", run.SHA[:min(7, len(run.SHA))])
+				_, _ = fmt.Fprintf(os.Stdout, "SHA:     %s\n", run.SHA[:min(shortSHALength, len(run.SHA))])
 			}
 			if run.HTMLURL != "" {
 				_, _ = fmt.Fprintf(os.Stdout, "URL:     %s\n", run.HTMLURL)

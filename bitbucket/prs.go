@@ -10,6 +10,8 @@ import (
 	forge "github.com/git-pkgs/forge"
 )
 
+const maxDiffSize = 10 << 20 // 10 MB
+
 type bitbucketPRService struct {
 	token      string
 	httpClient *http.Client
@@ -290,7 +292,7 @@ func (s *bitbucketPRService) Diff(ctx context.Context, owner, repo string, numbe
 		return "", forge.ErrNotFound
 	}
 
-	body, err := io.ReadAll(io.LimitReader(resp.Body, 10<<20)) // 10 MB max
+	body, err := io.ReadAll(io.LimitReader(resp.Body, maxDiffSize))
 	if err != nil {
 		return "", err
 	}

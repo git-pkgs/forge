@@ -6,6 +6,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const flagTypeBool = "bool"
+
 func TestReleaseEditDraftFlag(t *testing.T) {
 	cmd := releaseEditCmd()
 
@@ -14,7 +16,7 @@ func TestReleaseEditDraftFlag(t *testing.T) {
 	if f == nil {
 		t.Fatal("expected --draft flag to exist")
 	}
-	if f.Value.Type() != "bool" {
+	if f.Value.Type() != flagTypeBool {
 		t.Errorf("expected --draft to be bool, got %s", f.Value.Type())
 	}
 
@@ -22,7 +24,7 @@ func TestReleaseEditDraftFlag(t *testing.T) {
 	if f == nil {
 		t.Fatal("expected --prerelease flag to exist")
 	}
-	if f.Value.Type() != "bool" {
+	if f.Value.Type() != flagTypeBool {
 		t.Errorf("expected --prerelease to be bool, got %s", f.Value.Type())
 	}
 }
@@ -34,7 +36,7 @@ func TestReleaseCreateDraftFlag(t *testing.T) {
 	if f == nil {
 		t.Fatal("expected --draft flag to exist")
 	}
-	if f.Value.Type() != "bool" {
+	if f.Value.Type() != flagTypeBool {
 		t.Errorf("expected --draft to be bool, got %s", f.Value.Type())
 	}
 }

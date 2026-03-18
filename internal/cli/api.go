@@ -13,6 +13,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const maxErrorBodyLength = 200
+
 var apiCmd = &cobra.Command{
 	Use:   "api <endpoint>",
 	Short: "Make an authenticated API request",
@@ -112,10 +114,10 @@ var apiCmd = &cobra.Command{
 			}
 		}
 
-		if resp.StatusCode >= 400 {
+		if resp.StatusCode >= http.StatusBadRequest {
 			msg := strings.TrimSpace(string(respBody))
-			if len(msg) > 200 {
-				msg = msg[:200]
+			if len(msg) > maxErrorBodyLength {
+				msg = msg[:maxErrorBodyLength]
 			}
 			if msg != "" {
 				return fmt.Errorf("HTTP %d: %s", resp.StatusCode, msg)

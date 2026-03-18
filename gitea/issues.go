@@ -28,9 +28,9 @@ func convertGiteaIssue(i *gitea.Issue) forge.Issue {
 
 	switch i.State {
 	case gitea.StateOpen:
-		result.State = "open"
+		result.State = stateOpen
 	case gitea.StateClosed:
-		result.State = "closed"
+		result.State = stateClosed
 	default:
 		result.State = string(i.State)
 	}
@@ -134,11 +134,11 @@ func (s *giteaIssueService) List(ctx context.Context, owner, repo string, opts f
 	}
 
 	switch opts.State {
-	case "open":
+	case stateOpen:
 		gOpts.State = gitea.StateOpen
-	case "closed":
+	case stateClosed:
 		gOpts.State = gitea.StateClosed
-	case "all":
+	case stateAll:
 		gOpts.State = gitea.StateAll
 	default:
 		gOpts.State = gitea.StateOpen
@@ -296,7 +296,7 @@ func (s *giteaIssueService) ListComments(ctx context.Context, owner, repo string
 	page := 1
 	for {
 		comments, resp, err := s.client.ListIssueComments(owner, repo, int64(number), gitea.ListIssueCommentOptions{
-			ListOptions: gitea.ListOptions{Page: page, PageSize: 50},
+			ListOptions: gitea.ListOptions{Page: page, PageSize: defaultPageSize},
 		})
 		if err != nil {
 			if resp != nil && resp.StatusCode == http.StatusNotFound {
@@ -307,7 +307,7 @@ func (s *giteaIssueService) ListComments(ctx context.Context, owner, repo string
 		for _, c := range comments {
 			all = append(all, convertGiteaComment(c))
 		}
-		if len(comments) < 50 {
+		if len(comments) < defaultPageSize {
 			break
 		}
 		page++

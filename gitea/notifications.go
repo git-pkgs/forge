@@ -10,6 +10,8 @@ import (
 	forge "github.com/git-pkgs/forge"
 )
 
+const ownerRepoParts = 2
+
 type giteaNotificationService struct {
 	client *gitea.Client
 }
@@ -72,53 +74,69 @@ func (s *giteaNotificationService) List(ctx context.Context, opts forge.ListNoti
 	}
 
 	var all []forge.Notification
+	var err error
 
 	if opts.Repo != "" {
-		parts := strings.SplitN(opts.Repo, "/", 2)
-		if len(parts) == 2 {
-			for {
-				notifications, resp, err := s.client.ListRepoNotifications(parts[0], parts[1], gitea.ListNotificationOptions{
-					ListOptions: gitea.ListOptions{Page: page, PageSize: perPage},
-					Status:      statuses,
-				})
-				if err != nil {
-					if resp != nil && resp.StatusCode == http.StatusNotFound {
-						return nil, forge.ErrNotFound
-					}
-					return nil, err
-				}
-				for _, n := range notifications {
-					all = append(all, convertGiteaNotification(n))
-				}
-				if len(notifications) < perPage || (opts.Limit > 0 && len(all) >= opts.Limit) {
-					break
-				}
-				page++
-			}
+		parts := strings.SplitN(opts.Repo, "/", ownerRepoParts)
+		if len(parts) == ownerRepoParts {
+			all, err = s.listRepoNotifications(parts[0], parts[1], page, perPage, statuses, opts.Limit)
 		}
 	} else {
-		for {
-			notifications, _, err := s.client.ListNotifications(gitea.ListNotificationOptions{
-				ListOptions: gitea.ListOptions{Page: page, PageSize: perPage},
-				Status:      statuses,
-			})
-			if err != nil {
-				return nil, err
-			}
-			for _, n := range notifications {
-				all = append(all, convertGiteaNotification(n))
-			}
-			if len(notifications) < perPage || (opts.Limit > 0 && len(all) >= opts.Limit) {
-				break
-			}
-			page++
-		}
+		all, err = s.listAllNotifications(page, perPage, statuses, opts.Limit)
+	}
+	if err != nil {
+		return nil, err
 	}
 
 	if opts.Limit > 0 && len(all) > opts.Limit {
 		all = all[:opts.Limit]
 	}
 
+	return all, nil
+}
+
+func (s *giteaNotificationService) listRepoNotifications(owner, repo string, page, perPage int, statuses []gitea.NotifyStatus, limit int) ([]forge.Notification, error) {
+	var all []forge.Notification
+	for {
+		notifications, resp, err := s.client.ListRepoNotifications(owner, repo, gitea.ListNotificationOptions{
+			ListOptions: gitea.ListOptions{Page: page, PageSize: perPage},
+			Status:      statuses,
+		})
+		if err != nil {
+			if resp != nil && resp.StatusCode == http.StatusNotFound {
+				return nil, forge.ErrNotFound
+			}
+			return nil, err
+		}
+		for _, n := range notifications {
+			all = append(all, convertGiteaNotification(n))
+		}
+		if len(notifications) < perPage || (limit > 0 && len(all) >= limit) {
+			break
+		}
+		page++
+	}
+	return all, nil
+}
+
+func (s *giteaNotificationService) listAllNotifications(page, perPage int, statuses []gitea.NotifyStatus, limit int) ([]forge.Notification, error) {
+	var all []forge.Notification
+	for {
+		notifications, _, err := s.client.ListNotifications(gitea.ListNotificationOptions{
+			ListOptions: gitea.ListOptions{Page: page, PageSize: perPage},
+			Status:      statuses,
+		})
+		if err != nil {
+			return nil, err
+		}
+		for _, n := range notifications {
+			all = append(all, convertGiteaNotification(n))
+		}
+		if len(notifications) < perPage || (limit > 0 && len(all) >= limit) {
+			break
+		}
+		page++
+	}
 	return all, nil
 }
 
@@ -139,8 +157,8 @@ func (s *giteaNotificationService) MarkRead(ctx context.Context, opts forge.Mark
 	}
 
 	if opts.Repo != "" {
-		parts := strings.SplitN(opts.Repo, "/", 2)
-		if len(parts) == 2 {
+		parts := strings.SplitN(opts.Repo, "/", ownerRepoParts)
+		if len(parts) == ownerRepoParts {
 			_, resp, err := s.client.ReadRepoNotifications(parts[0], parts[1], gitea.MarkNotificationOptions{})
 			if err != nil {
 				if resp != nil && resp.StatusCode == http.StatusNotFound {

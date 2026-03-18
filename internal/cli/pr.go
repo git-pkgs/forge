@@ -6,10 +6,15 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/git-pkgs/forge"
+	forges "github.com/git-pkgs/forge"
 	"github.com/git-pkgs/forge/internal/output"
 	"github.com/git-pkgs/forge/internal/resolve"
 	"github.com/spf13/cobra"
+)
+
+const (
+	maxPRTitleLength = 60
+	defaultPRLimit   = 30
 )
 
 var prCmd = &cobra.Command{
@@ -61,43 +66,7 @@ func prViewCmd() *cobra.Command {
 				return p.PrintJSON(pr)
 			}
 
-			_, _ = fmt.Fprintf(os.Stdout, "#%d %s\n", pr.Number, pr.Title)
-			_, _ = fmt.Fprintf(os.Stdout, "State:   %s\n", pr.State)
-			_, _ = fmt.Fprintf(os.Stdout, "Author:  %s\n", pr.Author.Login)
-			_, _ = fmt.Fprintf(os.Stdout, "Branch:  %s -> %s\n", pr.Head, pr.Base)
-
-			if pr.Draft {
-				_, _ = fmt.Fprintln(os.Stdout, "Draft:   yes")
-			}
-
-			if len(pr.Reviewers) > 0 {
-				names := make([]string, len(pr.Reviewers))
-				for i, r := range pr.Reviewers {
-					names[i] = r.Login
-				}
-				_, _ = fmt.Fprintf(os.Stdout, "Review:  %s\n", strings.Join(names, ", "))
-			}
-
-			if len(pr.Labels) > 0 {
-				names := make([]string, len(pr.Labels))
-				for i, l := range pr.Labels {
-					names[i] = l.Name
-				}
-				_, _ = fmt.Fprintf(os.Stdout, "Labels:  %s\n", strings.Join(names, ", "))
-			}
-
-			if pr.Milestone != nil {
-				_, _ = fmt.Fprintf(os.Stdout, "Mile:    %s\n", pr.Milestone.Title)
-			}
-
-			if pr.Additions > 0 || pr.Deletions > 0 {
-				_, _ = fmt.Fprintf(os.Stdout, "Changes: +%d -%d (%d files)\n", pr.Additions, pr.Deletions, pr.ChangedFiles)
-			}
-
-			if pr.Body != "" {
-				_, _ = fmt.Fprintln(os.Stdout)
-				_, _ = fmt.Fprintln(os.Stdout, pr.Body)
-			}
+			printPRDetails(pr)
 
 			if flagComments {
 				comments, err := forge.PullRequests().ListComments(cmd.Context(), owner, repoName, number)
@@ -117,6 +86,46 @@ func prViewCmd() *cobra.Command {
 
 	cmd.Flags().BoolVarP(&flagComments, "comments", "c", false, "Show comments")
 	return cmd
+}
+
+func printPRDetails(pr *forges.PullRequest) {
+	_, _ = fmt.Fprintf(os.Stdout, "#%d %s\n", pr.Number, pr.Title)
+	_, _ = fmt.Fprintf(os.Stdout, "State:   %s\n", pr.State)
+	_, _ = fmt.Fprintf(os.Stdout, "Author:  %s\n", pr.Author.Login)
+	_, _ = fmt.Fprintf(os.Stdout, "Branch:  %s -> %s\n", pr.Head, pr.Base)
+
+	if pr.Draft {
+		_, _ = fmt.Fprintln(os.Stdout, "Draft:   yes")
+	}
+
+	if len(pr.Reviewers) > 0 {
+		names := make([]string, len(pr.Reviewers))
+		for i, r := range pr.Reviewers {
+			names[i] = r.Login
+		}
+		_, _ = fmt.Fprintf(os.Stdout, "Review:  %s\n", strings.Join(names, ", "))
+	}
+
+	if len(pr.Labels) > 0 {
+		names := make([]string, len(pr.Labels))
+		for i, l := range pr.Labels {
+			names[i] = l.Name
+		}
+		_, _ = fmt.Fprintf(os.Stdout, "Labels:  %s\n", strings.Join(names, ", "))
+	}
+
+	if pr.Milestone != nil {
+		_, _ = fmt.Fprintf(os.Stdout, "Mile:    %s\n", pr.Milestone.Title)
+	}
+
+	if pr.Additions > 0 || pr.Deletions > 0 {
+		_, _ = fmt.Fprintf(os.Stdout, "Changes: +%d -%d (%d files)\n", pr.Additions, pr.Deletions, pr.ChangedFiles)
+	}
+
+	if pr.Body != "" {
+		_, _ = fmt.Fprintln(os.Stdout)
+		_, _ = fmt.Fprintln(os.Stdout, pr.Body)
+	}
 }
 
 func prListCmd() *cobra.Command {
@@ -174,8 +183,8 @@ func prListCmd() *cobra.Command {
 			rows := make([][]string, len(prs))
 			for i, pr := range prs {
 				title := pr.Title
-				if len(title) > 60 {
-					title = title[:57] + "..."
+				if len(title) > maxPRTitleLength {
+					title = title[:maxPRTitleLength-3] + "..."
 				}
 				rows[i] = []string{
 					strconv.Itoa(pr.Number),
@@ -195,7 +204,7 @@ func prListCmd() *cobra.Command {
 	cmd.Flags().StringVar(&flagHead, "head", "", "Filter by head branch")
 	cmd.Flags().StringVar(&flagBase, "base", "", "Filter by base branch")
 	cmd.Flags().StringSliceVarP(&flagLabels, "label", "l", nil, "Filter by label")
-	cmd.Flags().IntVarP(&flagLimit, "limit", "L", 30, "Maximum number of PRs")
+	cmd.Flags().IntVarP(&flagLimit, "limit", "L", defaultPRLimit, "Maximum number of PRs")
 	cmd.Flags().StringVar(&flagSort, "sort", "", "Sort by: created, updated")
 	cmd.Flags().StringVar(&flagOrder, "order", "", "Sort order: asc, desc")
 	return cmd

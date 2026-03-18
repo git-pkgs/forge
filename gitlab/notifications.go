@@ -144,7 +144,7 @@ func (s *gitLabNotificationService) Get(ctx context.Context, id string) (*forge.
 	}
 
 	todos, _, err := s.client.Todos.ListTodos(&gitlab.ListTodosOptions{
-		ListOptions: gitlab.ListOptions{PerPage: 100},
+		ListOptions: gitlab.ListOptions{PerPage: defaultPageSize},
 	})
 	if err != nil {
 		return nil, err

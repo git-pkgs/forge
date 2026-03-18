@@ -18,7 +18,7 @@ func (f *gitHubForge) CommitStatuses() forge.CommitStatusService {
 
 func (s *gitHubCommitStatusService) List(ctx context.Context, owner, repo, sha string) ([]forge.CommitStatus, error) {
 	var all []forge.CommitStatus
-	opts := &github.ListOptions{PerPage: 100}
+	opts := &github.ListOptions{PerPage: defaultPageSize}
 	for {
 		statuses, resp, err := s.client.Repositories.ListStatuses(ctx, owner, repo, sha, opts)
 		if err != nil {

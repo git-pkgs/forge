@@ -22,7 +22,7 @@ func convertGitHubReaction(r *github.Reaction) forge.Reaction {
 func (s *gitHubIssueService) ListReactions(ctx context.Context, owner, repo string, number int, commentID int64) ([]forge.Reaction, error) {
 	var all []forge.Reaction
 	opts := &github.ListReactionOptions{
-		ListOptions: github.ListOptions{PerPage: 100},
+		ListOptions: github.ListOptions{PerPage: defaultPageSize},
 	}
 	for {
 		reactions, resp, err := s.client.Reactions.ListIssueCommentReactions(ctx, owner, repo, commentID, opts)
@@ -59,7 +59,7 @@ func (s *gitHubPRService) ListReactions(ctx context.Context, owner, repo string,
 	// GitHub uses the same issue comment reactions API for PR comments
 	var all []forge.Reaction
 	opts := &github.ListReactionOptions{
-		ListOptions: github.ListOptions{PerPage: 100},
+		ListOptions: github.ListOptions{PerPage: defaultPageSize},
 	}
 	for {
 		reactions, resp, err := s.client.Reactions.ListIssueCommentReactions(ctx, owner, repo, commentID, opts)

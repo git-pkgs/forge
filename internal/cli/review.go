@@ -11,6 +11,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const (
+	maxReviewBodyLength = 60
+	defaultReviewLimit  = 30
+	minReviewerArgs     = 2
+)
+
 var reviewCmd = &cobra.Command{
 	Use:   "review",
 	Short: "Manage pull request reviews",
@@ -74,7 +80,7 @@ func reviewListCmd() *cobra.Command {
 			rows := make([][]string, len(reviews))
 			for i, r := range reviews {
 				body := r.Body
-				if len(body) > 60 {
+				if len(body) > maxReviewBodyLength {
 					body = body[:57] + "..."
 				}
 				rows[i] = []string{
@@ -88,7 +94,7 @@ func reviewListCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().IntVarP(&flagLimit, "limit", "L", 30, "Maximum number of reviews")
+	cmd.Flags().IntVarP(&flagLimit, "limit", "L", defaultReviewLimit, "Maximum number of reviews")
 	return cmd
 }
 
@@ -180,7 +186,7 @@ func reviewerRequestCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "request <number> <users...>",
 		Short: "Request reviewers on a pull request",
-		Args:  cobra.MinimumNArgs(2),
+		Args:  cobra.MinimumNArgs(minReviewerArgs),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			number, err := strconv.Atoi(args[0])
 			if err != nil {
@@ -206,7 +212,7 @@ func reviewerRemoveCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "remove <number> <users...>",
 		Short: "Remove reviewer requests from a pull request",
-		Args:  cobra.MinimumNArgs(2),
+		Args:  cobra.MinimumNArgs(minReviewerArgs),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			number, err := strconv.Atoi(args[0])
 			if err != nil {

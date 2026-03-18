@@ -15,6 +15,8 @@ const (
 	Table Format = "table"
 	JSON  Format = "json"
 	Plain Format = "plain"
+
+	tabPadding = 2
 )
 
 // ParseFormat converts a string flag value to a Format.
@@ -45,7 +47,7 @@ func (p *Printer) PrintJSON(v any) error {
 // PrintTable writes rows as a tab-aligned table. headers are the column names;
 // rows is a slice of slices where each inner slice is one row.
 func (p *Printer) PrintTable(headers []string, rows [][]string) {
-	w := tabwriter.NewWriter(p.Out, 0, 0, 2, ' ', 0)
+	w := tabwriter.NewWriter(p.Out, 0, 0, tabPadding, ' ', 0)
 	_, _ = fmt.Fprintln(w, strings.Join(headers, "\t"))
 	for _, row := range rows {
 		_, _ = fmt.Fprintln(w, strings.Join(row, "\t"))

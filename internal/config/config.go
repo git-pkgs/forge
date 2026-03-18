@@ -10,6 +10,11 @@ import (
 	"sync"
 )
 
+const (
+	dirPermissions  = 0700
+	filePermissions = 0600
+)
+
 type Config struct {
 	Default DefaultSection
 	Domains map[string]DomainSection
@@ -199,7 +204,7 @@ func SetDomain(domain, token, forgeType string) error {
 		return fmt.Errorf("cannot determine config path")
 	}
 
-	if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
+	if err := os.MkdirAll(filepath.Dir(path), dirPermissions); err != nil {
 		return err
 	}
 
@@ -240,7 +245,7 @@ func writeINI(path string, sections map[string]map[string]string) error {
 		writeSection(&b, name, kv)
 	}
 
-	return os.WriteFile(path, []byte(b.String()), 0600)
+	return os.WriteFile(path, []byte(b.String()), filePermissions)
 }
 
 func writeSection(b *strings.Builder, name string, kv map[string]string) {

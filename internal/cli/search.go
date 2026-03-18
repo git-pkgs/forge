@@ -9,6 +9,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const maxSearchDescLength = 50
+
 var searchCmd = &cobra.Command{
 	Use:   "search",
 	Short: "Search across the forge",
@@ -66,7 +68,7 @@ func searchReposCmd() *cobra.Command {
 			rows := make([][]string, len(repos))
 			for i, r := range repos {
 				desc := r.Description
-				if len(desc) > 50 {
+				if len(desc) > maxSearchDescLength {
 					desc = desc[:47] + "..."
 				}
 				rows[i] = []string{
@@ -81,7 +83,7 @@ func searchReposCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().IntVarP(&flagLimit, "limit", "L", 30, "Maximum number of results")
+	cmd.Flags().IntVarP(&flagLimit, "limit", "L", defaultSearchLimit, "Maximum number of results")
 	cmd.Flags().StringVar(&flagSort, "sort", "", "Sort field: stars, forks, updated")
 	cmd.Flags().StringVar(&flagOrder, "order", "", "Sort order: asc, desc")
 	return cmd

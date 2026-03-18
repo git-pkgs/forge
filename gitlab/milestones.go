@@ -9,6 +9,10 @@ import (
 	gitlab "gitlab.com/gitlab-org/api/client-go"
 )
 
+const (
+	stateOpen = "open"
+)
+
 type gitLabMilestoneService struct {
 	client *gitlab.Client
 }
@@ -46,7 +50,7 @@ func (s *gitLabMilestoneService) List(ctx context.Context, owner, repo string, o
 		ListOptions: gitlab.ListOptions{PerPage: int64(perPage), Page: int64(page)},
 	}
 
-	if opts.State != "" && opts.State != "all" {
+	if opts.State != "" && opts.State != stateAll {
 		glOpts.State = gitlab.Ptr(opts.State)
 	}
 
@@ -128,7 +132,7 @@ func (s *gitLabMilestoneService) Update(ctx context.Context, owner, repo string,
 		switch *opts.State {
 		case "closed":
 			glOpts.StateEvent = gitlab.Ptr("close")
-		case "open":
+		case stateOpen:
 			glOpts.StateEvent = gitlab.Ptr("activate")
 		}
 		changed = true

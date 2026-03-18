@@ -8,6 +8,8 @@ import (
 	gitlab "gitlab.com/gitlab-org/api/client-go"
 )
 
+const defaultPageSize = 100
+
 type gitLabCommitStatusService struct {
 	client *gitlab.Client
 }
@@ -20,7 +22,7 @@ func (s *gitLabCommitStatusService) List(ctx context.Context, owner, repo, sha s
 	pid := owner + "/" + repo
 	var all []forge.CommitStatus
 	opts := &gitlab.GetCommitStatusesOptions{
-		ListOptions: gitlab.ListOptions{PerPage: 100},
+		ListOptions: gitlab.ListOptions{PerPage: defaultPageSize},
 	}
 	for {
 		statuses, resp, err := s.client.Commits.GetCommitStatuses(pid, sha, opts)

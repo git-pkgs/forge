@@ -8,6 +8,12 @@ import (
 	"github.com/google/go-github/v82/github"
 )
 
+const (
+	permRead  = "read"
+	permWrite = "write"
+	permAdmin = "admin"
+)
+
 type gitHubCollaboratorService struct {
 	client *github.Client
 }
@@ -17,22 +23,22 @@ func (f *gitHubForge) Collaborators() forge.CollaboratorService {
 }
 
 func convertGitHubCollaborator(u *github.User) forge.Collaborator {
-	perm := "read"
+	perm := permRead
 	if u.Permissions != nil {
-		if u.Permissions["admin"] {
-			perm = "admin"
+		if u.Permissions[permAdmin] {
+			perm = permAdmin
 		} else if u.Permissions["push"] {
-			perm = "write"
+			perm = permWrite
 		}
 	}
 	if u.RoleName != nil {
 		switch u.GetRoleName() {
-		case "admin":
-			perm = "admin"
-		case "write":
-			perm = "write"
-		case "read":
-			perm = "read"
+		case permAdmin:
+			perm = permAdmin
+		case permWrite:
+			perm = permWrite
+		case permRead:
+			perm = permRead
 		}
 	}
 	return forge.Collaborator{

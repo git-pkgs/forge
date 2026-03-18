@@ -3,7 +3,6 @@ package resolve
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"os"
 	"os/exec"
 	"strings"
@@ -16,16 +15,12 @@ import (
 	"github.com/git-pkgs/forge/internal/config"
 )
 
+const ownerRepoParts = 2
+
 var builders = forges.ForgeBuilders{
-	GitHub: func(baseURL, token string, hc *http.Client) forges.Forge {
-		return ghforge.NewWithBase(baseURL, token, hc)
-	},
-	GitLab: func(baseURL, token string, hc *http.Client) forges.Forge {
-		return glforge.New(baseURL, token, hc)
-	},
-	Gitea: func(baseURL, token string, hc *http.Client) forges.Forge {
-		return gitea.New(baseURL, token, hc)
-	},
+	GitHub: ghforge.NewWithBase,
+	GitLab: glforge.New,
+	Gitea:  gitea.New,
 }
 
 // Repo figures out the forge, owner, and repo name from flags or the current
@@ -39,8 +34,8 @@ func Repo(flagRepo, flagForgeType string) (forge forges.Forge, owner, repo, doma
 }
 
 func repoFromFlag(flagRepo, flagForgeType string) (forges.Forge, string, string, string, error) {
-	parts := strings.SplitN(flagRepo, "/", 2)
-	if len(parts) != 2 {
+	parts := strings.SplitN(flagRepo, "/", ownerRepoParts)
+	if len(parts) != ownerRepoParts {
 		return nil, "", "", "", fmt.Errorf("invalid repo format %q, expected OWNER/REPO", flagRepo)
 	}
 	owner, repo := parts[0], parts[1]
@@ -54,7 +49,7 @@ func repoFromFlag(flagRepo, flagForgeType string) (forges.Forge, string, string,
 	return f, owner, repo, domain, nil
 }
 
-func repoFromGitRemote(flagForgeType string) (forges.Forge, string, string, string, error) {
+func repoFromGitRemote(_ string) (forges.Forge, string, string, string, error) {
 	url, err := gitRemoteURL("origin")
 	if err != nil {
 		return nil, "", "", "", fmt.Errorf("not in a git repo and -R not set: %w", err)

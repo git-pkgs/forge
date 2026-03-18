@@ -44,7 +44,7 @@ func (f *giteaForge) GetRateLimit(ctx context.Context) (*forge.RateLimit, error)
 	if resp.StatusCode == http.StatusNotFound {
 		return nil, fmt.Errorf("getting rate limit: %w", forge.ErrNotSupported)
 	}
-	if resp.StatusCode >= 400 {
+	if resp.StatusCode >= http.StatusBadRequest {
 		return nil, &forge.HTTPError{StatusCode: resp.StatusCode, URL: url}
 	}
 

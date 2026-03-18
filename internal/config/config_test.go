@@ -8,6 +8,8 @@ import (
 	"testing"
 )
 
+const sectionDefault = "default"
+
 func TestParseINI(t *testing.T) {
 	input := `
 # This is a comment
@@ -30,11 +32,11 @@ token = abc123
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	if sections["default"]["output"] != "json" {
-		t.Errorf("expected output=json, got %q", sections["default"]["output"])
+	if sections[sectionDefault]["output"] != "json" {
+		t.Errorf("expected output=json, got %q", sections[sectionDefault]["output"])
 	}
-	if sections["default"]["forge-type"] != "gitlab" {
-		t.Errorf("expected forge-type=gitlab, got %q", sections["default"]["forge-type"])
+	if sections[sectionDefault]["forge-type"] != "gitlab" {
+		t.Errorf("expected forge-type=gitlab, got %q", sections[sectionDefault]["forge-type"])
 	}
 	if sections["github.com"]["token"] != "ghp_abc123" {
 		t.Errorf("expected github.com token=ghp_abc123, got %q", sections["github.com"]["token"])
@@ -64,7 +66,7 @@ func TestParseINIKeyBeforeSection(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if sections["default"]["output"] != "table" {
+	if sections[sectionDefault]["output"] != "table" {
 		t.Errorf("expected key before section to land in default, got %v", sections)
 	}
 }
@@ -166,7 +168,7 @@ type = github
 
 	// Simulate loading as project config (allowTokens=false)
 	for name, kv := range sections {
-		if name == "default" {
+		if name == sectionDefault {
 			continue
 		}
 		ds := cfg.Domains[name]

@@ -10,6 +10,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const maxLabelDescLength = 50
+
 var labelCmd = &cobra.Command{
 	Use:   "label",
 	Short: "Manage labels",
@@ -62,7 +64,7 @@ func labelListCmd() *cobra.Command {
 			rows := make([][]string, len(labels))
 			for i, l := range labels {
 				desc := l.Description
-				if len(desc) > 50 {
+				if len(desc) > maxLabelDescLength {
 					desc = desc[:47] + "..."
 				}
 				rows[i] = []string{l.Name, l.Color, desc}

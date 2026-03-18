@@ -10,6 +10,11 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const (
+	defaultReleaseLimit = 30
+	releaseAssetArgs    = 2
+)
+
 var releaseCmd = &cobra.Command{
 	Use:   "release",
 	Short: "Manage releases",
@@ -81,7 +86,7 @@ func releaseListCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().IntVarP(&flagLimit, "limit", "L", 30, "Maximum number of releases")
+	cmd.Flags().IntVarP(&flagLimit, "limit", "L", defaultReleaseLimit, "Maximum number of releases")
 	return cmd
 }
 
@@ -311,7 +316,7 @@ func releaseUploadCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "upload <tag> <file>",
 		Short: "Upload an asset to a release",
-		Args:  cobra.ExactArgs(2),
+		Args:  cobra.ExactArgs(releaseAssetArgs),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			tag := args[0]
 			filePath := args[1]
@@ -353,7 +358,7 @@ func releaseDownloadCmd() *cobra.Command {
 		Use:   "download <tag> <asset-name>",
 		Short: "Download a release asset",
 		Long:  "Downloads a release asset by first listing assets to find the matching name, then downloading by ID.",
-		Args:  cobra.ExactArgs(2),
+		Args:  cobra.ExactArgs(releaseAssetArgs),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			tag := args[0]
 			assetName := args[1]
