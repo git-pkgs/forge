@@ -110,7 +110,7 @@ func (s *gitLabRepoService) List(ctx context.Context, owner string, opts forge.L
 	return forge.FilterRepos(repos, opts), nil
 }
 
-func (s *gitLabRepoService) listGroupProjects(ctx context.Context, group string, perPage int) ([]forge.Repository, error) {
+func (s *gitLabRepoService) listGroupProjects(_ context.Context, group string, perPage int) ([]forge.Repository, error) {
 	var all []forge.Repository
 	glOpts := &gitlab.ListGroupProjectsOptions{
 		ListOptions: gitlab.ListOptions{PerPage: int64(perPage)},
@@ -134,7 +134,7 @@ func (s *gitLabRepoService) listGroupProjects(ctx context.Context, group string,
 	return all, nil
 }
 
-func (s *gitLabRepoService) listUserProjects(ctx context.Context, user string, perPage int) ([]forge.Repository, error) {
+func (s *gitLabRepoService) listUserProjects(_ context.Context, user string, perPage int) ([]forge.Repository, error) {
 	var all []forge.Repository
 	glOpts := &gitlab.ListProjectsOptions{
 		ListOptions: gitlab.ListOptions{PerPage: int64(perPage)},
@@ -331,7 +331,7 @@ func (s *gitLabRepoService) ListTags(ctx context.Context, owner, repo string) ([
 	pid := owner + "/" + repo
 	var allTags []forge.Tag
 	opts := &gitlab.ListTagsOptions{
-		ListOptions: gitlab.ListOptions{PerPage: 100},
+		ListOptions: gitlab.ListOptions{PerPage: defaultPageSize},
 	}
 	for {
 		tags, resp, err := s.client.Tags.ListTags(pid, opts)
@@ -360,7 +360,7 @@ func (s *gitLabRepoService) ListContributors(ctx context.Context, owner, repo st
 	pid := owner + "/" + repo
 	var all []forge.Contributor
 	opts := &gitlab.ListContributorsOptions{
-		ListOptions: gitlab.ListOptions{PerPage: 100},
+		ListOptions: gitlab.ListOptions{PerPage: defaultPageSize},
 	}
 	for {
 		contributors, resp, err := s.client.Repositories.Contributors(pid, opts)

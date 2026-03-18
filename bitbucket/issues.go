@@ -8,6 +8,11 @@ import (
 	"time"
 )
 
+const (
+	stateOpen   = "open"
+	stateClosed = "closed"
+)
+
 type bitbucketIssueService struct {
 	token      string
 	httpClient *http.Client
@@ -104,10 +109,10 @@ func convertBitbucketIssue(bb bbIssue) forge.Issue {
 
 	// Normalize Bitbucket states to open/closed
 	switch bb.State {
-	case "new", "open":
-		result.State = "open"
+	case "new", stateOpen:
+		result.State = stateOpen
 	default:
-		result.State = "closed"
+		result.State = stateClosed
 	}
 
 	if bb.Reporter != nil {
@@ -183,9 +188,9 @@ func (s *bitbucketIssueService) List(ctx context.Context, owner, repo string, op
 
 	// Bitbucket uses q= query parameter for filtering
 	switch opts.State {
-	case "open":
+	case stateOpen:
 		url += "&q=state+%3D+%22new%22+OR+state+%3D+%22open%22"
-	case "closed":
+	case stateClosed:
 		url += "&q=state+%3D+%22resolved%22+OR+state+%3D+%22closed%22"
 	}
 
@@ -263,7 +268,7 @@ func (s *bitbucketIssueService) Close(ctx context.Context, owner, repo string, n
 }
 
 func (s *bitbucketIssueService) Reopen(ctx context.Context, owner, repo string, number int) error {
-	body := map[string]any{"state": "open"}
+	body := map[string]any{"state": stateOpen}
 	url := fmt.Sprintf("%s/repositories/%s/%s/issues/%d", bitbucketAPI, owner, repo, number)
 	return s.doJSON(ctx, http.MethodPut, url, body, nil)
 }

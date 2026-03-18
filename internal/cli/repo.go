@@ -13,6 +13,14 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const (
+	defaultRepoLimit   = 100
+	maxDescLength      = 60
+	truncatedDescLen   = 57
+	defaultForkLimit   = 30
+	defaultSearchLimit = 30
+)
+
 var repoCmd = &cobra.Command{
 	Use:   "repo",
 	Short: "Manage repositories",
@@ -161,8 +169,8 @@ func repoListCmd() *cobra.Command {
 			rows := make([][]string, len(repos))
 			for i, r := range repos {
 				desc := r.Description
-				if len(desc) > 60 {
-					desc = desc[:57] + "..."
+				if len(desc) > maxDescLength {
+					desc = desc[:truncatedDescLen] + "..."
 				}
 				rows[i] = []string{
 					r.FullName,
@@ -176,7 +184,7 @@ func repoListCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().IntVarP(&flagLimit, "limit", "L", 100, "Maximum number of repos to return")
+	cmd.Flags().IntVarP(&flagLimit, "limit", "L", defaultRepoLimit, "Maximum number of repos to return")
 	cmd.Flags().BoolVar(&flagNoArchived, "no-archived", false, "Exclude archived repos")
 	cmd.Flags().BoolVar(&flagNoForks, "no-forks", false, "Exclude forked repos")
 	cmd.Flags().BoolVar(&flagArchivedOnly, "archived", false, "Only show archived repos")
@@ -237,11 +245,12 @@ func repoCreateCmd() *cobra.Command {
 				return fmt.Errorf("--private, --public, and --internal are mutually exclusive")
 			}
 
-			if flagPrivate {
+			switch {
+			case flagPrivate:
 				opts.Visibility = forges.VisibilityPrivate
-			} else if flagInternal {
+			case flagInternal:
 				opts.Visibility = forges.VisibilityInternal
-			} else if flagPublic {
+			case flagPublic:
 				opts.Visibility = forges.VisibilityPublic
 			}
 
@@ -520,8 +529,8 @@ func repoForksCmd() *cobra.Command {
 			rows := make([][]string, len(forks))
 			for i, r := range forks {
 				desc := r.Description
-				if len(desc) > 60 {
-					desc = desc[:57] + "..."
+				if len(desc) > maxDescLength {
+					desc = desc[:truncatedDescLen] + "..."
 				}
 				rows[i] = []string{
 					r.FullName,
@@ -534,7 +543,7 @@ func repoForksCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().IntVarP(&flagLimit, "limit", "L", 30, "Maximum number of forks")
+	cmd.Flags().IntVarP(&flagLimit, "limit", "L", defaultForkLimit, "Maximum number of forks")
 	cmd.Flags().StringVar(&flagSort, "sort", "", "Sort order (newest, oldest, stargazers, watchers)")
 	return cmd
 }
@@ -587,8 +596,8 @@ func repoSearchCmd() *cobra.Command {
 			rows := make([][]string, len(repos))
 			for i, r := range repos {
 				desc := r.Description
-				if len(desc) > 60 {
-					desc = desc[:57] + "..."
+				if len(desc) > maxDescLength {
+					desc = desc[:truncatedDescLen] + "..."
 				}
 				rows[i] = []string{
 					r.FullName,
@@ -601,7 +610,7 @@ func repoSearchCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().IntVarP(&flagLimit, "limit", "L", 30, "Maximum number of results")
+	cmd.Flags().IntVarP(&flagLimit, "limit", "L", defaultSearchLimit, "Maximum number of results")
 	cmd.Flags().StringVar(&flagSort, "sort", "", "Sort field (stars, forks, updated)")
 	cmd.Flags().StringVar(&flagOrder, "order", "", "Sort order (asc, desc)")
 	return cmd

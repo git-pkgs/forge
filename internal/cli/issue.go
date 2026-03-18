@@ -12,6 +12,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const (
+	maxTitleLength    = 60
+	truncatedTitleLen = 57
+	defaultIssueLimit = 30
+)
+
 var issueCmd = &cobra.Command{
 	Use:   "issue",
 	Short: "Manage issues",
@@ -165,8 +171,8 @@ func issueListCmd() *cobra.Command {
 					labels[j] = l.Name
 				}
 				title := iss.Title
-				if len(title) > 60 {
-					title = title[:57] + "..."
+				if len(title) > maxTitleLength {
+					title = title[:truncatedTitleLen] + "..."
 				}
 				rows[i] = []string{
 					strconv.Itoa(iss.Number),
@@ -185,7 +191,7 @@ func issueListCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&flagAssignee, "assignee", "a", "", "Filter by assignee")
 	cmd.Flags().StringVarP(&flagAuthor, "author", "A", "", "Filter by author")
 	cmd.Flags().StringSliceVarP(&flagLabels, "label", "l", nil, "Filter by label")
-	cmd.Flags().IntVarP(&flagLimit, "limit", "L", 30, "Maximum number of issues")
+	cmd.Flags().IntVarP(&flagLimit, "limit", "L", defaultIssueLimit, "Maximum number of issues")
 	cmd.Flags().StringVar(&flagSort, "sort", "", "Sort by: created, updated, comments")
 	cmd.Flags().StringVar(&flagOrder, "order", "", "Sort order: asc, desc")
 	return cmd

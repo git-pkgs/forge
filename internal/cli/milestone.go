@@ -12,6 +12,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const defaultMilestoneLimit = 30
+
 var milestoneCmd = &cobra.Command{
 	Use:   "milestone",
 	Short: "Manage milestones",
@@ -87,7 +89,7 @@ func milestoneListCmd() *cobra.Command {
 	}
 
 	cmd.Flags().StringVarP(&flagState, "state", "s", "open", "Filter by state: open, closed, all")
-	cmd.Flags().IntVarP(&flagLimit, "limit", "L", 30, "Maximum number of milestones")
+	cmd.Flags().IntVarP(&flagLimit, "limit", "L", defaultMilestoneLimit, "Maximum number of milestones")
 	return cmd
 }
 

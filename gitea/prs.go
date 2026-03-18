@@ -39,12 +39,13 @@ func convertGiteaPR(pr *gitea.PullRequest) forge.PullRequest {
 		DiffURL:      pr.DiffURL,
 	}
 
-	if pr.HasMerged {
+	switch {
+	case pr.HasMerged:
 		result.State = "merged"
-	} else if pr.State == gitea.StateClosed {
-		result.State = "closed"
-	} else {
-		result.State = "open"
+	case pr.State == gitea.StateClosed:
+		result.State = stateClosed
+	default:
+		result.State = stateOpen
 	}
 
 	if pr.Head != nil {
@@ -135,11 +136,11 @@ func (s *giteaPRService) List(ctx context.Context, owner, repo string, opts forg
 	}
 
 	switch opts.State {
-	case "open":
+	case stateOpen:
 		gOpts.State = gitea.StateOpen
-	case "closed":
+	case stateClosed:
 		gOpts.State = gitea.StateClosed
-	case "all":
+	case stateAll:
 		gOpts.State = gitea.StateAll
 	default:
 		gOpts.State = gitea.StateOpen
@@ -322,7 +323,7 @@ func (s *giteaPRService) ListComments(ctx context.Context, owner, repo string, n
 	page := 1
 	for {
 		comments, resp, err := s.client.ListIssueComments(owner, repo, int64(number), gitea.ListIssueCommentOptions{
-			ListOptions: gitea.ListOptions{Page: page, PageSize: 50},
+			ListOptions: gitea.ListOptions{Page: page, PageSize: defaultPageSize},
 		})
 		if err != nil {
 			if resp != nil && resp.StatusCode == http.StatusNotFound {
@@ -333,7 +334,7 @@ func (s *giteaPRService) ListComments(ctx context.Context, owner, repo string, n
 		for _, c := range comments {
 			all = append(all, convertGiteaComment(c))
 		}
-		if len(comments) < 50 {
+		if len(comments) < defaultPageSize {
 			break
 		}
 		page++

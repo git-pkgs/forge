@@ -8,6 +8,8 @@ import (
 	"code.gitea.io/sdk/gitea"
 )
 
+const defaultPageSize = 50
+
 type giteaCommitStatusService struct {
 	client *gitea.Client
 }
@@ -21,7 +23,7 @@ func (s *giteaCommitStatusService) List(ctx context.Context, owner, repo, sha st
 	page := 1
 	for {
 		statuses, resp, err := s.client.ListStatuses(owner, repo, sha, gitea.ListStatusesOption{
-			ListOptions: gitea.ListOptions{Page: page, PageSize: 50},
+			ListOptions: gitea.ListOptions{Page: page, PageSize: defaultPageSize},
 		})
 		if err != nil {
 			if resp != nil && resp.StatusCode == http.StatusNotFound {
@@ -42,7 +44,7 @@ func (s *giteaCommitStatusService) List(ctx context.Context, owner, repo, sha st
 			}
 			all = append(all, cs)
 		}
-		if len(statuses) < 50 {
+		if len(statuses) < defaultPageSize {
 			break
 		}
 		page++

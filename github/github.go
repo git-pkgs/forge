@@ -8,6 +8,8 @@ import (
 	"github.com/google/go-github/v82/github"
 )
 
+const defaultPageSize = 100
+
 type gitHubForge struct {
 	client *github.Client
 }
@@ -103,7 +105,7 @@ func (s *gitHubRepoService) Get(ctx context.Context, owner, repo string) (*forge
 func (s *gitHubRepoService) List(ctx context.Context, owner string, opts forge.ListRepoOpts) ([]forge.Repository, error) {
 	perPage := opts.PerPage
 	if perPage <= 0 {
-		perPage = 100
+		perPage = defaultPageSize
 	}
 
 	// Try org endpoint first, fall back to user on 404.
@@ -305,7 +307,7 @@ func (s *gitHubRepoService) Fork(ctx context.Context, owner, repo string, opts f
 func (s *gitHubRepoService) ListForks(ctx context.Context, owner, repo string, opts forge.ListForksOpts) ([]forge.Repository, error) {
 	perPage := opts.PerPage
 	if perPage <= 0 {
-		perPage = 100
+		perPage = defaultPageSize
 	}
 	page := opts.Page
 	if page <= 0 {
@@ -344,7 +346,7 @@ func (s *gitHubRepoService) ListForks(ctx context.Context, owner, repo string, o
 
 func (s *gitHubRepoService) ListTags(ctx context.Context, owner, repo string) ([]forge.Tag, error) {
 	var allTags []forge.Tag
-	opts := &github.ListOptions{PerPage: 100}
+	opts := &github.ListOptions{PerPage: defaultPageSize}
 	for {
 		tags, resp, err := s.client.Repositories.ListTags(ctx, owner, repo, opts)
 		if err != nil {
@@ -371,7 +373,7 @@ func (s *gitHubRepoService) ListTags(ctx context.Context, owner, repo string) ([
 func (s *gitHubRepoService) ListContributors(ctx context.Context, owner, repo string) ([]forge.Contributor, error) {
 	var all []forge.Contributor
 	opts := &github.ListContributorsOptions{
-		ListOptions: github.ListOptions{PerPage: 100},
+		ListOptions: github.ListOptions{PerPage: defaultPageSize},
 	}
 	for {
 		contributors, resp, err := s.client.Repositories.ListContributors(ctx, owner, repo, opts)

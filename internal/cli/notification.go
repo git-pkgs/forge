@@ -10,6 +10,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const (
+	maxNotifTitleLength    = 60
+	truncatedNotifTitleLen = 57
+	defaultNotifLimit      = 30
+)
+
 var notificationCmd = &cobra.Command{
 	Use:     "notification",
 	Short:   "Manage notifications",
@@ -80,8 +86,8 @@ func notificationListCmd() *cobra.Command {
 					status = "unread"
 				}
 				title := n.Title
-				if len(title) > 60 {
-					title = title[:57] + "..."
+				if len(title) > maxNotifTitleLength {
+					title = title[:truncatedNotifTitleLen] + "..."
 				}
 				rows[i] = []string{
 					n.ID,
@@ -98,7 +104,7 @@ func notificationListCmd() *cobra.Command {
 
 	cmd.Flags().BoolVar(&flagUnread, "unread", false, "Only show unread notifications")
 	cmd.Flags().StringVar(&flagNRepo, "repo", "", "Filter by repository (owner/repo)")
-	cmd.Flags().IntVarP(&flagLimit, "limit", "L", 30, "Maximum number of notifications")
+	cmd.Flags().IntVarP(&flagLimit, "limit", "L", defaultNotifLimit, "Maximum number of notifications")
 	return cmd
 }
 

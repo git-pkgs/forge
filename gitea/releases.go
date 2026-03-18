@@ -11,6 +11,8 @@ import (
 	"code.gitea.io/sdk/gitea"
 )
 
+const latestReleasesPageSize = 10
+
 type giteaReleaseService struct {
 	client *gitea.Client
 }
@@ -106,7 +108,7 @@ func (s *giteaReleaseService) Get(ctx context.Context, owner, repo, tag string) 
 func (s *giteaReleaseService) GetLatest(ctx context.Context, owner, repo string) (*forge.Release, error) {
 	// List releases and find the first non-draft, non-prerelease
 	releases, resp, err := s.client.ListReleases(owner, repo, gitea.ListReleasesOptions{
-		ListOptions: gitea.ListOptions{Page: 1, PageSize: 10},
+		ListOptions: gitea.ListOptions{Page: 1, PageSize: latestReleasesPageSize},
 	})
 	if err != nil {
 		if resp != nil && resp.StatusCode == http.StatusNotFound {

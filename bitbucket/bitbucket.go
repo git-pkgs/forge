@@ -128,7 +128,7 @@ func (s *bitbucketRepoService) doJSON(ctx context.Context, method, url string, b
 	if resp.StatusCode == http.StatusNoContent {
 		return nil
 	}
-	if resp.StatusCode >= 400 {
+	if resp.StatusCode >= http.StatusBadRequest {
 		respBody, _ := io.ReadAll(resp.Body)
 		return &forge.HTTPError{StatusCode: resp.StatusCode, URL: url, Body: string(respBody)}
 	}

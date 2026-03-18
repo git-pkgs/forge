@@ -145,7 +145,7 @@ func (s *gitHubPRService) List(ctx context.Context, owner, repo string, opts for
 		ListOptions: github.ListOptions{PerPage: perPage, Page: page},
 	}
 	if ghOpts.State == "" {
-		ghOpts.State = "open"
+		ghOpts.State = stateOpen
 	}
 
 	var all []forge.PullRequest
@@ -262,7 +262,7 @@ func (s *gitHubPRService) Update(ctx context.Context, owner, repo string, number
 }
 
 func (s *gitHubPRService) Close(ctx context.Context, owner, repo string, number int) error {
-	state := "closed"
+	state := stateClosed
 	_, resp, err := s.client.PullRequests.Edit(ctx, owner, repo, number, &github.PullRequest{
 		State: &state,
 	})
@@ -276,7 +276,7 @@ func (s *gitHubPRService) Close(ctx context.Context, owner, repo string, number 
 }
 
 func (s *gitHubPRService) Reopen(ctx context.Context, owner, repo string, number int) error {
-	state := "open"
+	state := stateOpen
 	_, resp, err := s.client.PullRequests.Edit(ctx, owner, repo, number, &github.PullRequest{
 		State: &state,
 	})
@@ -352,7 +352,7 @@ func (s *gitHubPRService) CreateComment(ctx context.Context, owner, repo string,
 func (s *gitHubPRService) ListComments(ctx context.Context, owner, repo string, number int) ([]forge.Comment, error) {
 	var all []forge.Comment
 	ghOpts := &github.IssueListCommentsOptions{
-		ListOptions: github.ListOptions{PerPage: 100},
+		ListOptions: github.ListOptions{PerPage: defaultPageSize},
 	}
 	for {
 		comments, resp, err := s.client.Issues.ListComments(ctx, owner, repo, number, ghOpts)

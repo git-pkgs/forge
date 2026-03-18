@@ -96,7 +96,7 @@ func (s *giteaRepoService) Get(ctx context.Context, owner, repo string) (*forge.
 func (s *giteaRepoService) List(ctx context.Context, owner string, opts forge.ListRepoOpts) ([]forge.Repository, error) {
 	perPage := opts.PerPage
 	if perPage <= 0 {
-		perPage = 50
+		perPage = defaultPageSize
 	}
 
 	// Try org endpoint first, fall back to user on 404.
@@ -296,7 +296,7 @@ func (s *giteaRepoService) Fork(ctx context.Context, owner, repo string, opts fo
 func (s *giteaRepoService) ListForks(ctx context.Context, owner, repo string, opts forge.ListForksOpts) ([]forge.Repository, error) {
 	perPage := opts.PerPage
 	if perPage <= 0 {
-		perPage = 50
+		perPage = defaultPageSize
 	}
 	page := opts.Page
 	if page <= 0 {
@@ -335,7 +335,7 @@ func (s *giteaRepoService) ListTags(ctx context.Context, owner, repo string) ([]
 	page := 1
 	for {
 		tags, resp, err := s.client.ListRepoTags(owner, repo, gitea.ListRepoTagsOptions{
-			ListOptions: gitea.ListOptions{Page: page, PageSize: 50},
+			ListOptions: gitea.ListOptions{Page: page, PageSize: defaultPageSize},
 		})
 		if err != nil {
 			if resp != nil && resp.StatusCode == http.StatusNotFound {
@@ -350,7 +350,7 @@ func (s *giteaRepoService) ListTags(ctx context.Context, owner, repo string) ([]
 			}
 			allTags = append(allTags, tag)
 		}
-		if len(tags) < 50 {
+		if len(tags) < defaultPageSize {
 			break
 		}
 		page++

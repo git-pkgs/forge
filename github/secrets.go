@@ -12,6 +12,8 @@ import (
 	"golang.org/x/crypto/nacl/box"
 )
 
+const naclKeySize = 32
+
 type gitHubSecretService struct {
 	client *github.Client
 }
@@ -106,8 +108,8 @@ func encryptSecret(publicKeyB64, secretValue string) (string, error) {
 	}
 
 	var recipientKey [32]byte
-	if len(publicKeyBytes) != 32 {
-		return "", fmt.Errorf("public key must be 32 bytes, got %d", len(publicKeyBytes))
+	if len(publicKeyBytes) != naclKeySize {
+		return "", fmt.Errorf("public key must be %d bytes, got %d", naclKeySize, len(publicKeyBytes))
 	}
 	copy(recipientKey[:], publicKeyBytes)
 

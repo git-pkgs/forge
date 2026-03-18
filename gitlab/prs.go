@@ -9,6 +9,10 @@ import (
 	gitlab "gitlab.com/gitlab-org/api/client-go"
 )
 
+const (
+	stateOpened = "opened"
+)
+
 type gitLabPRService struct {
 	client *gitlab.Client
 }
@@ -33,8 +37,8 @@ func convertGitLabMR(mr *gitlab.MergeRequest) forge.PullRequest {
 	}
 
 	// Normalize "opened" to "open"
-	if result.State == "opened" {
-		result.State = "open"
+	if result.State == stateOpened {
+		result.State = stateOpen
 	}
 
 	if mr.Author != nil {
@@ -119,8 +123,8 @@ func convertBasicGitLabMR(mr *gitlab.BasicMergeRequest) forge.PullRequest {
 		HTMLURL: mr.WebURL,
 	}
 
-	if result.State == "opened" {
-		result.State = "open"
+	if result.State == stateOpened {
+		result.State = stateOpen
 	}
 
 	if mr.Author != nil {
@@ -198,11 +202,11 @@ func (s *gitLabPRService) List(ctx context.Context, owner, repo string, opts for
 		ListOptions: gitlab.ListOptions{PerPage: int64(perPage), Page: int64(page)},
 	}
 
-	if opts.State != "" && opts.State != "all" {
+	if opts.State != "" && opts.State != stateAll {
 		// GitLab uses "opened" not "open"
 		state := opts.State
-		if state == "open" {
-			state = "opened"
+		if state == stateOpen {
+			state = stateOpened
 		}
 		glOpts.State = gitlab.Ptr(state)
 	}
@@ -407,7 +411,7 @@ func (s *gitLabPRService) ListComments(ctx context.Context, owner, repo string, 
 	pid := owner + "/" + repo
 	var all []forge.Comment
 	glOpts := &gitlab.ListMergeRequestNotesOptions{
-		ListOptions: gitlab.ListOptions{PerPage: 100},
+		ListOptions: gitlab.ListOptions{PerPage: defaultPageSize},
 	}
 	for {
 		notes, resp, err := s.client.Notes.ListMergeRequestNotes(pid, int64(number), glOpts)

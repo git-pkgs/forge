@@ -9,6 +9,11 @@ import (
 	"github.com/google/go-github/v82/github"
 )
 
+const (
+	stateOpen   = "open"
+	stateClosed = "closed"
+)
+
 type gitHubIssueService struct {
 	client *github.Client
 }
@@ -240,7 +245,7 @@ func (s *gitHubIssueService) Update(ctx context.Context, owner, repo string, num
 }
 
 func (s *gitHubIssueService) Close(ctx context.Context, owner, repo string, number int) error {
-	state := "closed"
+	state := stateClosed
 	req := &github.IssueRequest{State: &state}
 	_, resp, err := s.client.Issues.Edit(ctx, owner, repo, number, req)
 	if err != nil {
@@ -253,7 +258,7 @@ func (s *gitHubIssueService) Close(ctx context.Context, owner, repo string, numb
 }
 
 func (s *gitHubIssueService) Reopen(ctx context.Context, owner, repo string, number int) error {
-	state := "open"
+	state := stateOpen
 	req := &github.IssueRequest{State: &state}
 	_, resp, err := s.client.Issues.Edit(ctx, owner, repo, number, req)
 	if err != nil {
@@ -287,7 +292,7 @@ func (s *gitHubIssueService) CreateComment(ctx context.Context, owner, repo stri
 func (s *gitHubIssueService) ListComments(ctx context.Context, owner, repo string, number int) ([]forge.Comment, error) {
 	var all []forge.Comment
 	ghOpts := &github.IssueListCommentsOptions{
-		ListOptions: github.ListOptions{PerPage: 100},
+		ListOptions: github.ListOptions{PerPage: defaultPageSize},
 	}
 	for {
 		comments, resp, err := s.client.Issues.ListComments(ctx, owner, repo, number, ghOpts)

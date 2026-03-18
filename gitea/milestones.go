@@ -8,6 +8,12 @@ import (
 	"code.gitea.io/sdk/gitea"
 )
 
+const (
+	stateOpen   = "open"
+	stateClosed = "closed"
+	stateAll    = "all"
+)
+
 type giteaMilestoneService struct {
 	client *gitea.Client
 }
@@ -45,11 +51,11 @@ func (s *giteaMilestoneService) List(ctx context.Context, owner, repo string, op
 	}
 
 	switch opts.State {
-	case "open":
+	case stateOpen:
 		gOpts.State = gitea.StateOpen
-	case "closed":
+	case stateClosed:
 		gOpts.State = gitea.StateClosed
-	case "all":
+	case stateAll:
 		gOpts.State = gitea.StateAll
 	default:
 		gOpts.State = gitea.StateOpen
@@ -126,10 +132,10 @@ func (s *giteaMilestoneService) Update(ctx context.Context, owner, repo string, 
 	}
 	if opts.State != nil {
 		switch *opts.State {
-		case "open":
+		case stateOpen:
 			s := gitea.StateOpen
 			gOpts.State = &s
-		case "closed":
+		case stateClosed:
 			s := gitea.StateClosed
 			gOpts.State = &s
 		}

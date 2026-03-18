@@ -29,7 +29,7 @@ func convertGiteaLabel(l *gitea.Label) forge.Label {
 func (s *giteaLabelService) List(ctx context.Context, owner, repo string, opts forge.ListLabelOpts) ([]forge.Label, error) {
 	perPage := opts.PerPage
 	if perPage <= 0 {
-		perPage = 50
+		perPage = defaultPageSize
 	}
 	page := opts.Page
 	if page <= 0 {
@@ -69,7 +69,7 @@ func (s *giteaLabelService) findLabelByName(owner, repo, name string) (*gitea.La
 	page := 1
 	for {
 		labels, resp, err := s.client.ListRepoLabels(owner, repo, gitea.ListLabelsOptions{
-			ListOptions: gitea.ListOptions{Page: page, PageSize: 50},
+			ListOptions: gitea.ListOptions{Page: page, PageSize: defaultPageSize},
 		})
 		if err != nil {
 			if resp != nil && resp.StatusCode == http.StatusNotFound {
@@ -82,7 +82,7 @@ func (s *giteaLabelService) findLabelByName(owner, repo, name string) (*gitea.La
 				return l, nil
 			}
 		}
-		if len(labels) < 50 {
+		if len(labels) < defaultPageSize {
 			break
 		}
 		page++
@@ -102,7 +102,7 @@ func resolveLabelIDs(client *gitea.Client, owner, repo string, names []string) (
 	page := 1
 	for {
 		labels, resp, err := client.ListRepoLabels(owner, repo, gitea.ListLabelsOptions{
-			ListOptions: gitea.ListOptions{Page: page, PageSize: 50},
+			ListOptions: gitea.ListOptions{Page: page, PageSize: defaultPageSize},
 		})
 		if err != nil {
 			if resp != nil && resp.StatusCode == http.StatusNotFound {
@@ -116,7 +116,7 @@ func resolveLabelIDs(client *gitea.Client, owner, repo string, names []string) (
 				delete(nameSet, l.Name)
 			}
 		}
-		if len(nameSet) == 0 || len(labels) < 50 {
+		if len(nameSet) == 0 || len(labels) < defaultPageSize {
 			break
 		}
 		page++
