@@ -34,8 +34,8 @@ cloud.google.com/go/storage v1.5.0/go.mod h1:tpKbwo567HUNpVclU5sGELwQWBDZ8gh0Zeo
 cloud.google.com/go/storage v1.6.0/go.mod h1:N7U0C8pVQ/+NIKOBQyamJIeKQKkZ+mxpohlUTyfDhBk=
 cloud.google.com/go/storage v1.8.0/go.mod h1:Wv1Oy7z6Yz3DshWRJFhqM/UCfaWIRTdp0RXyy7KQOVs=
 cloud.google.com/go/storage v1.10.0/go.mod h1:FLPqc6j+Ki4BU591ie1oL6qBQGu2Bl/tZ9ullr3+Kg0=
-code.gitea.io/sdk/gitea v0.23.2 h1:iJB1FDmLegwfwjX8gotBDHdPSbk/ZR8V9VmEJaVsJYg=
-code.gitea.io/sdk/gitea v0.23.2/go.mod h1:yyF5+GhljqvA30sRDreoyHILruNiy4ASufugzYg0VHM=
+code.gitea.io/sdk/gitea v0.24.1 h1:hpaqcdGcBmfMpV7JSbBJVwE99qo+WqGreJYKrDKEyW8=
+code.gitea.io/sdk/gitea v0.24.1/go.mod h1:5/77BL3sHneCMEiZaMT9lfTvnnibsYxyO48mceCF3qA=
 codeberg.org/chavacava/garif v0.2.0 h1:F0tVjhYbuOCnvNcU3YSpO6b3Waw6Bimy4K0mM8y6MfY=
 codeberg.org/chavacava/garif v0.2.0/go.mod h1:P2BPbVbT4QcvLZrORc2T29szK3xEOlnl0GiPTJmEqBQ=
 codeberg.org/polyfloyd/go-errorlint v1.9.0 h1:VkdEEmA1VBpH6ecQoMR4LdphVI3fA4RrCh2an7YmodI=
@@ -45,8 +45,8 @@ dev.gaijin.team/go/exhaustruct/v4 v4.0.0/go.mod h1:aZ/k2o4Y05aMJtiux15x8iXaumE88
 dev.gaijin.team/go/golib v0.6.0 h1:v6nnznFTs4bppib/NyU1PQxobwDHwCXXl15P7DV5Zgo=
 dev.gaijin.team/go/golib v0.6.0/go.mod h1:uY1mShx8Z/aNHWDyAkZTkX+uCi5PdX7KsG1eDQa2AVE=
 dmitri.shuralyov.com/gpu/mtl v0.0.0-20190408044501-666a987793e9/go.mod h1:H6x//7gZCb22OMCxBHrMx7a5I7Hp++hsVxbQ4BYO7hU=
-github.com/42wim/httpsig v1.2.3 h1:xb0YyWhkYj57SPtfSttIobJUPJZB9as1nsfo7KWVcEs=
-github.com/42wim/httpsig v1.2.3/go.mod h1:nZq9OlYKDrUBhptd77IHx4/sZZD+IxTBADvAPI9G/EM=
+github.com/42wim/httpsig v1.2.4 h1:mI5bH0nm4xn7K18fo1K3okNDRq8CCJ0KbBYWyA6r8lU=
+github.com/42wim/httpsig v1.2.4/go.mod h1:yKsYfSyTBEohkPik224QPFylmzEBtda/kjyIAJjh3ps=
 github.com/4meepo/tagalign v1.4.3 h1:Bnu7jGWwbfpAie2vyl63Zup5KuRv21olsPIha53BJr8=
 github.com/4meepo/tagalign v1.4.3/go.mod h1:00WwRjiuSbrRJnSVeGWPLp2epS5Q/l4UEy0apLLS37c=
 github.com/Abirdcfly/dupword v0.1.7 h1:2j8sInznrje4I0CMisSL6ipEBkeJUJAmK1/lfoNGWrQ=
