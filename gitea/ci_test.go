@@ -11,13 +11,9 @@ import (
 	"testing"
 )
 
-func giteaVersionHandler125(w http.ResponseWriter, r *http.Request) {
-	_, _ = fmt.Fprintf(w, `{"version":"1.25.0"}`)
-}
-
 func TestGiteaCIListRuns(t *testing.T) {
 	mux := http.NewServeMux()
-	mux.HandleFunc("GET /api/v1/version", giteaVersionHandler125)
+	mux.HandleFunc("GET /api/v1/version", giteaVersionHandler)
 	mux.HandleFunc("GET /api/v1/repos/testorg/testrepo/actions/runs", func(w http.ResponseWriter, r *http.Request) {
 		_ = json.NewEncoder(w).Encode(map[string]any{
 			"total_count": 1,
@@ -67,7 +63,7 @@ func TestGiteaCIListRuns(t *testing.T) {
 
 func TestGiteaCIListRunsWithFilters(t *testing.T) {
 	mux := http.NewServeMux()
-	mux.HandleFunc("GET /api/v1/version", giteaVersionHandler125)
+	mux.HandleFunc("GET /api/v1/version", giteaVersionHandler)
 	mux.HandleFunc("GET /api/v1/repos/testorg/testrepo/actions/runs", func(w http.ResponseWriter, r *http.Request) {
 		q := r.URL.Query()
 		if q.Get("branch") != "develop" {
@@ -104,7 +100,7 @@ func TestGiteaCIListRunsWithFilters(t *testing.T) {
 
 func TestGiteaCIGetRun(t *testing.T) {
 	mux := http.NewServeMux()
-	mux.HandleFunc("GET /api/v1/version", giteaVersionHandler125)
+	mux.HandleFunc("GET /api/v1/version", giteaVersionHandler)
 	mux.HandleFunc("GET /api/v1/repos/testorg/testrepo/actions/runs/42", func(w http.ResponseWriter, r *http.Request) {
 		_ = json.NewEncoder(w).Encode(map[string]any{
 			"id":            42,
@@ -152,7 +148,7 @@ func TestGiteaCIGetRun(t *testing.T) {
 
 func TestGiteaCIGetRunNotFound(t *testing.T) {
 	mux := http.NewServeMux()
-	mux.HandleFunc("GET /api/v1/version", giteaVersionHandler125)
+	mux.HandleFunc("GET /api/v1/version", giteaVersionHandler)
 	mux.HandleFunc("GET /api/v1/repos/testorg/testrepo/actions/runs/999", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
 	})
@@ -169,7 +165,7 @@ func TestGiteaCIGetRunNotFound(t *testing.T) {
 
 func TestGiteaCIGetJobLog(t *testing.T) {
 	mux := http.NewServeMux()
-	mux.HandleFunc("GET /api/v1/version", giteaVersionHandler125)
+	mux.HandleFunc("GET /api/v1/version", giteaVersionHandler)
 	mux.HandleFunc("GET /api/v1/repos/testorg/testrepo/actions/jobs/100/logs", func(w http.ResponseWriter, r *http.Request) {
 		_, _ = fmt.Fprint(w, "Build started\nStep 1: compile\nBuild finished")
 	})
@@ -193,7 +189,7 @@ func TestGiteaCIGetJobLog(t *testing.T) {
 
 func TestGiteaCITriggerRunNotSupported(t *testing.T) {
 	mux := http.NewServeMux()
-	mux.HandleFunc("GET /api/v1/version", giteaVersionHandler125)
+	mux.HandleFunc("GET /api/v1/version", giteaVersionHandler)
 
 	srv := httptest.NewServer(mux)
 	defer srv.Close()
@@ -207,7 +203,7 @@ func TestGiteaCITriggerRunNotSupported(t *testing.T) {
 
 func TestGiteaCICancelRunNotSupported(t *testing.T) {
 	mux := http.NewServeMux()
-	mux.HandleFunc("GET /api/v1/version", giteaVersionHandler125)
+	mux.HandleFunc("GET /api/v1/version", giteaVersionHandler)
 
 	srv := httptest.NewServer(mux)
 	defer srv.Close()
@@ -221,7 +217,7 @@ func TestGiteaCICancelRunNotSupported(t *testing.T) {
 
 func TestGiteaCIRetryRunNotSupported(t *testing.T) {
 	mux := http.NewServeMux()
-	mux.HandleFunc("GET /api/v1/version", giteaVersionHandler125)
+	mux.HandleFunc("GET /api/v1/version", giteaVersionHandler)
 
 	srv := httptest.NewServer(mux)
 	defer srv.Close()

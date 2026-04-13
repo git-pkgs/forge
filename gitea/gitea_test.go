@@ -12,9 +12,9 @@ import (
 )
 
 // giteaVersionHandler serves the /api/v1/version endpoint that the Gitea SDK
-// requires during client creation.
+// queries to gate API features by server version.
 func giteaVersionHandler(w http.ResponseWriter, r *http.Request) {
-	_, _ = fmt.Fprintf(w, `{"version":"1.21.0"}`)
+	_, _ = fmt.Fprintf(w, `{"version":"1.26.0"}`)
 }
 
 func TestNewWithUnreachableHostDoesNotPanic(t *testing.T) {
