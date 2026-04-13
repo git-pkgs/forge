@@ -88,20 +88,27 @@ func init() {
 }
 
 func openBrowser(url string) error {
-	var cmd string
-	var args []string
+	argv := browserCmd(runtime.GOOS, url)
+	return exec.Command(argv[0], argv[1:]...).Start()
+}
 
-	switch runtime.GOOS {
-	case "linux":
-		cmd = "xdg-open"
-		args = []string{url}
-	case "windows":
-		cmd = "cmd"
-		args = []string{"/c", "start", url}
-	default:
-		cmd = "open"
-		args = []string{url}
+// browserCmd returns the argv to open url in a browser. The BROWSER
+// environment variable takes precedence over the platform default.
+//
+// On Windows we use rundll32 rather than cmd /c start, because cmd.exe
+// re-parses its /c argument: a URL containing & (which can come from
+// repo.HTMLURL or repo.DefaultBranch returned by a malicious forge) would
+// be split into separate shell commands.
+func browserCmd(goos, url string) []string {
+	if exe := os.Getenv("BROWSER"); exe != "" {
+		return []string{exe, url}
 	}
-
-	return exec.Command(cmd, args...).Start()
+	switch goos {
+	case "linux":
+		return []string{"xdg-open", url}
+	case "windows":
+		return []string{"rundll32", "url.dll,FileProtocolHandler", url}
+	default:
+		return []string{"open", url}
+	}
 }
