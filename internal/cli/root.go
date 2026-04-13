@@ -8,6 +8,7 @@ import (
 	forges "github.com/git-pkgs/forge"
 	"github.com/git-pkgs/forge/internal/config"
 	"github.com/git-pkgs/forge/internal/output"
+	"github.com/git-pkgs/forge/internal/resolve"
 	"github.com/spf13/cobra"
 )
 
@@ -33,6 +34,7 @@ var rootCmd = &cobra.Command{
 }
 
 func Execute() error {
+	resolve.SetUserAgent("forge/" + Version)
 	return rootCmd.Execute()
 }
 

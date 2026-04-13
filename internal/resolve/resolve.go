@@ -84,11 +84,12 @@ func newClient(domain string) *forges.Client {
 	}
 
 	// Register default forges first, so config-based registrations override them.
+	hc := HTTPClient()
 	defaults := map[string]forges.Forge{
-		"github.com":    ghforge.New(TokenForDomain("github.com"), nil),
-		"gitlab.com":    glforge.New("https://gitlab.com", TokenForDomain("gitlab.com"), nil),
-		"codeberg.org":  gitea.New("https://codeberg.org", TokenForDomain("codeberg.org"), nil),
-		"bitbucket.org": bitbucket.New(TokenForDomain("bitbucket.org"), nil),
+		"github.com":    ghforge.New(TokenForDomain("github.com"), hc),
+		"gitlab.com":    glforge.New("https://gitlab.com", TokenForDomain("gitlab.com"), hc),
+		"codeberg.org":  gitea.New("https://codeberg.org", TokenForDomain("codeberg.org"), hc),
+		"bitbucket.org": bitbucket.New(TokenForDomain("bitbucket.org"), hc),
 	}
 	for d, f := range defaults {
 		opts = append(opts, forges.WithForge(d, f))
@@ -99,9 +100,9 @@ func newClient(domain string) *forges.Client {
 	if ft := configForgeType(domain); ft != "" {
 		switch ft {
 		case "gitea", "forgejo":
-			opts = append(opts, forges.WithForge(domain, gitea.New("https://"+domain, token, nil)))
+			opts = append(opts, forges.WithForge(domain, gitea.New("https://"+domain, token, hc)))
 		case "gitlab":
-			opts = append(opts, forges.WithForge(domain, glforge.New("https://"+domain, token, nil)))
+			opts = append(opts, forges.WithForge(domain, glforge.New("https://"+domain, token, hc)))
 		}
 	}
 
