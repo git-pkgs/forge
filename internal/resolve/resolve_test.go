@@ -1,6 +1,9 @@
 package resolve
 
 import (
+	"os"
+	"os/exec"
+	"strings"
 	"testing"
 )
 
@@ -104,5 +107,108 @@ func TestDomainFromForgeTypeWithForgeHost(t *testing.T) {
 	got = DomainFromForgeType("")
 	if got != "git.example.com" {
 		t.Errorf("expected FORGE_HOST override for empty type, got %q", got)
+	}
+}
+
+func TestRemoteDefaultsToOrigin(t *testing.T) {
+	if remoteName != "origin" {
+		t.Errorf("default remote should be origin, got %q", remoteName)
+	}
+}
+
+func TestSetRemote(t *testing.T) {
+	old := remoteName
+	defer func() { remoteName = old }()
+
+	SetRemote("upstream")
+	if remoteName != "upstream" {
+		t.Errorf("SetRemote did not update remoteName, got %q", remoteName)
+	}
+
+	// Empty string should leave the default alone so callers can pass
+	// a flag value unconditionally without resetting to "".
+	SetRemote("")
+	if remoteName != "upstream" {
+		t.Errorf("SetRemote(\"\") should be a no-op, got %q", remoteName)
+	}
+}
+
+func TestRemoteSelectsCorrectGitURL(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not installed")
+	}
+
+	dir := t.TempDir()
+	t.Chdir(dir)
+
+	mustGit(t, "init", "-q")
+	mustGit(t, "remote", "add", "origin", "https://gitea.example.com/owner/origin-repo.git")
+	mustGit(t, "remote", "add", "mirror", "https://github.com/owner/mirror-repo.git")
+
+	old := remoteName
+	defer func() { remoteName = old }()
+
+	tests := []struct {
+		remote     string
+		wantDomain string
+		wantRepo   string
+	}{
+		{"origin", "gitea.example.com", "origin-repo"},
+		{"mirror", "github.com", "mirror-repo"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.remote, func(t *testing.T) {
+			SetRemote(tt.remote)
+			domain, owner, repo, err := resolveRemote()
+			if err != nil {
+				t.Fatalf("resolveRemote: %v", err)
+			}
+			if domain != tt.wantDomain {
+				t.Errorf("domain = %q, want %q", domain, tt.wantDomain)
+			}
+			if owner != "owner" {
+				t.Errorf("owner = %q, want owner", owner)
+			}
+			if repo != tt.wantRepo {
+				t.Errorf("repo = %q, want %q", repo, tt.wantRepo)
+			}
+		})
+	}
+}
+
+func TestRemoteUnknownNameError(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not installed")
+	}
+
+	dir := t.TempDir()
+	t.Chdir(dir)
+
+	mustGit(t, "init", "-q")
+	mustGit(t, "remote", "add", "origin", "https://github.com/owner/repo.git")
+
+	old := remoteName
+	defer func() { remoteName = old }()
+
+	SetRemote("doesnotexist")
+	_, _, _, err := resolveRemote()
+	if err == nil {
+		t.Fatal("expected error for unknown remote")
+	}
+	if !strings.Contains(err.Error(), "doesnotexist") {
+		t.Errorf("error should mention the remote name, got: %v", err)
+	}
+}
+
+func mustGit(t *testing.T, args ...string) {
+	t.Helper()
+	cmd := exec.Command("git", args...)
+	cmd.Env = append(os.Environ(),
+		"GIT_CONFIG_GLOBAL=/dev/null",
+		"GIT_CONFIG_SYSTEM=/dev/null",
+	)
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("git %v: %v\n%s", args, err, out)
 	}
 }

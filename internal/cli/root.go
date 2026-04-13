@@ -16,6 +16,7 @@ var (
 	flagRepo      string
 	flagForgeType string
 	flagOutput    string
+	flagRemote    string
 )
 
 var rootCmd = &cobra.Command{
@@ -30,6 +31,7 @@ var rootCmd = &cobra.Command{
 				flagOutput = cfg.Default.Output
 			}
 		}
+		resolve.SetRemote(flagRemote)
 	},
 }
 
@@ -42,6 +44,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVarP(&flagRepo, "repo", "R", "", "Select a repository (OWNER/REPO)")
 	rootCmd.PersistentFlags().StringVar(&flagForgeType, "forge-type", "", "Force forge type: github, gitlab, gitea, forgejo")
 	rootCmd.PersistentFlags().StringVarP(&flagOutput, "output", "o", "table", "Output format: table, json, plain")
+	rootCmd.PersistentFlags().StringVar(&flagRemote, "remote", "", "Git remote to use when not specifying -R (default origin)")
 }
 
 // notSupported wraps ErrNotSupported with a user-friendly message
