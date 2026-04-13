@@ -26,6 +26,13 @@ var repoCmd = &cobra.Command{
 	Short: "Manage repositories",
 }
 
+// gitCloneArgs builds the argv for git clone. The -- separator stops git
+// from parsing a server-supplied CloneURL as an option (a malicious forge
+// could otherwise return something like --upload-pack=...).
+func gitCloneArgs(url string) []string {
+	return []string{"clone", "--", url}
+}
+
 func init() {
 	rootCmd.AddCommand(repoCmd)
 	repoCmd.AddCommand(repoViewCmd())
@@ -267,7 +274,7 @@ func repoCreateCmd() *cobra.Command {
 			_, _ = fmt.Fprintf(os.Stdout, "%s\n", repo.HTMLURL)
 
 			if flagClone && repo.CloneURL != "" {
-				cloneCmd := exec.CommandContext(cmd.Context(), "git", "clone", repo.CloneURL)
+				cloneCmd := exec.CommandContext(cmd.Context(), "git", gitCloneArgs(repo.CloneURL)...)
 				cloneCmd.Stdout = os.Stdout
 				cloneCmd.Stderr = os.Stderr
 				return cloneCmd.Run()
@@ -435,7 +442,7 @@ func repoForkCmd() *cobra.Command {
 			_, _ = fmt.Fprintf(os.Stdout, "%s\n", r.HTMLURL)
 
 			if flagClone && r.CloneURL != "" {
-				cloneCmd := exec.CommandContext(cmd.Context(), "git", "clone", r.CloneURL)
+				cloneCmd := exec.CommandContext(cmd.Context(), "git", gitCloneArgs(r.CloneURL)...)
 				cloneCmd.Stdout = os.Stdout
 				cloneCmd.Stderr = os.Stderr
 				return cloneCmd.Run()
@@ -472,7 +479,7 @@ func repoCloneCmd() *cobra.Command {
 				cloneURL = r.HTMLURL + ".git"
 			}
 
-			cloneCmd := exec.CommandContext(cmd.Context(), "git", "clone", cloneURL)
+			cloneCmd := exec.CommandContext(cmd.Context(), "git", gitCloneArgs(cloneURL)...)
 			cloneCmd.Stdout = os.Stdout
 			cloneCmd.Stderr = os.Stderr
 			return cloneCmd.Run()
