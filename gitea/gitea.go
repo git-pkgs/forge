@@ -17,7 +17,13 @@ type giteaForge struct {
 
 // New creates a Gitea/Forgejo forge backend.
 func New(baseURL, token string, hc *http.Client) forge.Forge {
-	opts := []gitea.ClientOption{}
+	// SetGiteaVersion("") skips the SDK's /api/v1/version probe. Without
+	// it gitea.NewClient hits the network on construction and returns
+	// (nil, err) if the host is unreachable. Since this constructor is
+	// called at startup for the default codeberg.org registration whether
+	// or not the user is targeting Gitea, the probe is wasted latency at
+	// best and a stored nil client at worst.
+	opts := []gitea.ClientOption{gitea.SetGiteaVersion("")}
 	if token != "" {
 		opts = append(opts, gitea.SetToken(token))
 	}
