@@ -5,6 +5,12 @@ Go library and CLI for working with git forges. Supports GitHub, GitLab, Gitea/F
 ## CLI
 
 ```
+brew install git-pkgs/git-pkgs/forge
+```
+
+Or with Go:
+
+```
 go install github.com/git-pkgs/forge/cmd/forge@latest
 ```
 
