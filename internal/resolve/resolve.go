@@ -17,6 +17,18 @@ import (
 
 const ownerRepoParts = 2
 
+var remoteName = "origin"
+
+// SetRemote sets which git remote to read when resolving the current
+// repository. The CLI calls this from the --remote persistent flag.
+// An empty string is ignored so callers can pass the flag value
+// unconditionally.
+func SetRemote(name string) {
+	if name != "" {
+		remoteName = name
+	}
+}
+
 var builders = forges.ForgeBuilders{
 	GitHub: ghforge.NewWithBase,
 	GitLab: glforge.New,
@@ -50,14 +62,9 @@ func repoFromFlag(flagRepo, flagForgeType string) (forges.Forge, string, string,
 }
 
 func repoFromGitRemote(_ string) (forges.Forge, string, string, string, error) {
-	url, err := gitRemoteURL("origin")
+	domain, owner, repo, err := resolveRemote()
 	if err != nil {
-		return nil, "", "", "", fmt.Errorf("not in a git repo and -R not set: %w", err)
-	}
-
-	domain, owner, repo, err := forges.ParseRepoURL(url)
-	if err != nil {
-		return nil, "", "", "", fmt.Errorf("parsing remote URL: %w", err)
+		return nil, "", "", "", err
 	}
 
 	client := newClient(domain)
@@ -66,6 +73,19 @@ func repoFromGitRemote(_ string) (forges.Forge, string, string, string, error) {
 		return nil, "", "", "", err
 	}
 	return f, owner, repo, domain, nil
+}
+
+func resolveRemote() (domain, owner, repo string, err error) {
+	url, err := gitRemoteURL(remoteName)
+	if err != nil {
+		return "", "", "", fmt.Errorf("reading remote %q (not in a git repo, or remote not configured; use -R or --remote): %w", remoteName, err)
+	}
+
+	domain, owner, repo, err = forges.ParseRepoURL(url)
+	if err != nil {
+		return "", "", "", fmt.Errorf("parsing remote %q URL: %w", remoteName, err)
+	}
+	return domain, owner, repo, nil
 }
 
 func gitRemoteURL(name string) (string, error) {
