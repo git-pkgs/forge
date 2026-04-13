@@ -85,7 +85,23 @@ func resolveRemote() (domain, owner, repo string, err error) {
 	if err != nil {
 		return "", "", "", fmt.Errorf("parsing remote %q URL: %w", remoteName, err)
 	}
-	return domain, owner, repo, nil
+	return mapSSHHost(domain), owner, repo, nil
+}
+
+// mapSSHHost translates a git-over-ssh hostname to the corresponding API
+// hostname when the config declares them as different. Self-hosted GitLab
+// can serve ssh on ssh.gitlab.test while the API lives at gitlab.test;
+// without this mapping the parsed remote domain would point at the wrong host.
+// Returns the input unchanged when no mapping is configured.
+func mapSSHHost(domain string) string {
+	cfg, err := config.Load()
+	if err != nil {
+		return domain
+	}
+	if api := cfg.DomainForSSHHost(domain); api != "" {
+		return api
+	}
+	return domain
 }
 
 func gitRemoteURL(name string) (string, error) {

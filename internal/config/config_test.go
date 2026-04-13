@@ -85,6 +85,89 @@ key  =  value with spaces
 	}
 }
 
+func TestParseINISSHHost(t *testing.T) {
+	input := `[gitlab.test]
+type = gitlab
+ssh_host = ssh.gitlab.test
+`
+
+	cfg := &Config{Domains: make(map[string]DomainSection)}
+	sections, err := parseINI(strings.NewReader(input))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for name, kv := range sections {
+		ds := cfg.Domains[name]
+		if v, ok := kv["type"]; ok {
+			ds.Type = v
+		}
+		if v, ok := kv["ssh_host"]; ok {
+			ds.SSHHost = v
+		}
+		cfg.Domains[name] = ds
+	}
+
+	got := cfg.Domains["gitlab.test"].SSHHost
+	if got != "ssh.gitlab.test" {
+		t.Errorf("expected SSHHost=ssh.gitlab.test, got %q", got)
+	}
+}
+
+func TestDomainForSSHHost(t *testing.T) {
+	cfg := &Config{
+		Domains: map[string]DomainSection{
+			"gitlab.test": {Type: "gitlab", SSHHost: "ssh.gitlab.test"},
+			"github.com":  {Type: "github"},
+			"gitea.test":  {Type: "gitea", SSHHost: "git.gitea.test"},
+		},
+	}
+
+	tests := []struct {
+		sshHost string
+		want    string
+	}{
+		{"ssh.gitlab.test", "gitlab.test"},
+		{"git.gitea.test", "gitea.test"},
+		{"github.com", ""},   // no ssh_host configured, no mapping
+		{"unknown.host", ""}, // not in config at all
+		{"gitlab.test", ""},  // section name, not ssh_host
+	}
+
+	for _, tt := range tests {
+		got := cfg.DomainForSSHHost(tt.sshHost)
+		if got != tt.want {
+			t.Errorf("DomainForSSHHost(%q) = %q, want %q", tt.sshHost, got, tt.want)
+		}
+	}
+}
+
+func TestDomainForSSHHostNilConfig(t *testing.T) {
+	var cfg *Config
+	got := cfg.DomainForSSHHost("ssh.gitlab.test")
+	if got != "" {
+		t.Errorf("nil config should return empty, got %q", got)
+	}
+}
+
+func TestLoadFileReadsSSHHost(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "config")
+	_ = os.WriteFile(path, []byte(`[gitlab.test]
+type = gitlab
+ssh_host = ssh.gitlab.test
+`), 0600)
+
+	cfg := &Config{Domains: make(map[string]DomainSection)}
+	if err := loadFile(cfg, path, true); err != nil {
+		t.Fatal(err)
+	}
+
+	got := cfg.Domains["gitlab.test"].SSHHost
+	if got != "ssh.gitlab.test" {
+		t.Errorf("loadFile should populate SSHHost, got %q", got)
+	}
+}
+
 func TestLoadMergesUserAndProject(t *testing.T) {
 	ResetCache()
 	defer ResetCache()
