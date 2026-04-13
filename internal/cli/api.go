@@ -84,7 +84,7 @@ var apiCmd = &cobra.Command{
 			req.Header.Set(strings.TrimSpace(k), strings.TrimSpace(v))
 		}
 
-		resp, err := http.DefaultClient.Do(req)
+		resp, err := resolve.HTTPClient().Do(req)
 		if err != nil {
 			return err
 		}
