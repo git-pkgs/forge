@@ -57,8 +57,7 @@ func (s *giteaSecretService) List(ctx context.Context, owner, repo string, opts 
 }
 
 func (s *giteaSecretService) Set(ctx context.Context, owner, repo string, opts forge.SetSecretOpts) error {
-	resp, err := s.client.CreateRepoActionSecret(owner, repo, gitea.CreateSecretOption{
-		Name: opts.Name,
+	resp, err := s.client.CreateRepoActionSecret(owner, repo, opts.Name, gitea.CreateOrUpdateSecretOption{
 		Data: opts.Value,
 	})
 	if err != nil {
