@@ -28,8 +28,26 @@ type DefaultSection struct {
 }
 
 type DomainSection struct {
-	Type  string // github, gitlab, gitea, forgejo
-	Token string // only from user config, never .forge
+	Type    string // github, gitlab, gitea, forgejo
+	Token   string // only from user config, never .forge
+	SSHHost string // alternate host for git-over-ssh; the section name remains the API host
+}
+
+// DomainForSSHHost returns the API domain (the section name) whose ssh_host
+// matches the given host, or "" if none. Self-hosted GitLab in particular can
+// serve git-over-ssh on a different host than the web/API, so a remote URL like
+// git@ssh.gitlab.test:owner/repo needs mapping back to gitlab.test before we
+// build an API client.
+func (c *Config) DomainForSSHHost(sshHost string) string {
+	if c == nil {
+		return ""
+	}
+	for name, ds := range c.Domains {
+		if ds.SSHHost == sshHost {
+			return name
+		}
+	}
+	return ""
 }
 
 var (
@@ -107,6 +125,9 @@ func loadFile(cfg *Config, path string, allowTokens bool) error {
 		ds := cfg.Domains[name]
 		if v, ok := kv["type"]; ok {
 			ds.Type = v
+		}
+		if v, ok := kv["ssh_host"]; ok {
+			ds.SSHHost = v
 		}
 		if allowTokens {
 			if v, ok := kv["token"]; ok {

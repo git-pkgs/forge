@@ -3,9 +3,57 @@ package resolve
 import (
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/git-pkgs/forge/internal/config"
 )
+
+func TestMapSSHHost(t *testing.T) {
+	config.ResetCache()
+	defer config.ResetCache()
+
+	dir := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", dir)
+	cfgDir := filepath.Join(dir, "forge")
+	_ = os.MkdirAll(cfgDir, 0700)
+	_ = os.WriteFile(filepath.Join(cfgDir, "config"), []byte(`[gitlab.test]
+type = gitlab
+ssh_host = ssh.gitlab.test
+`), 0600)
+
+	tests := []struct {
+		in   string
+		want string
+	}{
+		// remote URL host matches a configured ssh_host: map to the API host
+		{"ssh.gitlab.test", "gitlab.test"},
+		// no mapping: pass through unchanged
+		{"github.com", "github.com"},
+		{"gitlab.test", "gitlab.test"},
+	}
+
+	for _, tt := range tests {
+		got := mapSSHHost(tt.in)
+		if got != tt.want {
+			t.Errorf("mapSSHHost(%q) = %q, want %q", tt.in, got, tt.want)
+		}
+	}
+}
+
+func TestMapSSHHostNoConfig(t *testing.T) {
+	config.ResetCache()
+	defer config.ResetCache()
+
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+
+	// With no config file, the domain passes through unchanged.
+	got := mapSSHHost("ssh.gitlab.test")
+	if got != "ssh.gitlab.test" {
+		t.Errorf("with no config, expected passthrough, got %q", got)
+	}
+}
 
 func TestTokenForDomain(t *testing.T) {
 	// With no env vars set, should return empty
