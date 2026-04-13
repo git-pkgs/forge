@@ -17,6 +17,42 @@ func giteaVersionHandler(w http.ResponseWriter, r *http.Request) {
 	_, _ = fmt.Fprintf(w, `{"version":"1.21.0"}`)
 }
 
+func TestNewWithUnreachableHostDoesNotPanic(t *testing.T) {
+	// gitea.NewClient probes /api/v1/version on construction. If that
+	// fails it returns (nil, err). We used to discard the error and store
+	// the nil client, so the first real API call would dereference nil.
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+	srv.Close() // connection refused from here on
+
+	f := New(srv.URL, "", nil)
+
+	_, err := f.Repos().Get(context.Background(), "owner", "repo")
+	if err == nil {
+		t.Fatal("expected error from unreachable host")
+	}
+}
+
+func TestNewDoesNotProbeVersionEndpoint(t *testing.T) {
+	// New is called at startup for the codeberg.org default registration
+	// regardless of which forge the user is actually targeting. The version
+	// probe is wasted latency in that case.
+	var versionHits int
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /api/v1/version", func(w http.ResponseWriter, r *http.Request) {
+		versionHits++
+		giteaVersionHandler(w, r)
+	})
+
+	srv := httptest.NewServer(mux)
+	defer srv.Close()
+
+	_ = New(srv.URL, "", nil)
+
+	if versionHits != 0 {
+		t.Errorf("New should not probe the version endpoint, got %d hits", versionHits)
+	}
+}
+
 func TestGiteaGetRepo(t *testing.T) {
 	created := time.Date(2021, 3, 15, 10, 0, 0, 0, time.UTC)
 	updated := time.Date(2024, 5, 20, 8, 30, 0, 0, time.UTC)
