@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 )
@@ -13,6 +14,7 @@ import (
 const (
 	dirPermissions  = 0700
 	filePermissions = 0600
+	goosWindows     = "windows"
 )
 
 type Config struct {
@@ -245,7 +247,15 @@ func writeINI(path string, sections map[string]map[string]string) error {
 		writeSection(&b, name, kv)
 	}
 
-	return os.WriteFile(path, []byte(b.String()), filePermissions)
+	if err := os.WriteFile(path, []byte(b.String()), filePermissions); err != nil {
+		return err
+	}
+	// os.WriteFile only applies the mode on creation. Tighten existing files
+	// too, since they hold tokens.
+	if runtime.GOOS != goosWindows {
+		_ = os.Chmod(path, filePermissions)
+	}
+	return nil
 }
 
 func writeSection(b *strings.Builder, name string, kv map[string]string) {

@@ -2,6 +2,7 @@ package cli
 
 import (
 	"bytes"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -104,4 +105,48 @@ func TestDomainFromFlags(t *testing.T) {
 		}
 	}
 	flagForgeType = "" // reset
+}
+
+func TestGitCloneArgs(t *testing.T) {
+	tests := []struct {
+		name string
+		url  string
+		want []string
+	}{
+		{
+			name: "https url",
+			url:  "https://github.com/owner/repo.git",
+			want: []string{"clone", "--", "https://github.com/owner/repo.git"},
+		},
+		{
+			name: "ssh url",
+			url:  "git@github.com:owner/repo.git",
+			want: []string{"clone", "--", "git@github.com:owner/repo.git"},
+		},
+		{
+			name: "url that looks like a git option",
+			url:  "--upload-pack=evil",
+			want: []string{"clone", "--", "--upload-pack=evil"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := gitCloneArgs(tt.url)
+			if !slices.Equal(got, tt.want) {
+				t.Errorf("gitCloneArgs(%q) = %v, want %v", tt.url, got, tt.want)
+			}
+
+			// The url must appear after the -- separator so git cannot
+			// parse a server-supplied CloneURL as an option.
+			sep := slices.Index(got, "--")
+			urlIdx := slices.Index(got, tt.url)
+			if sep == -1 {
+				t.Fatal("expected -- separator in argv")
+			}
+			if urlIdx <= sep {
+				t.Errorf("url at index %d is not after -- at index %d", urlIdx, sep)
+			}
+		})
+	}
 }

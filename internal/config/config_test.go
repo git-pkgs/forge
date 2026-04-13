@@ -268,7 +268,7 @@ func TestSetDomain(t *testing.T) {
 	}
 
 	// Verify file permissions (skip on Windows, which doesn't support Unix perms)
-	if runtime.GOOS != "windows" {
+	if runtime.GOOS != goosWindows {
 		info, err := os.Stat(path)
 		if err != nil {
 			t.Fatalf("stat: %v", err)
@@ -276,6 +276,40 @@ func TestSetDomain(t *testing.T) {
 		if info.Mode().Perm() != 0600 {
 			t.Errorf("expected 0600 permissions, got %o", info.Mode().Perm())
 		}
+	}
+}
+
+func TestSetDomainTightensExistingPermissions(t *testing.T) {
+	if runtime.GOOS == goosWindows {
+		t.Skip("unix permissions not enforced on windows")
+	}
+
+	dir := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", dir)
+
+	// Pre-create the config file with overly permissive mode. os.WriteFile
+	// only applies the mode bits on creation, so a file restored from a
+	// backup or created by hand can be left readable by other users even
+	// after we write a token into it.
+	cfgDir := filepath.Join(dir, "forge")
+	if err := os.MkdirAll(cfgDir, 0700); err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(cfgDir, "config")
+	if err := os.WriteFile(path, []byte("[github.com]\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := SetDomain("github.com", "ghp_secret", ""); err != nil {
+		t.Fatalf("SetDomain: %v", err)
+	}
+
+	info, err := os.Stat(path)
+	if err != nil {
+		t.Fatalf("stat: %v", err)
+	}
+	if got := info.Mode().Perm(); got != 0600 {
+		t.Errorf("expected SetDomain to tighten existing file to 0600, got %o", got)
 	}
 }
 
