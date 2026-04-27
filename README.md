@@ -1,4 +1,4 @@
-# forges
+# forge
 
 Go library and CLI for working with git forges. Supports GitHub, GitLab, Gitea/Forgejo, and Bitbucket Cloud through a single interface.
 
@@ -24,7 +24,7 @@ forge pr review approve 42
 forge pr reviewer request 42 alice bob
 forge release list
 forge ci list
-forge ci log 12345 --job 67890
+forge ci log 67890
 forge branch list
 forge label list
 forge notification list --unread
@@ -106,13 +106,22 @@ pr, _ := f.PullRequests().Get(ctx, "octocat", "hello-world", 42)
 Self-hosted instances can be registered explicitly or detected automatically:
 
 ```go
-client := forges.NewClient(
-    forges.WithGitea("gitea.example.com", token),
-    forges.WithGitLab("gitlab.internal.dev", token),
+import (
+    "github.com/git-pkgs/forge/gitea"
+    "github.com/git-pkgs/forge/gitlab"
 )
 
-// or auto-detect
-err := client.RegisterDomain(ctx, "git.example.com", token)
+client := forges.NewClient(
+    forges.WithForge("gitea.example.com", gitea.New("https://gitea.example.com", token, nil)),
+    forges.WithForge("gitlab.internal.dev", gitlab.New("https://gitlab.internal.dev", token, nil)),
+)
+
+// or auto-detect the forge type
+err := client.RegisterDomain(ctx, "git.example.com", token, forges.ForgeBuilders{
+    GitHub: github.NewWithBase,
+    GitLab: gitlab.New,
+    Gitea:  gitea.New,
+})
 ```
 
 PURL support via `github.com/git-pkgs/purl`:
