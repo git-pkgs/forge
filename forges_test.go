@@ -48,7 +48,19 @@ func TestParseRepoURL(t *testing.T) {
 		},
 		{
 			input:  "https://gitlab.com/group/project/tree/main",
-			domain: "gitlab.com", owner: "group", repo: "project",
+			domain: "gitlab.com", owner: "group/project/tree", repo: "main",
+		},
+		{
+			input:  "https://gitlab.com/group/namespace/repo",
+			domain: "gitlab.com", owner: "group/namespace", repo: "repo",
+		},
+		{
+			input:  "git@gitlab.com:group/namespace/repo.git",
+			domain: "gitlab.com", owner: "group/namespace", repo: "repo",
+		},
+		{
+			input:  "https://gitlab.com/deeply/nested/group/repo",
+			domain: "gitlab.com", owner: "deeply/nested/group", repo: "repo",
 		},
 		{
 			input:  "github.com/user/repo",

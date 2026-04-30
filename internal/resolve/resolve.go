@@ -15,8 +15,6 @@ import (
 	"github.com/git-pkgs/forge/internal/config"
 )
 
-const ownerRepoParts = 2
-
 var remoteName = "origin"
 
 // SetRemote sets which git remote to read when resolving the current
@@ -46,11 +44,11 @@ func Repo(flagRepo, flagForgeType string) (forge forges.Forge, owner, repo, doma
 }
 
 func repoFromFlag(flagRepo, flagForgeType string) (forges.Forge, string, string, string, error) {
-	parts := strings.SplitN(flagRepo, "/", ownerRepoParts)
-	if len(parts) != ownerRepoParts {
+	lastSlash := strings.LastIndex(flagRepo, "/")
+	if lastSlash < 0 {
 		return nil, "", "", "", fmt.Errorf("invalid repo format %q, expected OWNER/REPO", flagRepo)
 	}
-	owner, repo := parts[0], parts[1]
+	owner, repo := flagRepo[:lastSlash], flagRepo[lastSlash+1:]
 
 	domain := DomainFromForgeType(flagForgeType)
 	client := newClient(domain)

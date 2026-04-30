@@ -9,8 +9,6 @@ import (
 	"github.com/google/go-github/v82/github"
 )
 
-const ownerRepoParts = 2
-
 type gitHubNotificationService struct {
 	client *github.Client
 }
@@ -81,9 +79,8 @@ func (s *gitHubNotificationService) List(ctx context.Context, opts forge.ListNot
 	var err error
 
 	if opts.Repo != "" {
-		parts := strings.SplitN(opts.Repo, "/", ownerRepoParts)
-		if len(parts) == ownerRepoParts {
-			all, err = s.listRepoNotifications(ctx, parts[0], parts[1], ghOpts, opts.Limit)
+		if i := strings.LastIndex(opts.Repo, "/"); i > 0 {
+			all, err = s.listRepoNotifications(ctx, opts.Repo[:i], opts.Repo[i+1:], ghOpts, opts.Limit)
 		}
 	} else {
 		all, err = s.listAllNotifications(ctx, ghOpts, opts.Limit)
@@ -151,9 +148,8 @@ func (s *gitHubNotificationService) MarkRead(ctx context.Context, opts forge.Mar
 	}
 
 	if opts.Repo != "" {
-		parts := strings.SplitN(opts.Repo, "/", ownerRepoParts)
-		if len(parts) == ownerRepoParts {
-			resp, err := s.client.Activity.MarkRepositoryNotificationsRead(ctx, parts[0], parts[1], github.Timestamp{})
+		if i := strings.LastIndex(opts.Repo, "/"); i > 0 {
+			resp, err := s.client.Activity.MarkRepositoryNotificationsRead(ctx, opts.Repo[:i], opts.Repo[i+1:], github.Timestamp{})
 			if err != nil {
 				if resp != nil && resp.StatusCode == http.StatusNotFound {
 					return forge.ErrNotFound
