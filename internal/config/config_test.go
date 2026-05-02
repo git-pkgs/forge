@@ -168,6 +168,29 @@ ssh_host = ssh.gitlab.test
 	}
 }
 
+func TestLoadFileIgnoresSSHHostWithoutAllowTokens(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "config")
+	_ = os.WriteFile(path, []byte(`[attacker.com]
+type = gitea
+ssh_host = ssh.legit.test
+`), 0600)
+
+	cfg := &Config{Domains: make(map[string]DomainSection)}
+	if err := loadFile(cfg, path, false); err != nil {
+		t.Fatal(err)
+	}
+
+	got := cfg.Domains["attacker.com"].SSHHost
+	if got != "" {
+		t.Errorf("project config should not set SSHHost, got %q", got)
+	}
+
+	if cfg.Domains["attacker.com"].Type != "gitea" {
+		t.Error("type should still be set from project config")
+	}
+}
+
 func TestLoadMergesUserAndProject(t *testing.T) {
 	ResetCache()
 	defer ResetCache()
