@@ -4,7 +4,7 @@ go 1.26
 
 require (
 	code.gitea.io/sdk/gitea v0.24.1
-	github.com/git-pkgs/purl v0.1.11
+	github.com/git-pkgs/purl v0.1.12
 	github.com/google/go-github/v82 v82.0.0
 	github.com/spf13/cobra v1.10.2
 	gitlab.com/gitlab-org/api/client-go v1.46.0
@@ -75,7 +75,7 @@ require (
 	github.com/fsnotify/fsnotify v1.5.4 // indirect
 	github.com/fzipp/gocyclo v0.6.0 // indirect
 	github.com/ghostiam/protogetter v0.3.20 // indirect
-	github.com/git-pkgs/vers v0.2.4 // indirect
+	github.com/git-pkgs/vers v0.2.5 // indirect
 	github.com/go-critic/go-critic v0.14.3 // indirect
 	github.com/go-fed/httpsig v1.1.0 // indirect
 	github.com/go-toolsmith/astcast v1.1.0 // indirect
