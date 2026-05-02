@@ -126,8 +126,10 @@ func loadFile(cfg *Config, path string, allowTokens bool) error {
 		if v, ok := kv["type"]; ok {
 			ds.Type = v
 		}
-		if v, ok := kv["ssh_host"]; ok {
-			ds.SSHHost = v
+		if allowTokens {
+			if v, ok := kv["ssh_host"]; ok {
+				ds.SSHHost = v
+			}
 		}
 		if allowTokens {
 			if v, ok := kv["token"]; ok {
