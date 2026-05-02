@@ -74,8 +74,8 @@ func releaseListCmd() *cobra.Command {
 					published = r.PublishedAt.Format("2006-01-02")
 				}
 				rows[i] = []string{
-					r.TagName,
-					r.Title,
+					output.Sanitize(r.TagName),
+					output.Sanitize(r.Title),
 					fmt.Sprintf("%v", r.Draft),
 					fmt.Sprintf("%v", r.Prerelease),
 					published,
@@ -113,7 +113,7 @@ func releaseViewCmd() *cobra.Command {
 				return p.PrintJSON(release)
 			}
 
-			_, _ = fmt.Fprintf(os.Stdout, "%s %s\n", release.TagName, release.Title)
+			_, _ = fmt.Fprintf(os.Stdout, "%s %s\n", output.Sanitize(release.TagName), output.Sanitize(release.Title))
 			if release.Draft {
 				_, _ = fmt.Fprintln(os.Stdout, "Draft: true")
 			}
@@ -131,13 +131,13 @@ func releaseViewCmd() *cobra.Command {
 				_, _ = fmt.Fprintln(os.Stdout)
 				_, _ = fmt.Fprintln(os.Stdout, "Assets:")
 				for _, a := range release.Assets {
-					_, _ = fmt.Fprintf(os.Stdout, "  %s (%d bytes)\n", a.Name, a.Size)
+					_, _ = fmt.Fprintf(os.Stdout, "  %s (%d bytes)\n", output.Sanitize(a.Name), a.Size)
 				}
 			}
 
 			if release.Body != "" {
 				_, _ = fmt.Fprintln(os.Stdout)
-				_, _ = fmt.Fprintln(os.Stdout, release.Body)
+				_, _ = fmt.Fprintln(os.Stdout, output.Sanitize(release.Body))
 			}
 
 			return nil
@@ -194,7 +194,7 @@ func releaseCreateCmd() *cobra.Command {
 				return p.PrintJSON(release)
 			}
 
-			_, _ = fmt.Fprintf(os.Stdout, "%s %s\n", release.TagName, release.Title)
+			_, _ = fmt.Fprintf(os.Stdout, "%s %s\n", output.Sanitize(release.TagName), output.Sanitize(release.Title))
 			if release.HTMLURL != "" {
 				_, _ = fmt.Fprintln(os.Stdout, release.HTMLURL)
 			}
@@ -264,7 +264,7 @@ func releaseEditCmd() *cobra.Command {
 				return p.PrintJSON(release)
 			}
 
-			_, _ = fmt.Fprintf(os.Stdout, "%s %s\n", release.TagName, release.Title)
+			_, _ = fmt.Fprintf(os.Stdout, "%s %s\n", output.Sanitize(release.TagName), output.Sanitize(release.Title))
 			return nil
 		},
 	}

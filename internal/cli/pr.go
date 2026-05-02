@@ -75,8 +75,8 @@ func prViewCmd() *cobra.Command {
 				}
 				for _, c := range comments {
 					_, _ = fmt.Fprintln(os.Stdout)
-					_, _ = fmt.Fprintf(os.Stdout, "--- %s ---\n", c.Author.Login)
-					_, _ = fmt.Fprintln(os.Stdout, c.Body)
+					_, _ = fmt.Fprintf(os.Stdout, "--- %s ---\n", output.Sanitize(c.Author.Login))
+					_, _ = fmt.Fprintln(os.Stdout, output.Sanitize(c.Body))
 				}
 			}
 
@@ -89,9 +89,9 @@ func prViewCmd() *cobra.Command {
 }
 
 func printPRDetails(pr *forges.PullRequest) {
-	_, _ = fmt.Fprintf(os.Stdout, "#%d %s\n", pr.Number, pr.Title)
+	_, _ = fmt.Fprintf(os.Stdout, "#%d %s\n", pr.Number, output.Sanitize(pr.Title))
 	_, _ = fmt.Fprintf(os.Stdout, "State:   %s\n", pr.State)
-	_, _ = fmt.Fprintf(os.Stdout, "Author:  %s\n", pr.Author.Login)
+	_, _ = fmt.Fprintf(os.Stdout, "Author:  %s\n", output.Sanitize(pr.Author.Login))
 	_, _ = fmt.Fprintf(os.Stdout, "Branch:  %s -> %s\n", pr.Head, pr.Base)
 
 	if pr.Draft {
@@ -101,7 +101,7 @@ func printPRDetails(pr *forges.PullRequest) {
 	if len(pr.Reviewers) > 0 {
 		names := make([]string, len(pr.Reviewers))
 		for i, r := range pr.Reviewers {
-			names[i] = r.Login
+			names[i] = output.Sanitize(r.Login)
 		}
 		_, _ = fmt.Fprintf(os.Stdout, "Review:  %s\n", strings.Join(names, ", "))
 	}
@@ -109,13 +109,13 @@ func printPRDetails(pr *forges.PullRequest) {
 	if len(pr.Labels) > 0 {
 		names := make([]string, len(pr.Labels))
 		for i, l := range pr.Labels {
-			names[i] = l.Name
+			names[i] = output.Sanitize(l.Name)
 		}
 		_, _ = fmt.Fprintf(os.Stdout, "Labels:  %s\n", strings.Join(names, ", "))
 	}
 
 	if pr.Milestone != nil {
-		_, _ = fmt.Fprintf(os.Stdout, "Mile:    %s\n", pr.Milestone.Title)
+		_, _ = fmt.Fprintf(os.Stdout, "Mile:    %s\n", output.Sanitize(pr.Milestone.Title))
 	}
 
 	if pr.Additions > 0 || pr.Deletions > 0 {
@@ -124,7 +124,7 @@ func printPRDetails(pr *forges.PullRequest) {
 
 	if pr.Body != "" {
 		_, _ = fmt.Fprintln(os.Stdout)
-		_, _ = fmt.Fprintln(os.Stdout, pr.Body)
+		_, _ = fmt.Fprintln(os.Stdout, output.Sanitize(pr.Body))
 	}
 }
 
@@ -173,7 +173,7 @@ func prListCmd() *cobra.Command {
 			if p.Format == output.Plain {
 				lines := make([]string, len(prs))
 				for i, pr := range prs {
-					lines[i] = fmt.Sprintf("%d\t%s", pr.Number, pr.Title)
+					lines[i] = fmt.Sprintf("%d\t%s", pr.Number, output.Sanitize(pr.Title))
 				}
 				p.PrintPlain(lines)
 				return nil
@@ -182,14 +182,14 @@ func prListCmd() *cobra.Command {
 			headers := []string{"#", "TITLE", "AUTHOR", "HEAD", "UPDATED"}
 			rows := make([][]string, len(prs))
 			for i, pr := range prs {
-				title := pr.Title
+				title := output.Sanitize(pr.Title)
 				if len(title) > maxPRTitleLength {
 					title = title[:maxPRTitleLength-3] + "..."
 				}
 				rows[i] = []string{
 					strconv.Itoa(pr.Number),
 					title,
-					pr.Author.Login,
+					output.Sanitize(pr.Author.Login),
 					pr.Head,
 					pr.UpdatedAt.Format("2006-01-02"),
 				}

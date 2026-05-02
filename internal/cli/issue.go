@@ -65,14 +65,14 @@ func issueViewCmd() *cobra.Command {
 				return p.PrintJSON(issue)
 			}
 
-			_, _ = fmt.Fprintf(os.Stdout, "#%d %s\n", issue.Number, issue.Title)
+			_, _ = fmt.Fprintf(os.Stdout, "#%d %s\n", issue.Number, output.Sanitize(issue.Title))
 			_, _ = fmt.Fprintf(os.Stdout, "State:   %s\n", issue.State)
-			_, _ = fmt.Fprintf(os.Stdout, "Author:  %s\n", issue.Author.Login)
+			_, _ = fmt.Fprintf(os.Stdout, "Author:  %s\n", output.Sanitize(issue.Author.Login))
 
 			if len(issue.Assignees) > 0 {
 				names := make([]string, len(issue.Assignees))
 				for i, a := range issue.Assignees {
-					names[i] = a.Login
+					names[i] = output.Sanitize(a.Login)
 				}
 				_, _ = fmt.Fprintf(os.Stdout, "Assign:  %s\n", strings.Join(names, ", "))
 			}
@@ -80,18 +80,18 @@ func issueViewCmd() *cobra.Command {
 			if len(issue.Labels) > 0 {
 				names := make([]string, len(issue.Labels))
 				for i, l := range issue.Labels {
-					names[i] = l.Name
+					names[i] = output.Sanitize(l.Name)
 				}
 				_, _ = fmt.Fprintf(os.Stdout, "Labels:  %s\n", strings.Join(names, ", "))
 			}
 
 			if issue.Milestone != nil {
-				_, _ = fmt.Fprintf(os.Stdout, "Mile:    %s\n", issue.Milestone.Title)
+				_, _ = fmt.Fprintf(os.Stdout, "Mile:    %s\n", output.Sanitize(issue.Milestone.Title))
 			}
 
 			if issue.Body != "" {
 				_, _ = fmt.Fprintln(os.Stdout)
-				_, _ = fmt.Fprintln(os.Stdout, issue.Body)
+				_, _ = fmt.Fprintln(os.Stdout, output.Sanitize(issue.Body))
 			}
 
 			if flagComments {
@@ -101,8 +101,8 @@ func issueViewCmd() *cobra.Command {
 				}
 				for _, c := range comments {
 					_, _ = fmt.Fprintln(os.Stdout)
-					_, _ = fmt.Fprintf(os.Stdout, "--- %s ---\n", c.Author.Login)
-					_, _ = fmt.Fprintln(os.Stdout, c.Body)
+					_, _ = fmt.Fprintf(os.Stdout, "--- %s ---\n", output.Sanitize(c.Author.Login))
+					_, _ = fmt.Fprintln(os.Stdout, output.Sanitize(c.Body))
 				}
 			}
 
@@ -157,7 +157,7 @@ func issueListCmd() *cobra.Command {
 			if p.Format == output.Plain {
 				lines := make([]string, len(issues))
 				for i, iss := range issues {
-					lines[i] = fmt.Sprintf("%d\t%s", iss.Number, iss.Title)
+					lines[i] = fmt.Sprintf("%d\t%s", iss.Number, output.Sanitize(iss.Title))
 				}
 				p.PrintPlain(lines)
 				return nil
@@ -168,16 +168,16 @@ func issueListCmd() *cobra.Command {
 			for i, iss := range issues {
 				labels := make([]string, len(iss.Labels))
 				for j, l := range iss.Labels {
-					labels[j] = l.Name
+					labels[j] = output.Sanitize(l.Name)
 				}
-				title := iss.Title
+				title := output.Sanitize(iss.Title)
 				if len(title) > maxTitleLength {
 					title = title[:truncatedTitleLen] + "..."
 				}
 				rows[i] = []string{
 					strconv.Itoa(iss.Number),
 					title,
-					iss.Author.Login,
+					output.Sanitize(iss.Author.Login),
 					strings.Join(labels, ", "),
 					iss.UpdatedAt.Format("2006-01-02"),
 				}
