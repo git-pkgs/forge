@@ -6,6 +6,7 @@ import (
 	"io"
 	"strings"
 	"text/tabwriter"
+	"unicode"
 )
 
 // Format specifies how to render output.
@@ -60,4 +61,16 @@ func (p *Printer) PrintPlain(lines []string) {
 	for _, line := range lines {
 		_, _ = fmt.Fprintln(p.Out, line)
 	}
+}
+
+// Sanitize strips C0 control characters (except tab and newline) from s.
+// This prevents ANSI escape sequences and OSC commands in forge-sourced
+// text from manipulating the terminal.
+func Sanitize(s string) string {
+	return strings.Map(func(r rune) rune {
+		if r != '\t' && r != '\n' && unicode.IsControl(r) {
+			return -1
+		}
+		return r
+	}, s)
 }

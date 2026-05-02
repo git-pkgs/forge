@@ -77,3 +77,27 @@ func TestPrintPlain(t *testing.T) {
 		t.Error("expected line2 in output")
 	}
 }
+
+func TestSanitize(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{"plain text", "hello world", "hello world"},
+		{"preserves tabs", "col1\tcol2", "col1\tcol2"},
+		{"preserves newlines", "line1\nline2", "line1\nline2"},
+		{"strips ESC", "normal\x1b[31mred\x1b[0m", "normal[31mred[0m"},
+		{"strips BEL", "title\x07", "title"},
+		{"strips OSC", "\x1b]0;pwned\x07", "]0;pwned"},
+		{"strips null", "a\x00b", "ab"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := Sanitize(tt.input)
+			if got != tt.want {
+				t.Errorf("Sanitize(%q) = %q, want %q", tt.input, got, tt.want)
+			}
+		})
+	}
+}

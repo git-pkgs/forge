@@ -73,9 +73,9 @@ func repoViewCmd() *cobra.Command {
 				return p.PrintJSON(r)
 			}
 
-			_, _ = fmt.Fprintf(os.Stdout, "%s\n", r.FullName)
+			_, _ = fmt.Fprintf(os.Stdout, "%s\n", output.Sanitize(r.FullName))
 			if r.Description != "" {
-				_, _ = fmt.Fprintf(os.Stdout, "%s\n", r.Description)
+				_, _ = fmt.Fprintf(os.Stdout, "%s\n", output.Sanitize(r.Description))
 			}
 			_, _ = fmt.Fprintln(os.Stdout)
 
