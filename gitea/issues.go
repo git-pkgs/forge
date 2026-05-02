@@ -217,6 +217,19 @@ func (s *giteaIssueService) Update(ctx context.Context, owner, repo string, numb
 		changed = true
 	}
 
+	if opts.Labels != nil {
+		ids, err := s.resolveLabelIDs(owner, repo, opts.Labels)
+		if err != nil {
+			return nil, fmt.Errorf("resolving labels: %w", err)
+		}
+		if _, _, err := s.client.ReplaceIssueLabels(owner, repo, int64(number), gitea.IssueLabelsOption{Labels: ids}); err != nil {
+			return nil, fmt.Errorf("replacing labels: %w", err)
+		}
+		if !changed {
+			return s.Get(ctx, owner, repo, number)
+		}
+	}
+
 	if !changed {
 		return s.Get(ctx, owner, repo, number)
 	}
