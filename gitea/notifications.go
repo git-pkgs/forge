@@ -10,8 +10,6 @@ import (
 	forge "github.com/git-pkgs/forge"
 )
 
-const ownerRepoParts = 2
-
 type giteaNotificationService struct {
 	client *gitea.Client
 }
@@ -77,9 +75,8 @@ func (s *giteaNotificationService) List(ctx context.Context, opts forge.ListNoti
 	var err error
 
 	if opts.Repo != "" {
-		parts := strings.SplitN(opts.Repo, "/", ownerRepoParts)
-		if len(parts) == ownerRepoParts {
-			all, err = s.listRepoNotifications(parts[0], parts[1], page, perPage, statuses, opts.Limit)
+		if i := strings.LastIndex(opts.Repo, "/"); i > 0 {
+			all, err = s.listRepoNotifications(opts.Repo[:i], opts.Repo[i+1:], page, perPage, statuses, opts.Limit)
 		}
 	} else {
 		all, err = s.listAllNotifications(page, perPage, statuses, opts.Limit)
@@ -157,9 +154,8 @@ func (s *giteaNotificationService) MarkRead(ctx context.Context, opts forge.Mark
 	}
 
 	if opts.Repo != "" {
-		parts := strings.SplitN(opts.Repo, "/", ownerRepoParts)
-		if len(parts) == ownerRepoParts {
-			_, resp, err := s.client.ReadRepoNotifications(parts[0], parts[1], gitea.MarkNotificationOptions{})
+		if i := strings.LastIndex(opts.Repo, "/"); i > 0 {
+			_, resp, err := s.client.ReadRepoNotifications(opts.Repo[:i], opts.Repo[i+1:], gitea.MarkNotificationOptions{})
 			if err != nil {
 				if resp != nil && resp.StatusCode == http.StatusNotFound {
 					return forge.ErrNotFound

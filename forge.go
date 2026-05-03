@@ -274,5 +274,7 @@ func splitOwnerRepo(domain, path string) (string, string, string, error) {
 	if len(parts) < minOwnerRepoParts {
 		return "", "", "", fmt.Errorf("URL path must contain owner/repo, got %q", path)
 	}
-	return domain, parts[0], parts[1], nil
+	owner := strings.Join(parts[:len(parts)-1], "/")
+	repo := parts[len(parts)-1]
+	return domain, owner, repo, nil
 }
