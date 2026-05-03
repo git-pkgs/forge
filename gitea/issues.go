@@ -188,6 +188,13 @@ func (s *giteaIssueService) Create(ctx context.Context, owner, repo string, opts
 		}
 		gOpts.Labels = ids
 	}
+	if opts.Milestone != "" {
+		id, err := resolveMilestoneID(s.client, owner, repo, opts.Milestone)
+		if err != nil {
+			return nil, fmt.Errorf("resolving milestone: %w", err)
+		}
+		gOpts.Milestone = id
+	}
 
 	i, resp, err := s.client.CreateIssue(owner, repo, gOpts)
 	if err != nil {
@@ -214,6 +221,14 @@ func (s *giteaIssueService) Update(ctx context.Context, owner, repo string, numb
 	}
 	if opts.Assignees != nil {
 		gOpts.Assignees = opts.Assignees
+		changed = true
+	}
+	if opts.Milestone != nil {
+		id, err := resolveMilestoneID(s.client, owner, repo, *opts.Milestone)
+		if err != nil {
+			return nil, fmt.Errorf("resolving milestone: %w", err)
+		}
+		gOpts.Milestone = &id
 		changed = true
 	}
 

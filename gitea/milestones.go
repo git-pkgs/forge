@@ -2,6 +2,7 @@ package gitea
 
 import (
 	"context"
+	"fmt"
 	forge "github.com/git-pkgs/forge"
 	"net/http"
 
@@ -84,6 +85,20 @@ func (s *giteaMilestoneService) List(ctx context.Context, owner, repo string, op
 	}
 
 	return all, nil
+}
+
+func resolveMilestoneID(client *gitea.Client, owner, repo, name string) (int64, error) {
+	if name == "" {
+		return 0, nil
+	}
+	m, resp, err := client.GetMilestoneByName(owner, repo, name)
+	if err != nil {
+		if resp != nil && resp.StatusCode == http.StatusNotFound {
+			return 0, fmt.Errorf("milestone not found: %s", name)
+		}
+		return 0, err
+	}
+	return m.ID, nil
 }
 
 func (s *giteaMilestoneService) Get(ctx context.Context, owner, repo string, id int) (*forge.Milestone, error) {
