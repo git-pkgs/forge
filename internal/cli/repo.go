@@ -680,5 +680,5 @@ func repoContributorsCmd() *cobra.Command {
 }
 
 func domainFromFlags() string {
-	return resolve.DomainFromForgeType(flagForgeType)
+	return resolve.Domain(flagForgeType)
 }

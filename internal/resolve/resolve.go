@@ -15,7 +15,10 @@ import (
 	"github.com/git-pkgs/forge/internal/config"
 )
 
-var remoteName = "origin"
+var (
+	remoteName   = "origin"
+	hostOverride string
+)
 
 // SetRemote sets which git remote to read when resolving the current
 // repository. The CLI calls this from the --remote persistent flag.
@@ -24,6 +27,15 @@ var remoteName = "origin"
 func SetRemote(name string) {
 	if name != "" {
 		remoteName = name
+	}
+}
+
+// SetHost forces a specific forge domain, taking precedence over FORGE_HOST,
+// --forge-type, and git remote detection. The CLI calls this from the --host
+// persistent flag. An empty string is ignored.
+func SetHost(host string) {
+	if host != "" {
+		hostOverride = host
 	}
 }
 
@@ -50,7 +62,7 @@ func repoFromFlag(flagRepo, flagForgeType string) (forges.Forge, string, string,
 	}
 	owner, repo := flagRepo[:lastSlash], flagRepo[lastSlash+1:]
 
-	domain := DomainFromForgeType(flagForgeType)
+	domain := Domain(flagForgeType)
 	client := newClient(domain)
 	f, err := forgeForDomainMaybeConfig(context.Background(), client, domain)
 	if err != nil {
@@ -221,21 +233,30 @@ func ForgeForDomain(domain string) (forges.Forge, error) {
 	return forgeForDomainMaybeConfig(context.Background(), client, domain)
 }
 
-// DomainFromForgeType returns the default domain for a forge type string.
-// Checks FORGE_HOST first, then config default, then well-known defaults.
-func DomainFromForgeType(forgeType string) string {
+// Domain decides which forge host to talk to when the user supplies a bare
+// owner or owner/repo argument. Precedence: --host flag, FORGE_HOST env,
+// explicit --forge-type, the current directory's git remote, the config
+// default forge type, then github.com.
+func Domain(forgeType string) string {
+	if hostOverride != "" {
+		return hostOverride
+	}
 	if d := os.Getenv("FORGE_HOST"); d != "" {
 		return d
 	}
-
-	// If no forge type given, check config for a default
-	if forgeType == "" {
-		cfg, err := config.Load()
-		if err == nil && cfg != nil && cfg.Default.ForgeType != "" {
-			forgeType = cfg.Default.ForgeType
-		}
+	if forgeType != "" {
+		return defaultDomainForType(forgeType)
 	}
+	if d, _, _, err := resolveRemote(); err == nil {
+		return d
+	}
+	if cfg, err := config.Load(); err == nil && cfg != nil && cfg.Default.ForgeType != "" {
+		return defaultDomainForType(cfg.Default.ForgeType)
+	}
+	return "github.com"
+}
 
+func defaultDomainForType(forgeType string) string {
 	switch forgeType {
 	case "gitlab":
 		return "gitlab.com"

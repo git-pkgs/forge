@@ -85,6 +85,8 @@ func TestRepoEditMutuallyExclusiveVisibility(t *testing.T) {
 }
 
 func TestDomainFromFlags(t *testing.T) {
+	t.Chdir(t.TempDir())
+
 	tests := []struct {
 		forgeType string
 		want      string

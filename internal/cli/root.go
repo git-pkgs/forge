@@ -15,6 +15,7 @@ import (
 var (
 	flagRepo      string
 	flagForgeType string
+	flagHost      string
 	flagOutput    string
 	flagRemote    string
 )
@@ -32,6 +33,7 @@ var rootCmd = &cobra.Command{
 			}
 		}
 		resolve.SetRemote(flagRemote)
+		resolve.SetHost(flagHost)
 	},
 }
 
@@ -43,6 +45,7 @@ func Execute() error {
 func init() {
 	rootCmd.PersistentFlags().StringVarP(&flagRepo, "repo", "R", "", "Select a repository (OWNER/REPO)")
 	rootCmd.PersistentFlags().StringVar(&flagForgeType, "forge-type", "", "Force forge type: github, gitlab, gitea, forgejo")
+	rootCmd.PersistentFlags().StringVar(&flagHost, "host", "", "Force forge host (e.g. gitea.com); overrides FORGE_HOST and remote detection")
 	rootCmd.PersistentFlags().StringVarP(&flagOutput, "output", "o", "table", "Output format: table, json, plain")
 	rootCmd.PersistentFlags().StringVar(&flagRemote, "remote", "", "Git remote to use when not specifying -R (default origin)")
 }

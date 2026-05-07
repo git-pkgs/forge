@@ -122,7 +122,9 @@ func TestTokenForDomainEnvFallbackForUnknownDomain(t *testing.T) {
 	}
 }
 
-func TestDomainFromForgeType(t *testing.T) {
+func TestDomain(t *testing.T) {
+	t.Chdir(t.TempDir())
+
 	tests := []struct {
 		forgeType string
 		want      string
@@ -137,24 +139,90 @@ func TestDomainFromForgeType(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		got := DomainFromForgeType(tt.forgeType)
+		got := Domain(tt.forgeType)
 		if got != tt.want {
-			t.Errorf("DomainFromForgeType(%q) = %q, want %q", tt.forgeType, got, tt.want)
+			t.Errorf("Domain(%q) = %q, want %q", tt.forgeType, got, tt.want)
 		}
 	}
 }
 
-func TestDomainFromForgeTypeWithForgeHost(t *testing.T) {
+func TestDomainWithForgeHost(t *testing.T) {
+	t.Chdir(t.TempDir())
 	t.Setenv("FORGE_HOST", "git.example.com")
 
-	got := DomainFromForgeType("github")
+	got := Domain("github")
 	if got != "git.example.com" {
 		t.Errorf("expected FORGE_HOST override, got %q", got)
 	}
 
-	got = DomainFromForgeType("")
+	got = Domain("")
 	if got != "git.example.com" {
 		t.Errorf("expected FORGE_HOST override for empty type, got %q", got)
+	}
+}
+
+func TestDomainFallsBackToGitRemote(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not installed")
+	}
+
+	t.Chdir(t.TempDir())
+	mustGit(t, "init", "-q")
+	mustGit(t, "remote", "add", "origin", "https://gitea.com/someone/project.git")
+
+	got := Domain("")
+	if got != "gitea.com" {
+		t.Errorf("expected domain from git remote, got %q", got)
+	}
+}
+
+func TestDomainExplicitForgeTypeOverridesRemote(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not installed")
+	}
+
+	t.Chdir(t.TempDir())
+	mustGit(t, "init", "-q")
+	mustGit(t, "remote", "add", "origin", "https://gitea.com/someone/project.git")
+
+	got := Domain("gitlab")
+	if got != "gitlab.com" {
+		t.Errorf("expected --forge-type to override remote, got %q", got)
+	}
+}
+
+func TestDomainHostOverride(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not installed")
+	}
+
+	t.Chdir(t.TempDir())
+	mustGit(t, "init", "-q")
+	mustGit(t, "remote", "add", "origin", "https://github.com/someone/project.git")
+	t.Setenv("FORGE_HOST", "env.example.com")
+
+	old := hostOverride
+	defer func() { hostOverride = old }()
+	SetHost("flag.example.com")
+
+	got := Domain("gitlab")
+	if got != "flag.example.com" {
+		t.Errorf("expected --host to override everything, got %q", got)
+	}
+}
+
+func TestSetHost(t *testing.T) {
+	old := hostOverride
+	defer func() { hostOverride = old }()
+
+	SetHost("gitea.com")
+	if hostOverride != "gitea.com" {
+		t.Errorf("SetHost did not update hostOverride, got %q", hostOverride)
+	}
+
+	SetHost("")
+	if hostOverride != "gitea.com" {
+		t.Errorf("SetHost(\"\") should be a no-op, got %q", hostOverride)
 	}
 }
 
