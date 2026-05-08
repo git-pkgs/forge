@@ -19,7 +19,10 @@ func DetectForgeType(ctx context.Context, domain string, hc ...*http.Client) (Fo
 	baseURL := "https://" + domain
 
 	ft, err := detectFromHeaders(ctx, client, baseURL)
-	if err == nil && ft != Unknown {
+	if err != nil {
+		return Unknown, fmt.Errorf("could not detect forge type for %s: %w", baseURL, err)
+	}
+	if ft != Unknown {
 		return ft, nil
 	}
 
