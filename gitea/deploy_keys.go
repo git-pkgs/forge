@@ -17,10 +17,7 @@ func (f *giteaForge) DeployKeys() forge.DeployKeyService {
 }
 
 func (s *giteaDeployKeyService) List(ctx context.Context, owner, repo string, opts forge.ListDeployKeyOpts) ([]forge.DeployKey, error) {
-	perPage := opts.PerPage
-	if perPage <= 0 {
-		perPage = 30
-	}
+	perPage := pageSize(opts.PerPage)
 	page := opts.Page
 	if page <= 0 {
 		page = 1
@@ -46,7 +43,7 @@ func (s *giteaDeployKeyService) List(ctx context.Context, owner, repo string, op
 				CreatedAt: k.Created,
 			})
 		}
-		if len(keys) < perPage || (opts.Limit > 0 && len(all) >= opts.Limit) {
+		if lastPage(resp, len(keys), perPage) || (opts.Limit > 0 && len(all) >= opts.Limit) {
 			break
 		}
 		page++

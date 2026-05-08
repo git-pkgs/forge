@@ -57,10 +57,7 @@ func convertGiteaRelease(r *gitea.Release) forge.Release {
 }
 
 func (s *giteaReleaseService) List(ctx context.Context, owner, repo string, opts forge.ListReleaseOpts) ([]forge.Release, error) {
-	perPage := opts.PerPage
-	if perPage <= 0 {
-		perPage = 30
-	}
+	perPage := pageSize(opts.PerPage)
 	page := opts.Page
 	if page <= 0 {
 		page = 1
@@ -80,7 +77,7 @@ func (s *giteaReleaseService) List(ctx context.Context, owner, repo string, opts
 		for _, r := range releases {
 			all = append(all, convertGiteaRelease(r))
 		}
-		if len(releases) < perPage || (opts.Limit > 0 && len(all) >= opts.Limit) {
+		if lastPage(resp, len(releases), perPage) || (opts.Limit > 0 && len(all) >= opts.Limit) {
 			break
 		}
 		page++

@@ -122,10 +122,7 @@ func (s *giteaPRService) Get(ctx context.Context, owner, repo string, number int
 }
 
 func (s *giteaPRService) List(ctx context.Context, owner, repo string, opts forge.ListPROpts) ([]forge.PullRequest, error) {
-	perPage := opts.PerPage
-	if perPage <= 0 {
-		perPage = 30
-	}
+	perPage := pageSize(opts.PerPage)
 	page := opts.Page
 	if page <= 0 {
 		page = 1
@@ -162,7 +159,7 @@ func (s *giteaPRService) List(ctx context.Context, owner, repo string, opts forg
 		for _, pr := range prs {
 			all = append(all, convertGiteaPR(pr))
 		}
-		if len(prs) < perPage || (opts.Limit > 0 && len(all) >= opts.Limit) {
+		if lastPage(resp, len(prs), perPage) || (opts.Limit > 0 && len(all) >= opts.Limit) {
 			break
 		}
 		gOpts.Page++

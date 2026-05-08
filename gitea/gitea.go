@@ -100,10 +100,7 @@ func (s *giteaRepoService) Get(ctx context.Context, owner, repo string) (*forge.
 }
 
 func (s *giteaRepoService) List(ctx context.Context, owner string, opts forge.ListRepoOpts) ([]forge.Repository, error) {
-	perPage := opts.PerPage
-	if perPage <= 0 {
-		perPage = defaultPageSize
-	}
+	perPage := pageSize(opts.PerPage)
 
 	// Try org endpoint first, fall back to user on 404.
 	repos, err := s.listOrgRepos(ctx, owner, perPage)
@@ -133,7 +130,7 @@ func (s *giteaRepoService) listOrgRepos(_ context.Context, owner string, perPage
 		for _, r := range gRepos {
 			all = append(all, convertGiteaRepo(r))
 		}
-		if len(gRepos) < perPage {
+		if lastPage(resp, len(gRepos), perPage) {
 			break
 		}
 		page++
@@ -157,7 +154,7 @@ func (s *giteaRepoService) listUserRepos(_ context.Context, owner string, perPag
 		for _, r := range gRepos {
 			all = append(all, convertGiteaRepo(r))
 		}
-		if len(gRepos) < perPage {
+		if lastPage(resp, len(gRepos), perPage) {
 			break
 		}
 		page++
@@ -300,10 +297,7 @@ func (s *giteaRepoService) Fork(ctx context.Context, owner, repo string, opts fo
 }
 
 func (s *giteaRepoService) ListForks(ctx context.Context, owner, repo string, opts forge.ListForksOpts) ([]forge.Repository, error) {
-	perPage := opts.PerPage
-	if perPage <= 0 {
-		perPage = defaultPageSize
-	}
+	perPage := pageSize(opts.PerPage)
 	page := opts.Page
 	if page <= 0 {
 		page = 1
@@ -323,7 +317,7 @@ func (s *giteaRepoService) ListForks(ctx context.Context, owner, repo string, op
 		for _, r := range forks {
 			all = append(all, convertGiteaRepo(r))
 		}
-		if len(forks) < perPage || (opts.Limit > 0 && len(all) >= opts.Limit) {
+		if lastPage(resp, len(forks), perPage) || (opts.Limit > 0 && len(all) >= opts.Limit) {
 			break
 		}
 		page++
@@ -369,10 +363,7 @@ func (s *giteaRepoService) ListContributors(ctx context.Context, owner, repo str
 }
 
 func (s *giteaRepoService) Search(ctx context.Context, opts forge.SearchRepoOpts) ([]forge.Repository, error) {
-	perPage := opts.PerPage
-	if perPage <= 0 {
-		perPage = 30
-	}
+	perPage := pageSize(opts.PerPage)
 	page := opts.Page
 	if page <= 0 {
 		page = 1

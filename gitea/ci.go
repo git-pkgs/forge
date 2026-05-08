@@ -70,10 +70,7 @@ func convertGiteaWorkflowJob(j *gitea.ActionWorkflowJob) forge.CIJob {
 }
 
 func (s *giteaCIService) ListRuns(_ context.Context, owner, repo string, opts forge.ListCIRunOpts) ([]forge.CIRun, error) {
-	perPage := opts.PerPage
-	if perPage <= 0 {
-		perPage = 20
-	}
+	perPage := pageSize(opts.PerPage)
 	page := opts.Page
 	if page <= 0 {
 		page = 1
@@ -104,7 +101,7 @@ func (s *giteaCIService) ListRuns(_ context.Context, owner, repo string, opts fo
 		for _, r := range resp.WorkflowRuns {
 			all = append(all, convertGiteaWorkflowRun(r))
 		}
-		if len(resp.WorkflowRuns) < perPage || (opts.Limit > 0 && len(all) >= opts.Limit) {
+		if lastPage(httpResp, len(resp.WorkflowRuns), perPage) || (opts.Limit > 0 && len(all) >= opts.Limit) {
 			break
 		}
 		gOpts.Page++

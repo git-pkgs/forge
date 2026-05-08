@@ -10,6 +10,30 @@ import (
 
 const defaultPageSize = 50
 
+// pageSize caps the requested page size at Gitea's default MAX_RESPONSE_ITEMS.
+// Servers clamp larger values, which breaks len(results) < perPage loop exits.
+func pageSize(perPage int) int {
+	if perPage <= 0 || perPage > defaultPageSize {
+		return defaultPageSize
+	}
+	return perPage
+}
+
+// lastPage reports whether a paginated response was the final page. It trusts
+// the SDK-parsed Link headers when the server sent any, since Gitea clamps the
+// page size to MAX_RESPONSE_ITEMS and a clamped page would otherwise look like
+// a short final page. Falls back to the short-page heuristic when no Link
+// header was sent.
+func lastPage(resp *gitea.Response, got, perPage int) bool {
+	if got == 0 {
+		return true
+	}
+	if resp != nil && (resp.FirstPage > 0 || resp.PrevPage > 0 || resp.NextPage > 0 || resp.LastPage > 0) {
+		return resp.NextPage == 0
+	}
+	return got < perPage
+}
+
 type giteaCommitStatusService struct {
 	client *gitea.Client
 }

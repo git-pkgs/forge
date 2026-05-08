@@ -17,10 +17,7 @@ func (f *giteaForge) Collaborators() forge.CollaboratorService {
 }
 
 func (s *giteaCollaboratorService) List(ctx context.Context, owner, repo string, opts forge.ListCollaboratorOpts) ([]forge.Collaborator, error) {
-	perPage := opts.PerPage
-	if perPage <= 0 {
-		perPage = 50
-	}
+	perPage := pageSize(opts.PerPage)
 	page := opts.Page
 	if page <= 0 {
 		page = 1
@@ -47,7 +44,7 @@ func (s *giteaCollaboratorService) List(ctx context.Context, owner, repo string,
 				Permission: perm,
 			})
 		}
-		if len(users) < perPage || (opts.Limit > 0 && len(all) >= opts.Limit) {
+		if lastPage(resp, len(users), perPage) || (opts.Limit > 0 && len(all) >= opts.Limit) {
 			break
 		}
 		page++

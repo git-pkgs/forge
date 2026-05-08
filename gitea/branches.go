@@ -17,10 +17,7 @@ func (f *giteaForge) Branches() forge.BranchService {
 }
 
 func (s *giteaBranchService) List(ctx context.Context, owner, repo string, opts forge.ListBranchOpts) ([]forge.Branch, error) {
-	perPage := opts.PerPage
-	if perPage <= 0 {
-		perPage = 30
-	}
+	perPage := pageSize(opts.PerPage)
 	page := opts.Page
 	if page <= 0 {
 		page = 1
@@ -47,7 +44,7 @@ func (s *giteaBranchService) List(ctx context.Context, owner, repo string, opts 
 			}
 			all = append(all, branch)
 		}
-		if len(branches) < perPage || (opts.Limit > 0 && len(all) >= opts.Limit) {
+		if lastPage(resp, len(branches), perPage) || (opts.Limit > 0 && len(all) >= opts.Limit) {
 			break
 		}
 		page++

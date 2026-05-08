@@ -58,10 +58,7 @@ func convertGiteaReview(r *gitea.PullReview) forge.Review {
 }
 
 func (s *giteaReviewService) List(ctx context.Context, owner, repo string, number int, opts forge.ListReviewOpts) ([]forge.Review, error) {
-	perPage := opts.PerPage
-	if perPage <= 0 {
-		perPage = 30
-	}
+	perPage := pageSize(opts.PerPage)
 	page := opts.Page
 	if page <= 0 {
 		page = 1
@@ -81,7 +78,7 @@ func (s *giteaReviewService) List(ctx context.Context, owner, repo string, numbe
 		for _, r := range reviews {
 			all = append(all, convertGiteaReview(r))
 		}
-		if len(reviews) < perPage || (opts.Limit > 0 && len(all) >= opts.Limit) {
+		if lastPage(resp, len(reviews), perPage) || (opts.Limit > 0 && len(all) >= opts.Limit) {
 			break
 		}
 		page++
