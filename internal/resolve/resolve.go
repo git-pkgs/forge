@@ -3,6 +3,7 @@ package resolve
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"os"
 	"os/exec"
 	"strings"
@@ -16,8 +17,9 @@ import (
 )
 
 var (
-	remoteName   = "origin"
-	hostOverride string
+	remoteName        = "origin"
+	hostOverride      string
+	forgeTypeOverride string
 )
 
 // SetRemote sets which git remote to read when resolving the current
@@ -36,6 +38,15 @@ func SetRemote(name string) {
 func SetHost(host string) {
 	if host != "" {
 		hostOverride = host
+	}
+}
+
+// SetForgeType forces the API client implementation for the resolved domain,
+// skipping config lookup and network probing. The CLI calls this from the
+// --forge-type persistent flag. An empty string is ignored.
+func SetForgeType(forgeType string) {
+	if forgeType != "" {
+		forgeTypeOverride = forgeType
 	}
 }
 
@@ -141,18 +152,29 @@ func newClient(domain string) *forges.Client {
 		opts = append(opts, forges.WithForge(d, f))
 	}
 
-	// If the config knows this domain's forge type, register it after defaults
-	// so it takes precedence.
-	if ft := configForgeType(domain); ft != "" {
-		switch ft {
-		case "gitea", "forgejo":
-			opts = append(opts, forges.WithForge(domain, gitea.New("https://"+domain, token, hc)))
-		case "gitlab":
-			opts = append(opts, forges.WithForge(domain, glforge.New("https://"+domain, token, hc)))
-		}
+	// If --forge-type was given or the config knows this domain's type,
+	// register it after defaults so it takes precedence and probing is skipped.
+	ft := forgeTypeOverride
+	if ft == "" {
+		ft = configForgeType(domain)
+	}
+	if f := forgeForType(ft, "https://"+domain, token, hc); f != nil {
+		opts = append(opts, forges.WithForge(domain, f))
 	}
 
 	return forges.NewClient(opts...)
+}
+
+func forgeForType(forgeType, baseURL, token string, hc *http.Client) forges.Forge {
+	switch forgeType {
+	case "gitea", "forgejo":
+		return gitea.New(baseURL, token, hc)
+	case "gitlab":
+		return glforge.New(baseURL, token, hc)
+	case "github":
+		return ghforge.NewWithBase(baseURL, token, hc)
+	}
+	return nil
 }
 
 // forgeForDomainMaybeConfig tries the client's registered forges first. If that
@@ -165,7 +187,7 @@ func forgeForDomainMaybeConfig(ctx context.Context, client *forges.Client, domai
 	}
 	token := TokenForDomain(domain)
 	if regErr := client.RegisterDomain(ctx, domain, token, builders); regErr != nil {
-		return nil, fmt.Errorf("unknown forge at %s: %w", domain, regErr)
+		return nil, fmt.Errorf("unknown forge at %s: %w (use --forge-type, or set type under [%s] in config, to skip detection)", domain, regErr, domain)
 	}
 	return client.ForgeFor(domain)
 }

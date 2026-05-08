@@ -211,6 +211,39 @@ func TestDomainHostOverride(t *testing.T) {
 	}
 }
 
+func TestForgeTypeOverrideSkipsDetection(t *testing.T) {
+	config.ResetCache()
+	defer config.ResetCache()
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+
+	old := forgeTypeOverride
+	defer func() { forgeTypeOverride = old }()
+	SetForgeType("gitea")
+
+	f, err := ForgeForDomain("forge.invalid")
+	if err != nil {
+		t.Fatalf("--forge-type should skip network detection, got: %v", err)
+	}
+	if f == nil {
+		t.Fatal("expected a forge instance")
+	}
+}
+
+func TestSetForgeType(t *testing.T) {
+	old := forgeTypeOverride
+	defer func() { forgeTypeOverride = old }()
+
+	SetForgeType("gitea")
+	if forgeTypeOverride != "gitea" {
+		t.Errorf("SetForgeType did not update forgeTypeOverride, got %q", forgeTypeOverride)
+	}
+
+	SetForgeType("")
+	if forgeTypeOverride != "gitea" {
+		t.Errorf("SetForgeType(\"\") should be a no-op, got %q", forgeTypeOverride)
+	}
+}
+
 func TestSetHost(t *testing.T) {
 	old := hostOverride
 	defer func() { hostOverride = old }()
