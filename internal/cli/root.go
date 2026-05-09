@@ -34,6 +34,7 @@ var rootCmd = &cobra.Command{
 		}
 		resolve.SetRemote(flagRemote)
 		resolve.SetHost(flagHost)
+		resolve.SetForgeType(flagForgeType)
 	},
 }
 

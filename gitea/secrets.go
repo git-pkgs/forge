@@ -17,10 +17,7 @@ func (f *giteaForge) Secrets() forge.SecretService {
 }
 
 func (s *giteaSecretService) List(ctx context.Context, owner, repo string, opts forge.ListSecretOpts) ([]forge.Secret, error) {
-	perPage := opts.PerPage
-	if perPage <= 0 {
-		perPage = 30
-	}
+	perPage := pageSize(opts.PerPage)
 	page := opts.Page
 	if page <= 0 {
 		page = 1
@@ -43,7 +40,7 @@ func (s *giteaSecretService) List(ctx context.Context, owner, repo string, opts 
 				CreatedAt: sec.Created,
 			})
 		}
-		if len(secrets) < perPage || (opts.Limit > 0 && len(all) >= opts.Limit) {
+		if lastPage(resp, len(secrets), perPage) || (opts.Limit > 0 && len(all) >= opts.Limit) {
 			break
 		}
 		page++

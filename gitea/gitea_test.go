@@ -7,6 +7,7 @@ import (
 	forge "github.com/git-pkgs/forge"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 )
@@ -196,6 +197,53 @@ func TestGiteaListRepos(t *testing.T) {
 	}
 	assertEqual(t, "repos[0].FullName", "testorg/repo-a", repos[0].FullName)
 	assertEqual(t, "repos[1].FullName", "testorg/repo-b", repos[1].FullName)
+}
+
+func TestGiteaListReposPaginatesWhenServerClampsPageSize(t *testing.T) {
+	const serverCap = 2
+	total := 5
+
+	pages := (total + serverCap - 1) / serverCap
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /api/v1/version", giteaVersionHandler)
+	mux.HandleFunc("GET /api/v1/orgs/testorg/repos", func(w http.ResponseWriter, r *http.Request) {
+		page := 1
+		_, _ = fmt.Sscan(r.URL.Query().Get("page"), &page)
+
+		var links []string
+		links = append(links, `<?page=1>; rel="first"`, fmt.Sprintf(`<?page=%d>; rel="last"`, pages))
+		if page < pages {
+			links = append(links, fmt.Sprintf(`<?page=%d>; rel="next"`, page+1))
+		}
+		if page > 1 {
+			links = append(links, fmt.Sprintf(`<?page=%d>; rel="prev"`, page-1))
+		}
+		w.Header().Set("Link", strings.Join(links, ", "))
+
+		start := (page - 1) * serverCap
+		var out []map[string]any
+		for i := start; i < start+serverCap && i < total; i++ {
+			out = append(out, map[string]any{
+				"full_name": fmt.Sprintf("testorg/repo-%d", i),
+				"name":      fmt.Sprintf("repo-%d", i),
+				"owner":     map[string]any{"login": "testorg"},
+			})
+		}
+		_ = json.NewEncoder(w).Encode(out)
+	})
+
+	srv := httptest.NewServer(mux)
+	defer srv.Close()
+
+	f := New(srv.URL, "", nil)
+	repos, err := f.Repos().List(context.Background(), "testorg", forge.ListRepoOpts{PerPage: 100})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(repos) != total {
+		t.Fatalf("expected %d repos across pages, got %d", total, len(repos))
+	}
 }
 
 func TestGiteaListReposFallbackToUser(t *testing.T) {

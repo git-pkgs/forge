@@ -27,10 +27,7 @@ func convertGiteaLabel(l *gitea.Label) forge.Label {
 }
 
 func (s *giteaLabelService) List(ctx context.Context, owner, repo string, opts forge.ListLabelOpts) ([]forge.Label, error) {
-	perPage := opts.PerPage
-	if perPage <= 0 {
-		perPage = defaultPageSize
-	}
+	perPage := pageSize(opts.PerPage)
 	page := opts.Page
 	if page <= 0 {
 		page = 1
@@ -50,7 +47,7 @@ func (s *giteaLabelService) List(ctx context.Context, owner, repo string, opts f
 		for _, l := range labels {
 			all = append(all, convertGiteaLabel(l))
 		}
-		if len(labels) < perPage || (opts.Limit > 0 && len(all) >= opts.Limit) {
+		if lastPage(resp, len(labels), perPage) || (opts.Limit > 0 && len(all) >= opts.Limit) {
 			break
 		}
 		page++

@@ -57,10 +57,7 @@ func convertGiteaNotification(n *gitea.NotificationThread) forge.Notification {
 }
 
 func (s *giteaNotificationService) List(ctx context.Context, opts forge.ListNotificationOpts) ([]forge.Notification, error) {
-	perPage := opts.PerPage
-	if perPage <= 0 {
-		perPage = 30
-	}
+	perPage := pageSize(opts.PerPage)
 	page := opts.Page
 	if page <= 0 {
 		page = 1
@@ -108,7 +105,7 @@ func (s *giteaNotificationService) listRepoNotifications(owner, repo string, pag
 		for _, n := range notifications {
 			all = append(all, convertGiteaNotification(n))
 		}
-		if len(notifications) < perPage || (limit > 0 && len(all) >= limit) {
+		if lastPage(resp, len(notifications), perPage) || (limit > 0 && len(all) >= limit) {
 			break
 		}
 		page++
@@ -119,7 +116,7 @@ func (s *giteaNotificationService) listRepoNotifications(owner, repo string, pag
 func (s *giteaNotificationService) listAllNotifications(page, perPage int, statuses []gitea.NotifyStatus, limit int) ([]forge.Notification, error) {
 	var all []forge.Notification
 	for {
-		notifications, _, err := s.client.ListNotifications(gitea.ListNotificationOptions{
+		notifications, resp, err := s.client.ListNotifications(gitea.ListNotificationOptions{
 			ListOptions: gitea.ListOptions{Page: page, PageSize: perPage},
 			Status:      statuses,
 		})
@@ -129,7 +126,7 @@ func (s *giteaNotificationService) listAllNotifications(page, perPage int, statu
 		for _, n := range notifications {
 			all = append(all, convertGiteaNotification(n))
 		}
-		if len(notifications) < perPage || (limit > 0 && len(all) >= limit) {
+		if lastPage(resp, len(notifications), perPage) || (limit > 0 && len(all) >= limit) {
 			break
 		}
 		page++

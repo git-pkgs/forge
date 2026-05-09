@@ -119,10 +119,7 @@ func (s *giteaIssueService) Get(ctx context.Context, owner, repo string, number 
 }
 
 func (s *giteaIssueService) List(ctx context.Context, owner, repo string, opts forge.ListIssueOpts) ([]forge.Issue, error) {
-	perPage := opts.PerPage
-	if perPage <= 0 {
-		perPage = 30
-	}
+	perPage := pageSize(opts.PerPage)
 	page := opts.Page
 	if page <= 0 {
 		page = 1
@@ -160,7 +157,7 @@ func (s *giteaIssueService) List(ctx context.Context, owner, repo string, opts f
 		for _, i := range issues {
 			all = append(all, convertGiteaIssue(i))
 		}
-		if len(issues) < perPage || (opts.Limit > 0 && len(all) >= opts.Limit) {
+		if lastPage(resp, len(issues), perPage) || (opts.Limit > 0 && len(all) >= opts.Limit) {
 			break
 		}
 		gOpts.Page++

@@ -38,10 +38,7 @@ func convertGiteaMilestone(m *gitea.Milestone) forge.Milestone {
 }
 
 func (s *giteaMilestoneService) List(ctx context.Context, owner, repo string, opts forge.ListMilestoneOpts) ([]forge.Milestone, error) {
-	perPage := opts.PerPage
-	if perPage <= 0 {
-		perPage = 30
-	}
+	perPage := pageSize(opts.PerPage)
 	page := opts.Page
 	if page <= 0 {
 		page = 1
@@ -74,7 +71,7 @@ func (s *giteaMilestoneService) List(ctx context.Context, owner, repo string, op
 		for _, m := range milestones {
 			all = append(all, convertGiteaMilestone(m))
 		}
-		if len(milestones) < perPage || (opts.Limit > 0 && len(all) >= opts.Limit) {
+		if lastPage(resp, len(milestones), perPage) || (opts.Limit > 0 && len(all) >= opts.Limit) {
 			break
 		}
 		gOpts.Page++
