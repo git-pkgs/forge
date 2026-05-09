@@ -28,7 +28,7 @@ type DefaultSection struct {
 }
 
 type DomainSection struct {
-	Type    string // github, gitlab, gitea, forgejo
+	Type    string // github, gitlab, gitea, forgejo, bitbucket
 	Token   string // only from user config, never .forge
 	SSHHost string // alternate host for git-over-ssh; the section name remains the API host
 }

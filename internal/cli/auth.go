@@ -76,7 +76,7 @@ func authLoginCmd() *cobra.Command {
 
 	cmd.Flags().StringVar(&domain, "domain", "", "Forge domain (e.g. github.com, gitea.example.com)")
 	cmd.Flags().StringVar(&token, "token", "", "API token")
-	cmd.Flags().StringVar(&forgeType, "type", "", "Forge type: github, gitlab, gitea, forgejo")
+	cmd.Flags().StringVar(&forgeType, "type", "", "Forge type: github, gitlab, gitea, forgejo, bitbucket")
 	return cmd
 }
 
