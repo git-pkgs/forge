@@ -51,7 +51,12 @@ func (s *gitLabMilestoneService) List(ctx context.Context, owner, repo string, o
 	}
 
 	if opts.State != "" && opts.State != stateAll {
-		glOpts.State = gitlab.Ptr(opts.State)
+		// GitLab uses "opened" not "open"
+		state := opts.State
+		if state == stateOpen {
+			state = stateOpened
+		}
+		glOpts.State = gitlab.Ptr(state)
 	}
 
 	var all []forge.Milestone
