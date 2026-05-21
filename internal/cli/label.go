@@ -26,16 +26,24 @@ func init() {
 }
 
 func labelListCmd() *cobra.Command {
-	var flagLimit int
+	var (
+		flagLimit int
+		flagWeb   bool
+	)
 
 	cmd := &cobra.Command{
 		Use:     "list",
 		Aliases: []string{"ls"},
 		Short:   "List labels",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			forge, owner, repoName, _, err := resolve.Repo(flagRepo, flagForgeType)
+			forge, owner, repoName, domain, err := resolve.Repo(flagRepo, flagForgeType)
 			if err != nil {
 				return err
+			}
+
+			if flagWeb {
+				url := fmt.Sprintf("https://%s/%s/%s/labels", domain, owner, repoName)
+				return openBrowser(url)
 			}
 
 			opts := forges.ListLabelOpts{
@@ -76,6 +84,7 @@ func labelListCmd() *cobra.Command {
 	}
 
 	cmd.Flags().IntVarP(&flagLimit, "limit", "L", 0, "Maximum number of labels")
+	cmd.Flags().BoolVarP(&flagWeb, "web", "w", false, "Open in browser")
 	return cmd
 }
 

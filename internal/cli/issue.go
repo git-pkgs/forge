@@ -38,7 +38,10 @@ func init() {
 }
 
 func issueViewCmd() *cobra.Command {
-	var flagComments bool
+	var (
+		flagComments bool
+		flagWeb      bool
+	)
 
 	cmd := &cobra.Command{
 		Use:   "view <number>",
@@ -50,9 +53,14 @@ func issueViewCmd() *cobra.Command {
 				return fmt.Errorf("invalid issue number: %s", args[0])
 			}
 
-			forge, owner, repoName, _, err := resolve.Repo(flagRepo, flagForgeType)
+			forge, owner, repoName, domain, err := resolve.Repo(flagRepo, flagForgeType)
 			if err != nil {
 				return err
+			}
+
+			if flagWeb {
+				url := fmt.Sprintf("https://%s/%s/%s/issues/%d", domain, owner, repoName, number)
+				return openBrowser(url)
 			}
 
 			issue, err := forge.Issues().Get(cmd.Context(), owner, repoName, number)
@@ -111,6 +119,7 @@ func issueViewCmd() *cobra.Command {
 	}
 
 	cmd.Flags().BoolVarP(&flagComments, "comments", "c", false, "Show comments")
+	cmd.Flags().BoolVarP(&flagWeb, "web", "w", false, "Open in browser")
 	return cmd
 }
 
@@ -123,6 +132,7 @@ func issueListCmd() *cobra.Command {
 		flagLimit    int
 		flagSort     string
 		flagOrder    string
+		flagWeb      bool
 	)
 
 	cmd := &cobra.Command{
@@ -130,9 +140,14 @@ func issueListCmd() *cobra.Command {
 		Aliases: []string{"ls"},
 		Short:   "List issues",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			forge, owner, repoName, _, err := resolve.Repo(flagRepo, flagForgeType)
+			forge, owner, repoName, domain, err := resolve.Repo(flagRepo, flagForgeType)
 			if err != nil {
 				return err
+			}
+
+			if flagWeb {
+				url := fmt.Sprintf("https://%s/%s/%s/issues", domain, owner, repoName)
+				return openBrowser(url)
 			}
 
 			opts := forges.ListIssueOpts{
@@ -196,6 +211,7 @@ func issueListCmd() *cobra.Command {
 	cmd.Flags().IntVarP(&flagLimit, "limit", "L", defaultIssueLimit, "Maximum number of issues")
 	cmd.Flags().StringVar(&flagSort, "sort", "", "Sort by: created, updated, comments")
 	cmd.Flags().StringVar(&flagOrder, "order", "", "Sort order: asc, desc")
+	cmd.Flags().BoolVarP(&flagWeb, "web", "w", false, "Open in browser")
 	return cmd
 }
 

@@ -39,7 +39,10 @@ func init() {
 }
 
 func prViewCmd() *cobra.Command {
-	var flagComments bool
+	var (
+		flagComments bool
+		flagWeb      bool
+	)
 
 	cmd := &cobra.Command{
 		Use:   "view <number>",
@@ -51,9 +54,14 @@ func prViewCmd() *cobra.Command {
 				return fmt.Errorf("invalid PR number: %s", args[0])
 			}
 
-			forge, owner, repoName, _, err := resolve.Repo(flagRepo, flagForgeType)
+			forge, owner, repoName, domain, err := resolve.Repo(flagRepo, flagForgeType)
 			if err != nil {
 				return err
+			}
+
+			if flagWeb {
+				url := fmt.Sprintf("https://%s/%s/%s/pull/%d", domain, owner, repoName, number)
+				return openBrowser(url)
 			}
 
 			pr, err := forge.PullRequests().Get(cmd.Context(), owner, repoName, number)
@@ -85,6 +93,7 @@ func prViewCmd() *cobra.Command {
 	}
 
 	cmd.Flags().BoolVarP(&flagComments, "comments", "c", false, "Show comments")
+	cmd.Flags().BoolVarP(&flagWeb, "web", "w", false, "Open in browser")
 	return cmd
 }
 
@@ -138,16 +147,22 @@ func prListCmd() *cobra.Command {
 		flagLimit  int
 		flagSort   string
 		flagOrder  string
+		flagWeb    bool
 	)
 
 	cmd := &cobra.Command{
 		Use:     "list",
 		Aliases: []string{"ls"},
-		Short: "List pull requests",
+		Short:   "List pull requests",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			forge, owner, repoName, _, err := resolve.Repo(flagRepo, flagForgeType)
+			forge, owner, repoName, domain, err := resolve.Repo(flagRepo, flagForgeType)
 			if err != nil {
 				return err
+			}
+
+			if flagWeb {
+				url := fmt.Sprintf("https://%s/%s/%s/pulls", domain, owner, repoName)
+				return openBrowser(url)
 			}
 
 			opts := forges.ListPROpts{
@@ -209,6 +224,7 @@ func prListCmd() *cobra.Command {
 	cmd.Flags().IntVarP(&flagLimit, "limit", "L", defaultPRLimit, "Maximum number of PRs")
 	cmd.Flags().StringVar(&flagSort, "sort", "", "Sort by: created, updated")
 	cmd.Flags().StringVar(&flagOrder, "order", "", "Sort order: asc, desc")
+	cmd.Flags().BoolVarP(&flagWeb, "web", "w", false, "Open in browser")
 	return cmd
 }
 
