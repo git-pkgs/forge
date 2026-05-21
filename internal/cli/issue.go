@@ -126,8 +126,9 @@ func issueListCmd() *cobra.Command {
 	)
 
 	cmd := &cobra.Command{
-		Use:   "list",
-		Short: "List issues",
+		Use:     "list",
+		Aliases: []string{"ls"},
+		Short:   "List issues",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			forge, owner, repoName, _, err := resolve.Repo(flagRepo, flagForgeType)
 			if err != nil {
@@ -208,8 +209,9 @@ func issueCreateCmd() *cobra.Command {
 	)
 
 	cmd := &cobra.Command{
-		Use:   "create",
-		Short: "Create a new issue",
+		Use:     "create",
+		Aliases: []string{"new"},
+		Short:   "Create a new issue",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if flagTitle == "" {
 				return fmt.Errorf("--title is required")

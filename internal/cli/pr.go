@@ -141,7 +141,8 @@ func prListCmd() *cobra.Command {
 	)
 
 	cmd := &cobra.Command{
-		Use:   "list",
+		Use:     "list",
+		Aliases: []string{"ls"},
 		Short: "List pull requests",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			forge, owner, repoName, _, err := resolve.Repo(flagRepo, flagForgeType)
@@ -225,8 +226,9 @@ func prCreateCmd() *cobra.Command {
 	)
 
 	cmd := &cobra.Command{
-		Use:   "create",
-		Short: "Create a pull request",
+		Use:     "create",
+		Aliases: []string{"new"},
+		Short:   "Create a pull request",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if flagTitle == "" {
 				return fmt.Errorf("--title is required")

@@ -29,8 +29,9 @@ func labelListCmd() *cobra.Command {
 	var flagLimit int
 
 	cmd := &cobra.Command{
-		Use:   "list",
-		Short: "List labels",
+		Use:     "list",
+		Aliases: []string{"ls"},
+		Short:   "List labels",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			forge, owner, repoName, _, err := resolve.Repo(flagRepo, flagForgeType)
 			if err != nil {
