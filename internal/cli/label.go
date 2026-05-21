@@ -3,12 +3,20 @@ package cli
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/git-pkgs/forge"
 	"github.com/git-pkgs/forge/internal/output"
 	"github.com/git-pkgs/forge/internal/resolve"
 	"github.com/spf13/cobra"
 )
+
+func isLabelExistsError(err error) bool {
+	msg := strings.ToLower(err.Error())
+	return strings.Contains(msg, "already exists") ||
+		strings.Contains(msg, "already_exists") ||
+		strings.Contains(msg, "label with this name already exists")
+}
 
 const maxLabelDescLength = 50
 
@@ -93,6 +101,7 @@ func labelCreateCmd() *cobra.Command {
 		flagName        string
 		flagColor       string
 		flagDescription string
+		flagForce       bool
 	)
 
 	cmd := &cobra.Command{
@@ -108,7 +117,7 @@ func labelCreateCmd() *cobra.Command {
 				return fmt.Errorf("label name is required (provide as argument or --name)")
 			}
 
-			forge, owner, repoName, _, err := resolve.Repo(flagRepo, flagForgeType)
+			f, owner, repoName, _, err := resolve.Repo(flagRepo, flagForgeType)
 			if err != nil {
 				return err
 			}
@@ -119,9 +128,23 @@ func labelCreateCmd() *cobra.Command {
 				Description: flagDescription,
 			}
 
-			label, err := forge.Labels().Create(cmd.Context(), owner, repoName, opts)
+			label, err := f.Labels().Create(cmd.Context(), owner, repoName, opts)
 			if err != nil {
-				return notSupported(err, "labels")
+				if flagForce && isLabelExistsError(err) {
+					updateOpts := forges.UpdateLabelOpts{}
+					if flagColor != "" {
+						updateOpts.Color = &flagColor
+					}
+					if flagDescription != "" {
+						updateOpts.Description = &flagDescription
+					}
+					label, err = f.Labels().Update(cmd.Context(), owner, repoName, name, updateOpts)
+					if err != nil {
+						return notSupported(err, "labels")
+					}
+				} else {
+					return notSupported(err, "labels")
+				}
 			}
 
 			p := printer()
@@ -137,6 +160,7 @@ func labelCreateCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&flagName, "name", "n", "", "Label name (can also be provided as first argument)")
 	cmd.Flags().StringVarP(&flagColor, "color", "c", "", "Label color (hex without #)")
 	cmd.Flags().StringVarP(&flagDescription, "description", "d", "", "Label description")
+	cmd.Flags().BoolVarP(&flagForce, "force", "f", false, "Update the label if it already exists")
 	return cmd
 }
 
