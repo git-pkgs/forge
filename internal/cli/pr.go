@@ -204,6 +204,7 @@ func prListCmd() *cobra.Command {
 	cmd.Flags().StringVar(&flagHead, "head", "", "Filter by head branch")
 	cmd.Flags().StringVar(&flagBase, "base", "", "Filter by base branch")
 	cmd.Flags().StringSliceVarP(&flagLabels, "label", "l", nil, "Filter by label")
+	cmd.Flags().StringSliceVar(&flagLabels, "labels", nil, "Filter by label")
 	cmd.Flags().IntVarP(&flagLimit, "limit", "L", defaultPRLimit, "Maximum number of PRs")
 	cmd.Flags().StringVar(&flagSort, "sort", "", "Sort by: created, updated")
 	cmd.Flags().StringVar(&flagOrder, "order", "", "Sort order: asc, desc")
@@ -274,6 +275,7 @@ func prCreateCmd() *cobra.Command {
 	cmd.Flags().StringSliceVarP(&flagReviewers, "reviewer", "r", nil, "Request a reviewer")
 	cmd.Flags().StringSliceVarP(&flagAssignees, "assignee", "a", nil, "Assign to a user")
 	cmd.Flags().StringSliceVarP(&flagLabels, "label", "l", nil, "Add a label")
+	cmd.Flags().StringSliceVar(&flagLabels, "labels", nil, "Add a label")
 	cmd.Flags().StringVarP(&flagMilestone, "milestone", "m", "", "Assign to a milestone")
 	return cmd
 }
@@ -371,7 +373,7 @@ func prEditCmd() *cobra.Command {
 			if cmd.Flags().Changed("assignee") {
 				opts.Assignees = flagAssignees
 			}
-			if cmd.Flags().Changed("label") {
+			if cmd.Flags().Changed("label") || cmd.Flags().Changed("labels") {
 				opts.Labels = flagLabels
 			}
 
@@ -396,6 +398,7 @@ func prEditCmd() *cobra.Command {
 	cmd.Flags().StringSliceVarP(&flagReviewers, "reviewer", "r", nil, "Set reviewers")
 	cmd.Flags().StringSliceVarP(&flagAssignees, "assignee", "a", nil, "Set assignees")
 	cmd.Flags().StringSliceVarP(&flagLabels, "label", "l", nil, "Set labels")
+	cmd.Flags().StringSliceVar(&flagLabels, "labels", nil, "Set labels")
 	return cmd
 }
 

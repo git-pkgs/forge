@@ -67,13 +67,21 @@ func Repo(flagRepo, flagForgeType string) (forge forges.Forge, owner, repo, doma
 }
 
 func repoFromFlag(flagRepo, flagForgeType string) (forges.Forge, string, string, string, error) {
-	lastSlash := strings.LastIndex(flagRepo, "/")
-	if lastSlash < 0 {
-		return nil, "", "", "", fmt.Errorf("invalid repo format %q, expected OWNER/REPO", flagRepo)
-	}
-	owner, repo := flagRepo[:lastSlash], flagRepo[lastSlash+1:]
+	parts := strings.Split(flagRepo, "/")
 
-	domain := Domain(flagForgeType)
+	var domain, owner, repo string
+	switch len(parts) {
+	case 2:
+		// owner/repo
+		owner, repo = parts[0], parts[1]
+		domain = Domain(flagForgeType)
+	case 3:
+		// host/owner/repo
+		domain, owner, repo = parts[0], parts[1], parts[2]
+	default:
+		return nil, "", "", "", fmt.Errorf("invalid repo format %q, expected OWNER/REPO or HOST/OWNER/REPO", flagRepo)
+	}
+
 	client := newClient(domain)
 	f, err := forgeForDomainMaybeConfig(context.Background(), client, domain)
 	if err != nil {

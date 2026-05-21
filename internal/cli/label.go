@@ -86,11 +86,16 @@ func labelCreateCmd() *cobra.Command {
 	)
 
 	cmd := &cobra.Command{
-		Use:   "create",
+		Use:   "create [name]",
 		Short: "Create a label",
+		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if flagName == "" {
-				return fmt.Errorf("--name is required")
+			name := flagName
+			if len(args) > 0 {
+				name = args[0]
+			}
+			if name == "" {
+				return fmt.Errorf("label name is required (provide as argument or --name)")
 			}
 
 			forge, owner, repoName, _, err := resolve.Repo(flagRepo, flagForgeType)
@@ -99,7 +104,7 @@ func labelCreateCmd() *cobra.Command {
 			}
 
 			opts := forges.CreateLabelOpts{
-				Name:        flagName,
+				Name:        name,
 				Color:       flagColor,
 				Description: flagDescription,
 			}
@@ -119,7 +124,7 @@ func labelCreateCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVarP(&flagName, "name", "n", "", "Label name")
+	cmd.Flags().StringVarP(&flagName, "name", "n", "", "Label name (can also be provided as first argument)")
 	cmd.Flags().StringVarP(&flagColor, "color", "c", "", "Label color (hex without #)")
 	cmd.Flags().StringVarP(&flagDescription, "description", "d", "", "Label description")
 	return cmd

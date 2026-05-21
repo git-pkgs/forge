@@ -191,6 +191,7 @@ func issueListCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&flagAssignee, "assignee", "a", "", "Filter by assignee")
 	cmd.Flags().StringVarP(&flagAuthor, "author", "A", "", "Filter by author")
 	cmd.Flags().StringSliceVarP(&flagLabels, "label", "l", nil, "Filter by label")
+	cmd.Flags().StringSliceVar(&flagLabels, "labels", nil, "Filter by label")
 	cmd.Flags().IntVarP(&flagLimit, "limit", "L", defaultIssueLimit, "Maximum number of issues")
 	cmd.Flags().StringVar(&flagSort, "sort", "", "Sort by: created, updated, comments")
 	cmd.Flags().StringVar(&flagOrder, "order", "", "Sort order: asc, desc")
@@ -246,6 +247,7 @@ func issueCreateCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&flagBody, "body", "b", "", "Issue body")
 	cmd.Flags().StringSliceVarP(&flagAssignees, "assignee", "a", nil, "Assign to a user")
 	cmd.Flags().StringSliceVarP(&flagLabels, "label", "l", nil, "Add a label")
+	cmd.Flags().StringSliceVar(&flagLabels, "labels", nil, "Add a label")
 	cmd.Flags().StringVarP(&flagMilestone, "milestone", "m", "", "Assign to a milestone")
 	return cmd
 }
@@ -336,7 +338,7 @@ func issueEditCmd() *cobra.Command {
 			if cmd.Flags().Changed("assignee") {
 				opts.Assignees = flagAssignees
 			}
-			if cmd.Flags().Changed("label") {
+			if cmd.Flags().Changed("label") || cmd.Flags().Changed("labels") {
 				opts.Labels = flagLabels
 			}
 			if cmd.Flags().Changed("milestone") {
@@ -362,6 +364,7 @@ func issueEditCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&flagBody, "body", "b", "", "Set the body")
 	cmd.Flags().StringSliceVarP(&flagAssignees, "assignee", "a", nil, "Set assignees")
 	cmd.Flags().StringSliceVarP(&flagLabels, "label", "l", nil, "Set labels")
+	cmd.Flags().StringSliceVar(&flagLabels, "labels", nil, "Set labels")
 	cmd.Flags().StringVarP(&flagMilestone, "milestone", "m", "", "Set the milestone")
 	return cmd
 }

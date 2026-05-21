@@ -44,7 +44,7 @@ func Execute() error {
 }
 
 func init() {
-	rootCmd.PersistentFlags().StringVarP(&flagRepo, "repo", "R", "", "Select a repository (OWNER/REPO)")
+	rootCmd.PersistentFlags().StringVarP(&flagRepo, "repo", "R", "", "Select a repository (OWNER/REPO or HOST/OWNER/REPO)")
 	rootCmd.PersistentFlags().StringVar(&flagForgeType, "forge-type", "", "Force forge type: github, gitlab, gitea, forgejo, bitbucket")
 	rootCmd.PersistentFlags().StringVar(&flagHost, "host", "", "Force forge host (e.g. gitea.com); overrides FORGE_HOST and remote detection")
 	rootCmd.PersistentFlags().StringVarP(&flagOutput, "output", "o", "table", "Output format: table, json, plain")

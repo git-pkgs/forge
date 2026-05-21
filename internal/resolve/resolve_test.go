@@ -361,3 +361,76 @@ func mustGit(t *testing.T, args ...string) {
 		t.Fatalf("git %v: %v\n%s", args, err, out)
 	}
 }
+
+func TestRepoFromFlag(t *testing.T) {
+	config.ResetCache()
+	defer config.ResetCache()
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	t.Chdir(t.TempDir())
+
+	tests := []struct {
+		name       string
+		flagRepo   string
+		wantDomain string
+		wantOwner  string
+		wantRepo   string
+		wantErr    bool
+	}{
+		{
+			name:       "owner/repo uses default domain",
+			flagRepo:   "owner/repo",
+			wantDomain: "github.com",
+			wantOwner:  "owner",
+			wantRepo:   "repo",
+		},
+		{
+			name:       "host/owner/repo",
+			flagRepo:   "codeberg.org/owner/repo",
+			wantDomain: "codeberg.org",
+			wantOwner:  "owner",
+			wantRepo:   "repo",
+		},
+		{
+			name:     "single part is invalid",
+			flagRepo: "repo",
+			wantErr:  true,
+		},
+		{
+			name:     "empty is invalid",
+			flagRepo: "",
+			wantErr:  true,
+		},
+		{
+			name:     "too many parts is invalid",
+			flagRepo: "host/group/subgroup/repo",
+			wantErr:  true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			f, owner, repo, domain, err := repoFromFlag(tt.flagRepo, "")
+			if tt.wantErr {
+				if err == nil {
+					t.Errorf("expected error, got nil")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if f == nil {
+				t.Error("expected forge instance, got nil")
+			}
+			if domain != tt.wantDomain {
+				t.Errorf("domain = %q, want %q", domain, tt.wantDomain)
+			}
+			if owner != tt.wantOwner {
+				t.Errorf("owner = %q, want %q", owner, tt.wantOwner)
+			}
+			if repo != tt.wantRepo {
+				t.Errorf("repo = %q, want %q", repo, tt.wantRepo)
+			}
+		})
+	}
+}
