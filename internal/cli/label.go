@@ -1,22 +1,15 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
 	"os"
-	"strings"
 
-	"github.com/git-pkgs/forge"
+	forges "github.com/git-pkgs/forge"
 	"github.com/git-pkgs/forge/internal/output"
 	"github.com/git-pkgs/forge/internal/resolve"
 	"github.com/spf13/cobra"
 )
-
-func isLabelExistsError(err error) bool {
-	msg := strings.ToLower(err.Error())
-	return strings.Contains(msg, "already exists") ||
-		strings.Contains(msg, "already_exists") ||
-		strings.Contains(msg, "label with this name already exists")
-}
 
 const maxLabelDescLength = 50
 
@@ -133,7 +126,7 @@ func labelCreateCmd() *cobra.Command {
 
 			label, err := f.Labels().Create(cmd.Context(), owner, repoName, opts)
 			if err != nil {
-				if flagForce && isLabelExistsError(err) {
+				if flagForce && errors.Is(err, forges.ErrLabelExists) {
 					updateOpts := forges.UpdateLabelOpts{}
 					if flagColor != "" {
 						updateOpts.Color = &flagColor

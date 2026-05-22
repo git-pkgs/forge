@@ -148,8 +148,13 @@ func (s *giteaLabelService) Create(ctx context.Context, owner, repo string, opts
 
 	l, resp, err := s.client.CreateLabel(owner, repo, gOpts)
 	if err != nil {
-		if resp != nil && resp.StatusCode == http.StatusNotFound {
-			return nil, forge.ErrNotFound
+		if resp != nil {
+			switch resp.StatusCode {
+			case http.StatusNotFound:
+				return nil, forge.ErrNotFound
+			case http.StatusConflict, http.StatusUnprocessableEntity:
+				return nil, forge.ErrLabelExists
+			}
 		}
 		return nil, err
 	}

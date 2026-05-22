@@ -20,6 +20,9 @@ var ErrOwnerNotFound = errors.New("owner not found")
 // ErrNotSupported is returned when a forge does not support an operation.
 var ErrNotSupported = errors.New("not supported by this forge")
 
+// ErrLabelExists is returned when creating a label that already exists.
+var ErrLabelExists = errors.New("label already exists")
+
 // HTTPError represents a non-OK HTTP response from a forge API.
 type HTTPError struct {
 	StatusCode int
