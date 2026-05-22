@@ -432,3 +432,7 @@ func (s *gitLabRepoService) ActionsURL(repoHTMLURL string) string {
 func (s *gitLabRepoService) ReleasesURL(repoHTMLURL string) string {
 	return repoHTMLURL + "/-/releases"
 }
+
+func (s *gitLabRepoService) BlobURL(repoHTMLURL, ref, path string) string {
+	return repoHTMLURL + "/-/blob/" + ref + "/" + path
+}

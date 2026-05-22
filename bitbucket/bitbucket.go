@@ -386,3 +386,7 @@ func (s *bitbucketRepoService) ActionsURL(repoHTMLURL string) string {
 func (s *bitbucketRepoService) ReleasesURL(repoHTMLURL string) string {
 	return repoHTMLURL + "/downloads"
 }
+
+func (s *bitbucketRepoService) BlobURL(repoHTMLURL, ref, path string) string {
+	return repoHTMLURL + "/src/" + ref + "/" + path
+}

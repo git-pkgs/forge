@@ -56,7 +56,7 @@ var browseCmd = &cobra.Command{
 				if branch == "" {
 					branch = repo.DefaultBranch
 				}
-				url = repoURL + fmt.Sprintf("/blob/%s/%s", branch, args[0])
+				url = forge.Repos().BlobURL(repoURL, branch, args[0])
 			}
 		} else {
 			url = repoURL

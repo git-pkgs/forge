@@ -416,4 +416,8 @@ func (s *giteaRepoService) ReleasesURL(repoHTMLURL string) string {
 	return repoHTMLURL + "/releases"
 }
 
+func (s *giteaRepoService) BlobURL(repoHTMLURL, ref, path string) string {
+	return repoHTMLURL + "/src/branch/" + ref + "/" + path
+}
+
 func boolPtr(b bool) *bool { return &b }

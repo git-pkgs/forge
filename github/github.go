@@ -445,3 +445,7 @@ func (s *gitHubRepoService) ActionsURL(repoHTMLURL string) string {
 func (s *gitHubRepoService) ReleasesURL(repoHTMLURL string) string {
 	return repoHTMLURL + "/releases"
 }
+
+func (s *gitHubRepoService) BlobURL(repoHTMLURL, ref, path string) string {
+	return repoHTMLURL + "/blob/" + ref + "/" + path
+}

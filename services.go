@@ -23,6 +23,7 @@ type RepoService interface {
 	WikiURL(repoHTMLURL string) string
 	ActionsURL(repoHTMLURL string) string
 	ReleasesURL(repoHTMLURL string) string
+	BlobURL(repoHTMLURL, ref, path string) string
 }
 
 // PullRequestService provides operations on pull requests (merge requests on GitLab).

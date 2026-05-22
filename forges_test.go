@@ -618,6 +618,10 @@ func (m *mockRepoService) ReleasesURL(repoHTMLURL string) string {
 	return repoHTMLURL + "/releases"
 }
 
+func (m *mockRepoService) BlobURL(repoHTMLURL, ref, path string) string {
+	return repoHTMLURL + "/blob/" + ref + "/" + path
+}
+
 type mockIssueService struct {
 	issue      *Issue
 	issues     []Issue
