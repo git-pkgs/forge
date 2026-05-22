@@ -434,3 +434,7 @@ func (s *gitLabPRService) ListComments(ctx context.Context, owner, repo string, 
 	}
 	return all, nil
 }
+
+func (s *gitLabPRService) ListURL(repoHTMLURL string) string {
+	return repoHTMLURL + "/-/merge_requests"
+}

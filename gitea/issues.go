@@ -339,3 +339,7 @@ func (s *giteaIssueService) ListComments(ctx context.Context, owner, repo string
 	}
 	return all, nil
 }
+
+func (s *giteaIssueService) ListURL(repoHTMLURL string) string {
+	return repoHTMLURL + "/issues"
+}

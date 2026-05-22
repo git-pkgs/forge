@@ -31,3 +31,7 @@ func (s *bitbucketLabelService) Update(_ context.Context, _, _, _ string, _ forg
 func (s *bitbucketLabelService) Delete(_ context.Context, _, _, _ string) error {
 	return forge.ErrNotSupported
 }
+
+func (s *bitbucketLabelService) ListURL(repoHTMLURL string) string {
+	return repoHTMLURL + "/issues"
+}

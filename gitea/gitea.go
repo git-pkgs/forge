@@ -400,4 +400,20 @@ func (s *giteaRepoService) Search(ctx context.Context, opts forge.SearchRepoOpts
 	return repos, nil
 }
 
+func (s *giteaRepoService) SettingsURL(repoHTMLURL string) string {
+	return repoHTMLURL + "/settings"
+}
+
+func (s *giteaRepoService) WikiURL(repoHTMLURL string) string {
+	return repoHTMLURL + "/wiki"
+}
+
+func (s *giteaRepoService) ActionsURL(repoHTMLURL string) string {
+	return repoHTMLURL + "/actions"
+}
+
+func (s *giteaRepoService) ReleasesURL(repoHTMLURL string) string {
+	return repoHTMLURL + "/releases"
+}
+
 func boolPtr(b bool) *bool { return &b }

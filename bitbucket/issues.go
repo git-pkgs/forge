@@ -306,3 +306,7 @@ func (s *bitbucketIssueService) ListComments(ctx context.Context, owner, repo st
 	}
 	return all, nil
 }
+
+func (s *bitbucketIssueService) ListURL(repoHTMLURL string) string {
+	return repoHTMLURL + "/issues"
+}

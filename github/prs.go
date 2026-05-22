@@ -372,3 +372,7 @@ func (s *gitHubPRService) ListComments(ctx context.Context, owner, repo string, 
 	}
 	return all, nil
 }
+
+func (s *gitHubPRService) ListURL(repoHTMLURL string) string {
+	return repoHTMLURL + "/pulls"
+}

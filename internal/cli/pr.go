@@ -54,19 +54,18 @@ func prViewCmd() *cobra.Command {
 				return fmt.Errorf("invalid PR number: %s", args[0])
 			}
 
-			forge, owner, repoName, domain, err := resolve.Repo(flagRepo, flagForgeType)
+			forge, owner, repoName, _, err := resolve.Repo(flagRepo, flagForgeType)
 			if err != nil {
 				return err
-			}
-
-			if flagWeb {
-				url := fmt.Sprintf("https://%s/%s/%s/pull/%d", domain, owner, repoName, number)
-				return openBrowser(url)
 			}
 
 			pr, err := forge.PullRequests().Get(cmd.Context(), owner, repoName, number)
 			if err != nil {
 				return fmt.Errorf("getting PR #%d: %w", number, err)
+			}
+
+			if flagWeb {
+				return openBrowser(pr.HTMLURL)
 			}
 
 			p := printer()
@@ -155,14 +154,17 @@ func prListCmd() *cobra.Command {
 		Aliases: []string{"ls"},
 		Short:   "List pull requests",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			forge, owner, repoName, domain, err := resolve.Repo(flagRepo, flagForgeType)
+			forge, owner, repoName, _, err := resolve.Repo(flagRepo, flagForgeType)
 			if err != nil {
 				return err
 			}
 
 			if flagWeb {
-				url := fmt.Sprintf("https://%s/%s/%s/pulls", domain, owner, repoName)
-				return openBrowser(url)
+				repo, err := forge.Repos().Get(cmd.Context(), owner, repoName)
+				if err != nil {
+					return fmt.Errorf("getting repository: %w", err)
+				}
+				return openBrowser(forge.PullRequests().ListURL(repo.HTMLURL))
 			}
 
 			opts := forges.ListPROpts{
@@ -221,6 +223,7 @@ func prListCmd() *cobra.Command {
 	cmd.Flags().StringVar(&flagBase, "base", "", "Filter by base branch")
 	cmd.Flags().StringSliceVarP(&flagLabels, "label", "l", nil, "Filter by label")
 	cmd.Flags().StringSliceVar(&flagLabels, "labels", nil, "Filter by label")
+	_ = cmd.Flags().MarkHidden("labels")
 	cmd.Flags().IntVarP(&flagLimit, "limit", "L", defaultPRLimit, "Maximum number of PRs")
 	cmd.Flags().StringVar(&flagSort, "sort", "", "Sort by: created, updated")
 	cmd.Flags().StringVar(&flagOrder, "order", "", "Sort order: asc, desc")
@@ -294,6 +297,7 @@ func prCreateCmd() *cobra.Command {
 	cmd.Flags().StringSliceVarP(&flagAssignees, "assignee", "a", nil, "Assign to a user")
 	cmd.Flags().StringSliceVarP(&flagLabels, "label", "l", nil, "Add a label")
 	cmd.Flags().StringSliceVar(&flagLabels, "labels", nil, "Add a label")
+	_ = cmd.Flags().MarkHidden("labels")
 	cmd.Flags().StringVarP(&flagMilestone, "milestone", "m", "", "Assign to a milestone")
 	return cmd
 }
@@ -417,6 +421,7 @@ func prEditCmd() *cobra.Command {
 	cmd.Flags().StringSliceVarP(&flagAssignees, "assignee", "a", nil, "Set assignees")
 	cmd.Flags().StringSliceVarP(&flagLabels, "label", "l", nil, "Set labels")
 	cmd.Flags().StringSliceVar(&flagLabels, "labels", nil, "Set labels")
+	_ = cmd.Flags().MarkHidden("labels")
 	return cmd
 }
 

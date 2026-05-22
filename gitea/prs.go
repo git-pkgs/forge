@@ -338,3 +338,7 @@ func (s *giteaPRService) ListComments(ctx context.Context, owner, repo string, n
 	}
 	return all, nil
 }
+
+func (s *giteaPRService) ListURL(repoHTMLURL string) string {
+	return repoHTMLURL + "/pulls"
+}

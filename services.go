@@ -18,6 +18,11 @@ type RepoService interface {
 	ListTags(ctx context.Context, owner, repo string) ([]Tag, error)
 	ListContributors(ctx context.Context, owner, repo string) ([]Contributor, error)
 	Search(ctx context.Context, opts SearchRepoOpts) ([]Repository, error)
+	// URL builders for web pages (take repo.HTMLURL as input)
+	SettingsURL(repoHTMLURL string) string
+	WikiURL(repoHTMLURL string) string
+	ActionsURL(repoHTMLURL string) string
+	ReleasesURL(repoHTMLURL string) string
 }
 
 // PullRequestService provides operations on pull requests (merge requests on GitLab).
@@ -34,6 +39,7 @@ type PullRequestService interface {
 	ListComments(ctx context.Context, owner, repo string, number int) ([]Comment, error)
 	ListReactions(ctx context.Context, owner, repo string, number int, commentID int64) ([]Reaction, error)
 	AddReaction(ctx context.Context, owner, repo string, number int, commentID int64, reaction string) (*Reaction, error)
+	ListURL(repoHTMLURL string) string
 }
 
 // LabelService provides operations on repository labels.
@@ -43,6 +49,7 @@ type LabelService interface {
 	Create(ctx context.Context, owner, repo string, opts CreateLabelOpts) (*Label, error)
 	Update(ctx context.Context, owner, repo, name string, opts UpdateLabelOpts) (*Label, error)
 	Delete(ctx context.Context, owner, repo, name string) error
+	ListURL(repoHTMLURL string) string
 }
 
 // MilestoneService provides operations on repository milestones.
@@ -147,4 +154,5 @@ type IssueService interface {
 	ListComments(ctx context.Context, owner, repo string, number int) ([]Comment, error)
 	ListReactions(ctx context.Context, owner, repo string, number int, commentID int64) ([]Reaction, error)
 	AddReaction(ctx context.Context, owner, repo string, number int, commentID int64, reaction string) (*Reaction, error)
+	ListURL(repoHTMLURL string) string
 }

@@ -370,3 +370,19 @@ func (s *bitbucketRepoService) Search(ctx context.Context, opts forge.SearchRepo
 	// The closest is searching within a workspace, which requires an owner.
 	return nil, forge.ErrNotSupported
 }
+
+func (s *bitbucketRepoService) SettingsURL(repoHTMLURL string) string {
+	return repoHTMLURL + "/admin"
+}
+
+func (s *bitbucketRepoService) WikiURL(repoHTMLURL string) string {
+	return repoHTMLURL + "/wiki"
+}
+
+func (s *bitbucketRepoService) ActionsURL(repoHTMLURL string) string {
+	return repoHTMLURL + "/pipelines"
+}
+
+func (s *bitbucketRepoService) ReleasesURL(repoHTMLURL string) string {
+	return repoHTMLURL + "/downloads"
+}

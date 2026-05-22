@@ -602,6 +602,22 @@ func (m *mockRepoService) Search(_ context.Context, opts SearchRepoOpts) ([]Repo
 	return m.repos, nil
 }
 
+func (m *mockRepoService) SettingsURL(repoHTMLURL string) string {
+	return repoHTMLURL + "/settings"
+}
+
+func (m *mockRepoService) WikiURL(repoHTMLURL string) string {
+	return repoHTMLURL + "/wiki"
+}
+
+func (m *mockRepoService) ActionsURL(repoHTMLURL string) string {
+	return repoHTMLURL + "/actions"
+}
+
+func (m *mockRepoService) ReleasesURL(repoHTMLURL string) string {
+	return repoHTMLURL + "/releases"
+}
+
 type mockIssueService struct {
 	issue      *Issue
 	issues     []Issue
@@ -679,6 +695,10 @@ func (m *mockIssueService) ListReactions(_ context.Context, owner, repo string, 
 
 func (m *mockIssueService) AddReaction(_ context.Context, owner, repo string, number int, commentID int64, reaction string) (*Reaction, error) {
 	return nil, nil
+}
+
+func (m *mockIssueService) ListURL(repoHTMLURL string) string {
+	return repoHTMLURL + "/issues"
 }
 
 type mockPRService struct {
@@ -768,6 +788,10 @@ func (m *mockPRService) AddReaction(_ context.Context, owner, repo string, numbe
 	return nil, nil
 }
 
+func (m *mockPRService) ListURL(repoHTMLURL string) string {
+	return repoHTMLURL + "/pulls"
+}
+
 type mockLabelService struct {
 	label     *Label
 	labels    []Label
@@ -807,6 +831,10 @@ func (m *mockLabelService) Delete(_ context.Context, owner, repo, name string) e
 	m.lastRepo = repo
 	m.lastName = name
 	return nil
+}
+
+func (m *mockLabelService) ListURL(repoHTMLURL string) string {
+	return repoHTMLURL + "/labels"
 }
 
 type mockMilestoneService struct {

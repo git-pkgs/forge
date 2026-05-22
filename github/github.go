@@ -429,3 +429,19 @@ func (s *gitHubRepoService) Search(ctx context.Context, opts forge.SearchRepoOpt
 	}
 	return repos, nil
 }
+
+func (s *gitHubRepoService) SettingsURL(repoHTMLURL string) string {
+	return repoHTMLURL + "/settings"
+}
+
+func (s *gitHubRepoService) WikiURL(repoHTMLURL string) string {
+	return repoHTMLURL + "/wiki"
+}
+
+func (s *gitHubRepoService) ActionsURL(repoHTMLURL string) string {
+	return repoHTMLURL + "/actions"
+}
+
+func (s *gitHubRepoService) ReleasesURL(repoHTMLURL string) string {
+	return repoHTMLURL + "/releases"
+}

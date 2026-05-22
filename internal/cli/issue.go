@@ -53,19 +53,18 @@ func issueViewCmd() *cobra.Command {
 				return fmt.Errorf("invalid issue number: %s", args[0])
 			}
 
-			forge, owner, repoName, domain, err := resolve.Repo(flagRepo, flagForgeType)
+			forge, owner, repoName, _, err := resolve.Repo(flagRepo, flagForgeType)
 			if err != nil {
 				return err
-			}
-
-			if flagWeb {
-				url := fmt.Sprintf("https://%s/%s/%s/issues/%d", domain, owner, repoName, number)
-				return openBrowser(url)
 			}
 
 			issue, err := forge.Issues().Get(cmd.Context(), owner, repoName, number)
 			if err != nil {
 				return fmt.Errorf("getting issue #%d: %w", number, err)
+			}
+
+			if flagWeb {
+				return openBrowser(issue.HTMLURL)
 			}
 
 			p := printer()
@@ -140,14 +139,17 @@ func issueListCmd() *cobra.Command {
 		Aliases: []string{"ls"},
 		Short:   "List issues",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			forge, owner, repoName, domain, err := resolve.Repo(flagRepo, flagForgeType)
+			forge, owner, repoName, _, err := resolve.Repo(flagRepo, flagForgeType)
 			if err != nil {
 				return err
 			}
 
 			if flagWeb {
-				url := fmt.Sprintf("https://%s/%s/%s/issues", domain, owner, repoName)
-				return openBrowser(url)
+				repo, err := forge.Repos().Get(cmd.Context(), owner, repoName)
+				if err != nil {
+					return fmt.Errorf("getting repository: %w", err)
+				}
+				return openBrowser(forge.Issues().ListURL(repo.HTMLURL))
 			}
 
 			opts := forges.ListIssueOpts{
@@ -208,6 +210,7 @@ func issueListCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&flagAuthor, "author", "A", "", "Filter by author")
 	cmd.Flags().StringSliceVarP(&flagLabels, "label", "l", nil, "Filter by label")
 	cmd.Flags().StringSliceVar(&flagLabels, "labels", nil, "Filter by label")
+	_ = cmd.Flags().MarkHidden("labels")
 	cmd.Flags().IntVarP(&flagLimit, "limit", "L", defaultIssueLimit, "Maximum number of issues")
 	cmd.Flags().StringVar(&flagSort, "sort", "", "Sort by: created, updated, comments")
 	cmd.Flags().StringVar(&flagOrder, "order", "", "Sort order: asc, desc")
@@ -266,6 +269,7 @@ func issueCreateCmd() *cobra.Command {
 	cmd.Flags().StringSliceVarP(&flagAssignees, "assignee", "a", nil, "Assign to a user")
 	cmd.Flags().StringSliceVarP(&flagLabels, "label", "l", nil, "Add a label")
 	cmd.Flags().StringSliceVar(&flagLabels, "labels", nil, "Add a label")
+	_ = cmd.Flags().MarkHidden("labels")
 	cmd.Flags().StringVarP(&flagMilestone, "milestone", "m", "", "Assign to a milestone")
 	return cmd
 }
@@ -383,6 +387,7 @@ func issueEditCmd() *cobra.Command {
 	cmd.Flags().StringSliceVarP(&flagAssignees, "assignee", "a", nil, "Set assignees")
 	cmd.Flags().StringSliceVarP(&flagLabels, "label", "l", nil, "Set labels")
 	cmd.Flags().StringSliceVar(&flagLabels, "labels", nil, "Set labels")
+	_ = cmd.Flags().MarkHidden("labels")
 	cmd.Flags().StringVarP(&flagMilestone, "milestone", "m", "", "Set the milestone")
 	return cmd
 }

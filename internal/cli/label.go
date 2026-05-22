@@ -44,21 +44,24 @@ func labelListCmd() *cobra.Command {
 		Aliases: []string{"ls"},
 		Short:   "List labels",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			forge, owner, repoName, domain, err := resolve.Repo(flagRepo, flagForgeType)
+			f, owner, repoName, _, err := resolve.Repo(flagRepo, flagForgeType)
 			if err != nil {
 				return err
 			}
 
 			if flagWeb {
-				url := fmt.Sprintf("https://%s/%s/%s/labels", domain, owner, repoName)
-				return openBrowser(url)
+				repo, err := f.Repos().Get(cmd.Context(), owner, repoName)
+				if err != nil {
+					return fmt.Errorf("getting repository: %w", err)
+				}
+				return openBrowser(f.Labels().ListURL(repo.HTMLURL))
 			}
 
 			opts := forges.ListLabelOpts{
 				Limit: flagLimit,
 			}
 
-			labels, err := forge.Labels().List(cmd.Context(), owner, repoName, opts)
+			labels, err := f.Labels().List(cmd.Context(), owner, repoName, opts)
 			if err != nil {
 				return notSupported(err, "labels")
 			}

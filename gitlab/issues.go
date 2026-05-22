@@ -319,3 +319,7 @@ func (s *gitLabIssueService) ListComments(ctx context.Context, owner, repo strin
 	}
 	return all, nil
 }
+
+func (s *gitLabIssueService) ListURL(repoHTMLURL string) string {
+	return repoHTMLURL + "/-/issues"
+}

@@ -133,3 +133,7 @@ func (s *gitHubLabelService) Delete(ctx context.Context, owner, repo, name strin
 	}
 	return nil
 }
+
+func (s *gitHubLabelService) ListURL(repoHTMLURL string) string {
+	return repoHTMLURL + "/labels"
+}

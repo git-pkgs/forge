@@ -416,3 +416,19 @@ func (s *gitLabRepoService) Search(ctx context.Context, opts forge.SearchRepoOpt
 	}
 	return repos, nil
 }
+
+func (s *gitLabRepoService) SettingsURL(repoHTMLURL string) string {
+	return repoHTMLURL + "/-/settings"
+}
+
+func (s *gitLabRepoService) WikiURL(repoHTMLURL string) string {
+	return repoHTMLURL + "/-/wikis"
+}
+
+func (s *gitLabRepoService) ActionsURL(repoHTMLURL string) string {
+	return repoHTMLURL + "/-/pipelines"
+}
+
+func (s *gitLabRepoService) ReleasesURL(repoHTMLURL string) string {
+	return repoHTMLURL + "/-/releases"
+}

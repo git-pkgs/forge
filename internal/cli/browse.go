@@ -26,33 +26,40 @@ var browseCmd = &cobra.Command{
 			return err
 		}
 
-		url := repo.HTMLURL
-		if url == "" {
-			url = fmt.Sprintf("https://%s/%s/%s", domain, owner, repoName)
+		repoURL := repo.HTMLURL
+		if repoURL == "" {
+			repoURL = fmt.Sprintf("https://%s/%s/%s", domain, owner, repoName)
 		}
 
+		var url string
 		if flagBrowseSettings {
-			url += "/settings"
+			url = forge.Repos().SettingsURL(repoURL)
 		} else if flagBrowseWiki {
-			url += "/wiki"
+			url = forge.Repos().WikiURL(repoURL)
 		} else if flagBrowseActions {
-			url += "/actions"
+			url = forge.Repos().ActionsURL(repoURL)
 		} else if flagBrowseReleases {
-			url += "/releases"
+			url = forge.Repos().ReleasesURL(repoURL)
 		} else if flagBrowseIssues {
-			url += "/issues"
+			url = forge.Issues().ListURL(repoURL)
 		} else if flagBrowsePulls {
-			url += "/pulls"
+			url = forge.PullRequests().ListURL(repoURL)
 		} else if len(args) > 0 {
 			if n, err := strconv.Atoi(args[0]); err == nil {
-				url += fmt.Sprintf("/issues/%d", n)
+				issue, err := forge.Issues().Get(cmd.Context(), owner, repoName, n)
+				if err != nil {
+					return fmt.Errorf("getting issue #%d: %w", n, err)
+				}
+				url = issue.HTMLURL
 			} else {
 				branch := flagBrowseBranch
 				if branch == "" {
 					branch = repo.DefaultBranch
 				}
-				url += fmt.Sprintf("/blob/%s/%s", branch, args[0])
+				url = repoURL + fmt.Sprintf("/blob/%s/%s", branch, args[0])
 			}
+		} else {
+			url = repoURL
 		}
 
 		if flagNoBrowser {

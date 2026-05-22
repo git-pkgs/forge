@@ -210,3 +210,7 @@ func (s *giteaLabelService) Delete(ctx context.Context, owner, repo, name string
 	}
 	return nil
 }
+
+func (s *giteaLabelService) ListURL(repoHTMLURL string) string {
+	return repoHTMLURL + "/labels"
+}

@@ -312,3 +312,7 @@ func (s *gitHubIssueService) ListComments(ctx context.Context, owner, repo strin
 	}
 	return all, nil
 }
+
+func (s *gitHubIssueService) ListURL(repoHTMLURL string) string {
+	return repoHTMLURL + "/issues"
+}

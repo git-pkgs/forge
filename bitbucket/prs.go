@@ -327,3 +327,7 @@ func (s *bitbucketPRService) ListComments(ctx context.Context, owner, repo strin
 	}
 	return all, nil
 }
+
+func (s *bitbucketPRService) ListURL(repoHTMLURL string) string {
+	return repoHTMLURL + "/pull-requests"
+}
