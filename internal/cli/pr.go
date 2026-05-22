@@ -1,8 +1,10 @@
 package cli
 
 import (
+	"context"
 	"fmt"
 	"os"
+	"os/exec"
 	"strconv"
 	"strings"
 
@@ -36,6 +38,7 @@ func init() {
 	prCmd.AddCommand(prCommentCmd())
 	prCmd.AddCommand(prReactionsCmd())
 	prCmd.AddCommand(prReactCmd())
+	prCmd.AddCommand(prCheckoutCmd())
 }
 
 func prViewCmd() *cobra.Command {
@@ -537,4 +540,171 @@ func prCommentCmd() *cobra.Command {
 
 	cmd.Flags().StringVarP(&flagBody, "body", "b", "", "Comment body")
 	return cmd
+}
+
+func prCheckoutCmd() *cobra.Command {
+	var (
+		flagRemoteName string
+		flagBranch     string
+		flagDetach     bool
+		flagForce      bool
+	)
+
+	cmd := &cobra.Command{
+		Use:   "checkout <number>",
+		Short: "Check out a pull request locally",
+		Long: `Check out a pull request's head branch locally.
+
+If the PR is from a fork, the fork repository is added as a remote
+(named after the fork owner by default), and the branch is fetched
+and checked out with upstream tracking configured.
+
+For same-repo PRs, the branch is fetched and checked out.`,
+		Args: cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			number, err := strconv.Atoi(args[0])
+			if err != nil {
+				return fmt.Errorf("invalid PR number: %s", args[0])
+			}
+
+			forge, owner, repoName, _, err := resolve.Repo(flagRepo, flagForgeType)
+			if err != nil {
+				return err
+			}
+
+			ctx := cmd.Context()
+
+			if !flagForce {
+				status, _ := exec.CommandContext(ctx, "git", "status", "--porcelain").Output()
+				if len(status) > 0 {
+					return fmt.Errorf("you have uncommitted changes; commit or stash them, or use --force")
+				}
+			}
+
+			pr, err := forge.PullRequests().Get(ctx, owner, repoName, number)
+			if err != nil {
+				return fmt.Errorf("getting PR #%d: %w", number, err)
+			}
+
+			// remoteRef is the branch name on the remote (PR's head branch)
+			remoteRef := pr.Head
+			if pr.HeadBranch != nil && pr.HeadBranch.Ref != "" {
+				remoteRef = pr.HeadBranch.Ref
+			}
+
+			// localBranch is what we'll name the local branch (defaults to remote ref)
+			localBranch := remoteRef
+			if flagBranch != "" {
+				localBranch = flagBranch
+			}
+
+			if !flagForce && !flagDetach {
+				if err := exec.CommandContext(ctx, "git", "rev-parse", "--verify", "--quiet", localBranch).Run(); err == nil {
+					_, _ = fmt.Fprintf(os.Stderr, "warning: local branch %q already exists and will be reset\n", localBranch)
+				}
+			}
+
+			if pr.HeadBranch != nil && pr.HeadBranch.Fork != nil {
+				return checkoutForkPR(ctx, pr, remoteRef, localBranch, flagRemoteName, flagDetach)
+			}
+
+			return checkoutSameRepoPR(ctx, remoteRef, localBranch, flagDetach)
+		},
+	}
+
+	cmd.Flags().StringVar(&flagRemoteName, "remote-name", "", "Name for fork remote (default: fork owner)")
+	cmd.Flags().StringVarP(&flagBranch, "branch", "b", "", "Local branch name (default: same as remote)")
+	cmd.Flags().BoolVar(&flagDetach, "detach", false, "Checkout in detached HEAD mode")
+	cmd.Flags().BoolVarP(&flagForce, "force", "f", false, "Force checkout even with uncommitted changes or existing branch")
+	return cmd
+}
+
+func checkoutForkPR(ctx context.Context, pr *forges.PullRequest, remoteRef, localBranch, flagRemoteName string, detach bool) error {
+	fork := pr.HeadBranch.Fork
+	remoteName := flagRemoteName
+	if remoteName == "" {
+		remoteName = fork.Owner
+	}
+	if remoteName == "" {
+		remoteName = "fork"
+	}
+
+	cloneURL := fork.CloneURL
+	if cloneURL == "" {
+		cloneURL = fork.SSHURL
+	}
+	if cloneURL == "" {
+		return fmt.Errorf("no clone URL available for fork repository")
+	}
+
+	remoteName, err := ensureRemote(ctx, remoteName, cloneURL)
+	if err != nil {
+		return err
+	}
+
+	refspec := fmt.Sprintf("+refs/heads/%s:refs/remotes/%s/%s", remoteRef, remoteName, remoteRef)
+	fetchCmd := exec.CommandContext(ctx, "git", "fetch", "--", remoteName, refspec)
+	fetchCmd.Stdout = os.Stdout
+	fetchCmd.Stderr = os.Stderr
+	if err := fetchCmd.Run(); err != nil {
+		return fmt.Errorf("fetching %s/%s: %w", remoteName, remoteRef, err)
+	}
+
+	return gitCheckout(ctx, localBranch, remoteName+"/"+remoteRef, detach)
+}
+
+func checkoutSameRepoPR(ctx context.Context, remoteRef, localBranch string, detach bool) error {
+	refspec := fmt.Sprintf("+refs/heads/%s:refs/remotes/origin/%s", remoteRef, remoteRef)
+	fetchCmd := exec.CommandContext(ctx, "git", "fetch", "--", "origin", refspec)
+	fetchCmd.Stdout = os.Stdout
+	fetchCmd.Stderr = os.Stderr
+	if err := fetchCmd.Run(); err != nil {
+		return fmt.Errorf("fetching origin/%s: %w", remoteRef, err)
+	}
+
+	return gitCheckout(ctx, localBranch, "origin/"+remoteRef, detach)
+}
+
+func ensureRemote(ctx context.Context, preferredName, cloneURL string) (string, error) {
+	remotes, err := exec.CommandContext(ctx, "git", "remote", "-v").Output()
+	if err == nil {
+		for _, line := range strings.Split(string(remotes), "\n") {
+			fields := strings.Fields(line)
+			if len(fields) >= 2 && fields[1] == cloneURL {
+				return fields[0], nil
+			}
+		}
+	}
+
+	existingURL, err := exec.CommandContext(ctx, "git", "remote", "get-url", preferredName).Output()
+	if err != nil {
+		addCmd := exec.CommandContext(ctx, "git", "remote", "add", "--", preferredName, cloneURL)
+		addCmd.Stdout = os.Stdout
+		addCmd.Stderr = os.Stderr
+		if err := addCmd.Run(); err != nil {
+			return "", fmt.Errorf("adding remote %s: %w", preferredName, err)
+		}
+		return preferredName, nil
+	}
+
+	if strings.TrimSpace(string(existingURL)) == cloneURL {
+		return preferredName, nil
+	}
+
+	return "", fmt.Errorf("remote %q already exists with a different URL; use --remote-name to specify a different name", preferredName)
+}
+
+func gitCheckout(ctx context.Context, branchName, ref string, detach bool) error {
+	var checkoutCmd *exec.Cmd
+	if detach {
+		checkoutCmd = exec.CommandContext(ctx, "git", "checkout", "--detach", ref)
+	} else {
+		checkoutCmd = exec.CommandContext(ctx, "git", "checkout", "-B", branchName, ref)
+	}
+	checkoutCmd.Stdout = os.Stdout
+	checkoutCmd.Stderr = os.Stderr
+	if err := checkoutCmd.Run(); err != nil {
+		return fmt.Errorf("checking out %s: %w", ref, err)
+	}
+	return nil
 }

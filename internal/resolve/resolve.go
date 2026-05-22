@@ -20,6 +20,13 @@ var (
 	remoteName        = "origin"
 	hostOverride      string
 	forgeTypeOverride string
+
+	// testForge allows tests to inject a mock forge. When set, Repo() returns
+	// this forge directly without network or git resolution.
+	testForge  forges.Forge
+	testOwner  string
+	testRepo   string
+	testDomain string
 )
 
 // SetRemote sets which git remote to read when resolving the current
@@ -50,6 +57,23 @@ func SetForgeType(forgeType string) {
 	}
 }
 
+// SetTestForge configures a mock forge for testing. When set, Repo() returns
+// this forge directly without network or git resolution.
+func SetTestForge(forge forges.Forge, owner, repo, domain string) {
+	testForge = forge
+	testOwner = owner
+	testRepo = repo
+	testDomain = domain
+}
+
+// ResetTestForge clears the test forge configuration.
+func ResetTestForge() {
+	testForge = nil
+	testOwner = ""
+	testRepo = ""
+	testDomain = ""
+}
+
 var builders = forges.ForgeBuilders{
 	GitHub: ghforge.NewWithBase,
 	GitLab: glforge.New,
@@ -60,6 +84,9 @@ var builders = forges.ForgeBuilders{
 // git remote. The -R flag takes precedence; otherwise we read the "origin"
 // remote URL and parse it.
 func Repo(flagRepo, flagForgeType string) (forge forges.Forge, owner, repo, domain string, err error) {
+	if testForge != nil {
+		return testForge, testOwner, testRepo, testDomain, nil
+	}
 	if flagRepo != "" {
 		return repoFromFlag(flagRepo, flagForgeType)
 	}

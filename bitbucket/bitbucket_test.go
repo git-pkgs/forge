@@ -42,10 +42,7 @@ func TestBitbucketGetRepo(t *testing.T) {
 				Avatar struct {
 					Href string `json:"href"`
 				} `json:"avatar"`
-				Clone []struct {
-					Href string `json:"href"`
-					Name string `json:"name"`
-				} `json:"clone"`
+				Clone []bbCloneLink `json:"clone"`
 			}{
 				HTML: struct {
 					Href string `json:"href"`

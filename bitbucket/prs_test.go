@@ -17,18 +17,10 @@ func TestBitbucketGetPR(t *testing.T) {
 			Title:       "Add feature",
 			Description: "New feature PR",
 			State:       "OPEN",
-			Source: struct {
-				Branch struct {
-					Name string `json:"name"`
-				} `json:"branch"`
-			}{Branch: struct {
+			Source: bbPRBranch{Branch: struct {
 				Name string `json:"name"`
 			}{Name: "feature-branch"}},
-			Destination: struct {
-				Branch struct {
-					Name string `json:"name"`
-				} `json:"branch"`
-			}{Branch: struct {
+			Destination: bbPRBranch{Branch: struct {
 				Name string `json:"name"`
 			}{Name: "main"}},
 			Author: &struct {

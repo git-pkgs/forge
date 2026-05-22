@@ -81,11 +81,33 @@ func convertGitHubPR(pr *github.PullRequest) forge.PullRequest {
 		}
 	}
 
-	if h := pr.GetHead(); h != nil {
-		result.Head = h.GetRef()
-	}
+	var baseFullName string
 	if b := pr.GetBase(); b != nil {
 		result.Base = b.GetRef()
+		result.BaseBranch = &forge.PRBranch{
+			Ref: b.GetRef(),
+			SHA: b.GetSHA(),
+		}
+		if repo := b.GetRepo(); repo != nil {
+			baseFullName = repo.GetFullName()
+		}
+	}
+	if h := pr.GetHead(); h != nil {
+		result.Head = h.GetRef()
+		result.HeadBranch = &forge.PRBranch{
+			Ref: h.GetRef(),
+			SHA: h.GetSHA(),
+		}
+		if repo := h.GetRepo(); repo != nil {
+			if repo.GetFullName() != baseFullName {
+				result.HeadBranch.Fork = &forge.ForkInfo{
+					Owner:    repo.GetOwner().GetLogin(),
+					Name:     repo.GetName(),
+					CloneURL: repo.GetCloneURL(),
+					SSHURL:   repo.GetSSHURL(),
+				}
+			}
+		}
 	}
 
 	if u := pr.GetMergedBy(); u != nil {

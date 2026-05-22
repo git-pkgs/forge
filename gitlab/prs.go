@@ -36,6 +36,12 @@ func convertGitLabMR(mr *gitlab.MergeRequest) forge.PullRequest {
 		HTMLURL: mr.WebURL,
 	}
 
+	result.BaseBranch = &forge.PRBranch{Ref: mr.TargetBranch}
+	result.HeadBranch = &forge.PRBranch{
+		Ref: mr.SourceBranch,
+		SHA: mr.SHA,
+	}
+
 	// Normalize "opened" to "open"
 	if result.State == stateOpened {
 		result.State = stateOpen
@@ -184,6 +190,22 @@ func (s *gitLabPRService) Get(ctx context.Context, owner, repo string, number in
 		return nil, err
 	}
 	result := convertGitLabMR(mr)
+
+	if mr.SourceProjectID != mr.TargetProjectID {
+		sourceProject, _, err := s.client.Projects.GetProject(mr.SourceProjectID, nil)
+		if err == nil && sourceProject != nil {
+			if result.HeadBranch == nil {
+				result.HeadBranch = &forge.PRBranch{Ref: mr.SourceBranch, SHA: mr.SHA}
+			}
+			result.HeadBranch.Fork = &forge.ForkInfo{
+				Owner:    sourceProject.Namespace.Path,
+				Name:     sourceProject.Path,
+				CloneURL: sourceProject.HTTPURLToRepo,
+				SSHURL:   sourceProject.SSHURLToRepo,
+			}
+		}
+	}
+
 	return &result, nil
 }
 
