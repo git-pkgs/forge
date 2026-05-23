@@ -257,10 +257,8 @@ type PullRequest struct {
 	Reviewers    []User     `json:"reviewers,omitempty"`
 	Labels       []Label    `json:"labels,omitempty"`
 	Milestone    *Milestone `json:"milestone,omitempty"`
-	Head         string     `json:"head"`                  // head branch name (for backward compat)
-	Base         string     `json:"base"`                  // base branch name (for backward compat)
-	HeadBranch   *PRBranch  `json:"head_branch,omitempty"` // rich head branch info with repo
-	BaseBranch   *PRBranch  `json:"base_branch,omitempty"` // rich base branch info
+	Head         PRBranch   `json:"head"`
+	Base         PRBranch   `json:"base"`
 	Mergeable    bool       `json:"mergeable"`
 	Merged       bool       `json:"merged"`
 	MergedBy     *User      `json:"merged_by,omitempty"`

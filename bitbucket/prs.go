@@ -89,25 +89,23 @@ func convertBitbucketPR(bb bbPullRequest) forge.PullRequest {
 		Number:   bb.ID,
 		Title:    bb.Title,
 		Body:     bb.Description,
-		Head:     bb.Source.Branch.Name,
-		Base:     bb.Destination.Branch.Name,
+		Head:     forge.PRBranch{Ref: bb.Source.Branch.Name},
+		Base:     forge.PRBranch{Ref: bb.Destination.Branch.Name},
 		Comments: bb.CommentCount,
 		HTMLURL:  bb.Links.HTML.Href,
 		DiffURL:  bb.Links.Diff.Href,
 	}
 
 	var destFullName string
-	result.BaseBranch = &forge.PRBranch{Ref: bb.Destination.Branch.Name}
 	if bb.Destination.Commit != nil {
-		result.BaseBranch.SHA = bb.Destination.Commit.Hash
+		result.Base.SHA = bb.Destination.Commit.Hash
 	}
 	if bb.Destination.Repository != nil {
 		destFullName = bb.Destination.Repository.FullName
 	}
 
-	result.HeadBranch = &forge.PRBranch{Ref: bb.Source.Branch.Name}
 	if bb.Source.Commit != nil {
-		result.HeadBranch.SHA = bb.Source.Commit.Hash
+		result.Head.SHA = bb.Source.Commit.Hash
 	}
 	if bb.Source.Repository != nil && bb.Source.Repository.FullName != destFullName {
 		cloneURL, sshURL := parseCloneURLs(bb.Source.Repository.Links.Clone)
@@ -117,7 +115,7 @@ func convertBitbucketPR(bb bbPullRequest) forge.PullRequest {
 			owner = parts[0]
 			name = parts[1]
 		}
-		result.HeadBranch.Fork = &forge.ForkInfo{
+		result.Head.Fork = &forge.ForkInfo{
 			Owner:    owner,
 			Name:     name,
 			CloneURL: cloneURL,

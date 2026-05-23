@@ -50,21 +50,19 @@ func convertGiteaPR(pr *gitea.PullRequest) forge.PullRequest {
 
 	var baseRepoID int64
 	if pr.Base != nil {
-		result.Base = pr.Base.Name
-		result.BaseBranch = &forge.PRBranch{
+		result.Base = forge.PRBranch{
 			Ref: pr.Base.Ref,
 			SHA: pr.Base.Sha,
 		}
 		baseRepoID = pr.Base.RepoID
 	}
 	if pr.Head != nil {
-		result.Head = pr.Head.Name
-		result.HeadBranch = &forge.PRBranch{
+		result.Head = forge.PRBranch{
 			Ref: pr.Head.Ref,
 			SHA: pr.Head.Sha,
 		}
-		if pr.Head.RepoID != baseRepoID && pr.Head.Repository != nil {
-			result.HeadBranch.Fork = &forge.ForkInfo{
+		if pr.Head.RepoID != baseRepoID && pr.Head.Repository != nil && pr.Head.Repository.Owner != nil {
+			result.Head.Fork = &forge.ForkInfo{
 				Owner:    pr.Head.Repository.Owner.UserName,
 				Name:     pr.Head.Repository.Name,
 				CloneURL: pr.Head.Repository.CloneURL,

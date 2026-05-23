@@ -39,6 +39,12 @@ func SetRemote(name string) {
 	}
 }
 
+// RemoteName returns the name of the git remote being used for resolution.
+// This is "origin" by default, or whatever was set via SetRemote.
+func RemoteName() string {
+	return remoteName
+}
+
 // SetHost forces a specific forge domain, taking precedence over FORGE_HOST,
 // --forge-type, and git remote detection. The CLI calls this from the --host
 // persistent flag. An empty string is ignored.

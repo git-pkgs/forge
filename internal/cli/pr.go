@@ -103,7 +103,7 @@ func printPRDetails(pr *forges.PullRequest) {
 	_, _ = fmt.Fprintf(os.Stdout, "#%d %s\n", pr.Number, output.Sanitize(pr.Title))
 	_, _ = fmt.Fprintf(os.Stdout, "State:   %s\n", pr.State)
 	_, _ = fmt.Fprintf(os.Stdout, "Author:  %s\n", output.Sanitize(pr.Author.Login))
-	_, _ = fmt.Fprintf(os.Stdout, "Branch:  %s -> %s\n", pr.Head, pr.Base)
+	_, _ = fmt.Fprintf(os.Stdout, "Branch:  %s -> %s\n", pr.Head.Ref, pr.Base.Ref)
 
 	if pr.Draft {
 		_, _ = fmt.Fprintln(os.Stdout, "Draft:   yes")
@@ -211,7 +211,7 @@ func prListCmd() *cobra.Command {
 					strconv.Itoa(pr.Number),
 					title,
 					output.Sanitize(pr.Author.Login),
-					pr.Head,
+					pr.Head.Ref,
 					pr.UpdatedAt.Format("2006-01-02"),
 				}
 			}
@@ -574,23 +574,13 @@ For same-repo PRs, the branch is fetched and checked out.`,
 
 			ctx := cmd.Context()
 
-			if !flagForce {
-				status, _ := exec.CommandContext(ctx, "git", "status", "--porcelain").Output()
-				if len(status) > 0 {
-					return fmt.Errorf("you have uncommitted changes; commit or stash them, or use --force")
-				}
-			}
-
 			pr, err := forge.PullRequests().Get(ctx, owner, repoName, number)
 			if err != nil {
 				return fmt.Errorf("getting PR #%d: %w", number, err)
 			}
 
 			// remoteRef is the branch name on the remote (PR's head branch)
-			remoteRef := pr.Head
-			if pr.HeadBranch != nil && pr.HeadBranch.Ref != "" {
-				remoteRef = pr.HeadBranch.Ref
-			}
+			remoteRef := pr.Head.Ref
 
 			// localBranch is what we'll name the local branch (defaults to remote ref)
 			localBranch := remoteRef
@@ -598,29 +588,23 @@ For same-repo PRs, the branch is fetched and checked out.`,
 				localBranch = flagBranch
 			}
 
-			if !flagForce && !flagDetach {
-				if err := exec.CommandContext(ctx, "git", "rev-parse", "--verify", "--quiet", localBranch).Run(); err == nil {
-					_, _ = fmt.Fprintf(os.Stderr, "warning: local branch %q already exists and will be reset\n", localBranch)
-				}
+			if pr.Head.Fork != nil {
+				return checkoutForkPR(ctx, pr, remoteRef, localBranch, flagRemoteName, flagDetach, flagForce)
 			}
 
-			if pr.HeadBranch != nil && pr.HeadBranch.Fork != nil {
-				return checkoutForkPR(ctx, pr, remoteRef, localBranch, flagRemoteName, flagDetach)
-			}
-
-			return checkoutSameRepoPR(ctx, remoteRef, localBranch, flagDetach)
+			return checkoutSameRepoPR(ctx, remoteRef, localBranch, flagDetach, flagForce)
 		},
 	}
 
 	cmd.Flags().StringVar(&flagRemoteName, "remote-name", "", "Name for fork remote (default: fork owner)")
 	cmd.Flags().StringVarP(&flagBranch, "branch", "b", "", "Local branch name (default: same as remote)")
 	cmd.Flags().BoolVar(&flagDetach, "detach", false, "Checkout in detached HEAD mode")
-	cmd.Flags().BoolVarP(&flagForce, "force", "f", false, "Force checkout even with uncommitted changes or existing branch")
+	cmd.Flags().BoolVarP(&flagForce, "force", "f", false, "Reset the local branch to the remote state even if it has diverged")
 	return cmd
 }
 
-func checkoutForkPR(ctx context.Context, pr *forges.PullRequest, remoteRef, localBranch, flagRemoteName string, detach bool) error {
-	fork := pr.HeadBranch.Fork
+func checkoutForkPR(ctx context.Context, pr *forges.PullRequest, remoteRef, localBranch, flagRemoteName string, detach, force bool) error {
+	fork := pr.Head.Fork
 	remoteName := flagRemoteName
 	if remoteName == "" {
 		remoteName = fork.Owner
@@ -642,27 +626,11 @@ func checkoutForkPR(ctx context.Context, pr *forges.PullRequest, remoteRef, loca
 		return err
 	}
 
-	refspec := fmt.Sprintf("+refs/heads/%s:refs/remotes/%s/%s", remoteRef, remoteName, remoteRef)
-	fetchCmd := exec.CommandContext(ctx, "git", "fetch", "--", remoteName, refspec)
-	fetchCmd.Stdout = os.Stdout
-	fetchCmd.Stderr = os.Stderr
-	if err := fetchCmd.Run(); err != nil {
-		return fmt.Errorf("fetching %s/%s: %w", remoteName, remoteRef, err)
-	}
-
-	return gitCheckout(ctx, localBranch, remoteName+"/"+remoteRef, detach)
+	return gitCheckout(ctx, remoteName, remoteRef, localBranch, detach, force)
 }
 
-func checkoutSameRepoPR(ctx context.Context, remoteRef, localBranch string, detach bool) error {
-	refspec := fmt.Sprintf("+refs/heads/%s:refs/remotes/origin/%s", remoteRef, remoteRef)
-	fetchCmd := exec.CommandContext(ctx, "git", "fetch", "--", "origin", refspec)
-	fetchCmd.Stdout = os.Stdout
-	fetchCmd.Stderr = os.Stderr
-	if err := fetchCmd.Run(); err != nil {
-		return fmt.Errorf("fetching origin/%s: %w", remoteRef, err)
-	}
-
-	return gitCheckout(ctx, localBranch, "origin/"+remoteRef, detach)
+func checkoutSameRepoPR(ctx context.Context, remoteRef, localBranch string, detach, force bool) error {
+	return gitCheckout(ctx, resolve.RemoteName(), remoteRef, localBranch, detach, force)
 }
 
 func ensureRemote(ctx context.Context, preferredName, cloneURL string) (string, error) {
@@ -694,17 +662,48 @@ func ensureRemote(ctx context.Context, preferredName, cloneURL string) (string, 
 	return "", fmt.Errorf("remote %q already exists with a different URL; use --remote-name to specify a different name", preferredName)
 }
 
-func gitCheckout(ctx context.Context, branchName, ref string, detach bool) error {
-	var checkoutCmd *exec.Cmd
+func gitCheckout(ctx context.Context, remote, remoteRef, localBranch string, detach, force bool) error {
+	refspec := fmt.Sprintf("+refs/heads/%s:refs/remotes/%s/%s", remoteRef, remote, remoteRef)
+	fetchCmd := exec.CommandContext(ctx, "git", "fetch", "--", remote, refspec)
+	fetchCmd.Stdout = os.Stdout
+	fetchCmd.Stderr = os.Stderr
+	if err := fetchCmd.Run(); err != nil {
+		return fmt.Errorf("fetching %s/%s: %w", remote, remoteRef, err)
+	}
+
+	ref := remote + "/" + remoteRef
+
 	if detach {
-		checkoutCmd = exec.CommandContext(ctx, "git", "checkout", "--detach", ref)
-	} else {
-		checkoutCmd = exec.CommandContext(ctx, "git", "checkout", "-B", branchName, ref)
+		cmd := exec.CommandContext(ctx, "git", "checkout", "--detach", ref)
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		return cmd.Run()
 	}
-	checkoutCmd.Stdout = os.Stdout
-	checkoutCmd.Stderr = os.Stderr
-	if err := checkoutCmd.Run(); err != nil {
-		return fmt.Errorf("checking out %s: %w", ref, err)
+
+	// Try creating a new branch
+	if exec.CommandContext(ctx, "git", "checkout", "-b", localBranch, ref).Run() == nil {
+		return nil
 	}
-	return nil
+
+	// Branch exists - switch to it and try to fast-forward
+	cmd := exec.CommandContext(ctx, "git", "checkout", localBranch)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("checking out %s: %w", localBranch, err)
+	}
+
+	if exec.CommandContext(ctx, "git", "merge", "--ff-only", ref).Run() == nil {
+		return nil
+	}
+
+	if !force {
+		return fmt.Errorf("local branch %q has diverged from %s; use --force to reset it", localBranch, ref)
+	}
+
+	_, _ = fmt.Fprintf(os.Stderr, "warning: resetting %q to %s (local commits will be lost)\n", localBranch, ref)
+	resetCmd := exec.CommandContext(ctx, "git", "reset", "--hard", ref)
+	resetCmd.Stdout = os.Stdout
+	resetCmd.Stderr = os.Stderr
+	return resetCmd.Run()
 }

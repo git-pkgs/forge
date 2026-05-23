@@ -83,8 +83,7 @@ func convertGitHubPR(pr *github.PullRequest) forge.PullRequest {
 
 	var baseFullName string
 	if b := pr.GetBase(); b != nil {
-		result.Base = b.GetRef()
-		result.BaseBranch = &forge.PRBranch{
+		result.Base = forge.PRBranch{
 			Ref: b.GetRef(),
 			SHA: b.GetSHA(),
 		}
@@ -93,14 +92,13 @@ func convertGitHubPR(pr *github.PullRequest) forge.PullRequest {
 		}
 	}
 	if h := pr.GetHead(); h != nil {
-		result.Head = h.GetRef()
-		result.HeadBranch = &forge.PRBranch{
+		result.Head = forge.PRBranch{
 			Ref: h.GetRef(),
 			SHA: h.GetSHA(),
 		}
 		if repo := h.GetRepo(); repo != nil {
 			if repo.GetFullName() != baseFullName {
-				result.HeadBranch.Fork = &forge.ForkInfo{
+				result.Head.Fork = &forge.ForkInfo{
 					Owner:    repo.GetOwner().GetLogin(),
 					Name:     repo.GetName(),
 					CloneURL: repo.GetCloneURL(),

@@ -194,8 +194,7 @@ func TestPRCheckout(t *testing.T) {
 			name: "same-repo PR checks out branch",
 			pr: &forges.PullRequest{
 				Number: 42,
-				Head:   "feature-branch",
-				HeadBranch: &forges.PRBranch{
+				Head: forges.PRBranch{
 					Ref: "feature-branch",
 					SHA: "abc123",
 				},
@@ -208,8 +207,7 @@ func TestPRCheckout(t *testing.T) {
 			name: "fork PR adds remote and checks out",
 			pr: &forges.PullRequest{
 				Number: 42,
-				Head:   "feature",
-				HeadBranch: &forges.PRBranch{
+				Head: forges.PRBranch{
 					Ref: "feature",
 					SHA: "abc123",
 					Fork: &forges.ForkInfo{
@@ -228,8 +226,7 @@ func TestPRCheckout(t *testing.T) {
 			name: "fork PR with custom remote name",
 			pr: &forges.PullRequest{
 				Number: 42,
-				Head:   "feature",
-				HeadBranch: &forges.PRBranch{
+				Head: forges.PRBranch{
 					Ref: "feature",
 					SHA: "abc123",
 					Fork: &forges.ForkInfo{
@@ -248,8 +245,7 @@ func TestPRCheckout(t *testing.T) {
 			name: "detach mode",
 			pr: &forges.PullRequest{
 				Number: 42,
-				Head:   "feature-branch",
-				HeadBranch: &forges.PRBranch{
+				Head: forges.PRBranch{
 					Ref: "feature-branch",
 					SHA: "abc123",
 				},
@@ -262,8 +258,7 @@ func TestPRCheckout(t *testing.T) {
 			name: "checkout with custom branch name",
 			pr: &forges.PullRequest{
 				Number: 42,
-				Head:   "feature-branch",
-				HeadBranch: &forges.PRBranch{
+				Head: forges.PRBranch{
 					Ref: "feature-branch",
 					SHA: "abc123",
 				},
@@ -281,8 +276,7 @@ func TestPRCheckout(t *testing.T) {
 			name: "fork PR without clone URL",
 			pr: &forges.PullRequest{
 				Number: 42,
-				Head:   "feature",
-				HeadBranch: &forges.PRBranch{
+				Head: forges.PRBranch{
 					Ref: "feature",
 					SHA: "abc123",
 					Fork: &forges.ForkInfo{
@@ -322,15 +316,15 @@ func TestPRCheckout(t *testing.T) {
 				workDir = setupTestRepo(t, originDir)
 
 				if tt.setupOrigin {
-					branchName := tt.pr.HeadBranch.Ref
+					branchName := tt.pr.Head.Ref
 					pushBranchToRemote(t, workDir, "origin", branchName)
 				}
 
 				if tt.setupFork {
 					forkDir := setupBareRepo(t)
-					tt.pr.HeadBranch.Fork.CloneURL = forkDir
+					tt.pr.Head.Fork.CloneURL = forkDir
 
-					branchName := tt.pr.HeadBranch.Ref
+					branchName := tt.pr.Head.Ref
 					cmd := exec.Command("git", "remote", "add", "tempfork", forkDir)
 					cmd.Dir = workDir
 					if out, err := cmd.CombinedOutput(); err != nil {
@@ -351,16 +345,7 @@ func TestPRCheckout(t *testing.T) {
 
 			// Change to work directory for the test
 			if workDir != "" {
-				oldWd, err := os.Getwd()
-				if err != nil {
-					t.Fatalf("getting working directory: %v", err)
-				}
-				if err := os.Chdir(workDir); err != nil {
-					t.Fatalf("changing to work directory: %v", err)
-				}
-				t.Cleanup(func() {
-					_ = os.Chdir(oldWd)
-				})
+				t.Chdir(workDir)
 			}
 
 			// Set up mock forge
@@ -434,67 +419,5 @@ func TestPRCheckout(t *testing.T) {
 				}
 			}
 		})
-	}
-}
-
-func TestPRCheckoutUncommittedChanges(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping git integration test in short mode")
-	}
-
-	originDir := setupBareRepo(t)
-	workDir := setupTestRepo(t, originDir)
-
-	// Push a branch to origin
-	pushBranchToRemote(t, workDir, "origin", "feature-branch")
-
-	// Create uncommitted changes
-	testFile := filepath.Join(workDir, "uncommitted.txt")
-	if err := os.WriteFile(testFile, []byte("uncommitted\n"), 0644); err != nil {
-		t.Fatalf("writing test file: %v", err)
-	}
-
-	oldWd, _ := os.Getwd()
-	if err := os.Chdir(workDir); err != nil {
-		t.Fatalf("changing to work directory: %v", err)
-	}
-	t.Cleanup(func() { _ = os.Chdir(oldWd) })
-
-	pr := &forges.PullRequest{
-		Number: 42,
-		Head:   "feature-branch",
-		HeadBranch: &forges.PRBranch{
-			Ref: "feature-branch",
-			SHA: "abc123",
-		},
-	}
-
-	resolve.SetTestForge(
-		&mockForge{prService: &mockPRService{pr: pr}},
-		"testowner", "testrepo", "github.com",
-	)
-	t.Cleanup(resolve.ResetTestForge)
-
-	// Without --force should fail
-	var buf bytes.Buffer
-	rootCmd.SetOut(&buf)
-	rootCmd.SetErr(&buf)
-	rootCmd.SetArgs([]string{"pr", "checkout", "42"})
-
-	err := rootCmd.Execute()
-	if err == nil {
-		t.Fatal("expected error for uncommitted changes, got nil")
-	}
-	if !strings.Contains(err.Error(), "uncommitted changes") {
-		t.Errorf("expected error about uncommitted changes, got: %v", err)
-	}
-
-	// With --force should succeed
-	buf.Reset()
-	rootCmd.SetArgs([]string{"pr", "checkout", "42", "--force"})
-
-	err = rootCmd.Execute()
-	if err != nil {
-		t.Fatalf("unexpected error with --force: %v", err)
 	}
 }
