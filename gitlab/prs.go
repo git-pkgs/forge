@@ -2,10 +2,11 @@ package gitlab
 
 import (
 	"context"
-	forge "github.com/git-pkgs/forge"
+	"fmt"
 	"net/http"
 	"time"
 
+	forge "github.com/git-pkgs/forge"
 	gitlab "gitlab.com/gitlab-org/api/client-go"
 )
 
@@ -28,8 +29,8 @@ func convertGitLabMR(mr *gitlab.MergeRequest) forge.PullRequest {
 		Body:     mr.Description,
 		State:    mr.State, // "opened", "closed", "merged"
 		Draft:    mr.Draft,
-		Head:     mr.SourceBranch,
-		Base:     mr.TargetBranch,
+		Head:     forge.PRBranch{Ref: mr.SourceBranch, SHA: mr.SHA},
+		Base:     forge.PRBranch{Ref: mr.TargetBranch},
 		Merged:   mr.State == "merged",
 		Comments: int(mr.UserNotesCount),
 		// ChangesCount is a string in the GitLab API
@@ -117,8 +118,8 @@ func convertBasicGitLabMR(mr *gitlab.BasicMergeRequest) forge.PullRequest {
 		Body:    mr.Description,
 		State:   mr.State,
 		Draft:   mr.Draft,
-		Head:    mr.SourceBranch,
-		Base:    mr.TargetBranch,
+		Head:    forge.PRBranch{Ref: mr.SourceBranch},
+		Base:    forge.PRBranch{Ref: mr.TargetBranch},
 		Merged:  mr.State == "merged",
 		HTMLURL: mr.WebURL,
 	}
@@ -184,6 +185,22 @@ func (s *gitLabPRService) Get(ctx context.Context, owner, repo string, number in
 		return nil, err
 	}
 	result := convertGitLabMR(mr)
+
+	if mr.SourceProjectID != mr.TargetProjectID {
+		sourceProject, _, err := s.client.Projects.GetProject(mr.SourceProjectID, nil)
+		if err != nil {
+			return nil, fmt.Errorf("getting source project: %w", err)
+		}
+		if sourceProject != nil {
+			result.Head.Fork = &forge.ForkInfo{
+				Owner:    sourceProject.Namespace.Path,
+				Name:     sourceProject.Path,
+				CloneURL: sourceProject.HTTPURLToRepo,
+				SSHURL:   sourceProject.SSHURLToRepo,
+			}
+		}
+	}
+
 	return &result, nil
 }
 

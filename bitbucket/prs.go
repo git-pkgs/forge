@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 	"time"
 
 	forge "github.com/git-pkgs/forge"
@@ -21,22 +22,29 @@ func (f *bitbucketForge) PullRequests() forge.PullRequestService {
 	return &bitbucketPRService{token: f.token, httpClient: f.httpClient}
 }
 
+type bbPRBranch struct {
+	Branch struct {
+		Name string `json:"name"`
+	} `json:"branch"`
+	Commit *struct {
+		Hash string `json:"hash"`
+	} `json:"commit"`
+	Repository *struct {
+		FullName string `json:"full_name"`
+		Links    struct {
+			Clone []bbCloneLink `json:"clone"`
+		} `json:"links"`
+	} `json:"repository"`
+}
+
 type bbPullRequest struct {
-	ID          int    `json:"id"`
-	Title       string `json:"title"`
-	Description string `json:"description"`
-	State       string `json:"state"` // OPEN, MERGED, DECLINED, SUPERSEDED
-	Source      struct {
-		Branch struct {
-			Name string `json:"name"`
-		} `json:"branch"`
-	} `json:"source"`
-	Destination struct {
-		Branch struct {
-			Name string `json:"name"`
-		} `json:"branch"`
-	} `json:"destination"`
-	Author *struct {
+	ID          int        `json:"id"`
+	Title       string     `json:"title"`
+	Description string     `json:"description"`
+	State       string     `json:"state"` // OPEN, MERGED, DECLINED, SUPERSEDED
+	Source      bbPRBranch `json:"source"`
+	Destination bbPRBranch `json:"destination"`
+	Author      *struct {
 		Username    string `json:"username"`
 		DisplayName string `json:"display_name"`
 		Links       struct {
@@ -81,11 +89,38 @@ func convertBitbucketPR(bb bbPullRequest) forge.PullRequest {
 		Number:   bb.ID,
 		Title:    bb.Title,
 		Body:     bb.Description,
-		Head:     bb.Source.Branch.Name,
-		Base:     bb.Destination.Branch.Name,
+		Head:     forge.PRBranch{Ref: bb.Source.Branch.Name},
+		Base:     forge.PRBranch{Ref: bb.Destination.Branch.Name},
 		Comments: bb.CommentCount,
 		HTMLURL:  bb.Links.HTML.Href,
 		DiffURL:  bb.Links.Diff.Href,
+	}
+
+	var destFullName string
+	if bb.Destination.Commit != nil {
+		result.Base.SHA = bb.Destination.Commit.Hash
+	}
+	if bb.Destination.Repository != nil {
+		destFullName = bb.Destination.Repository.FullName
+	}
+
+	if bb.Source.Commit != nil {
+		result.Head.SHA = bb.Source.Commit.Hash
+	}
+	if bb.Source.Repository != nil && bb.Source.Repository.FullName != destFullName {
+		cloneURL, sshURL := parseCloneURLs(bb.Source.Repository.Links.Clone)
+		parts := strings.Split(bb.Source.Repository.FullName, "/")
+		var owner, name string
+		if len(parts) >= 2 {
+			owner = parts[0]
+			name = parts[1]
+		}
+		result.Head.Fork = &forge.ForkInfo{
+			Owner:    owner,
+			Name:     name,
+			CloneURL: cloneURL,
+			SSHURL:   sshURL,
+		}
 	}
 
 	switch bb.State {

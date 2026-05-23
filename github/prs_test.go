@@ -69,8 +69,8 @@ func TestGitHubGetPR(t *testing.T) {
 	assertEqualBool(t, "Draft", false, pr.Draft)
 	assertEqualBool(t, "Merged", false, pr.Merged)
 	assertEqualBool(t, "Mergeable", true, pr.Mergeable)
-	assertEqual(t, "Head", "feature-branch", pr.Head)
-	assertEqual(t, "Base", "main", pr.Base)
+	assertEqual(t, "Head", "feature-branch", pr.Head.Ref)
+	assertEqual(t, "Base", "main", pr.Base.Ref)
 	assertEqual(t, "Author.Login", "octocat", pr.Author.Login)
 	assertEqualInt(t, "Comments", 2, pr.Comments)
 	assertEqualInt(t, "Additions", 10, pr.Additions)
@@ -174,7 +174,7 @@ func TestGitHubListPRs(t *testing.T) {
 		t.Fatalf("expected 2 PRs, got %d", len(prs))
 	}
 	assertEqual(t, "prs[0].Title", "First PR", prs[0].Title)
-	assertEqual(t, "prs[0].Head", "feature-1", prs[0].Head)
+	assertEqual(t, "prs[0].Head", "feature-1", prs[0].Head.Ref)
 	assertEqual(t, "prs[1].Title", "Second PR", prs[1].Title)
 }
 

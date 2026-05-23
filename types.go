@@ -229,6 +229,22 @@ type UpdateIssueOpts struct {
 	Milestone *string
 }
 
+// ForkInfo holds minimal repository info needed for PR checkout from forks.
+type ForkInfo struct {
+	Owner    string `json:"owner"`
+	Name     string `json:"name,omitempty"`
+	CloneURL string `json:"clone_url,omitempty"`
+	SSHURL   string `json:"ssh_url,omitempty"`
+}
+
+// PRBranch holds branch info including the repository it belongs to.
+// For same-repo PRs, Fork is nil. For fork PRs, Fork points to the source repo.
+type PRBranch struct {
+	Ref  string    `json:"ref"`            // branch name
+	SHA  string    `json:"sha,omitempty"`  // commit SHA
+	Fork *ForkInfo `json:"fork,omitempty"` // nil if same repo as target
+}
+
 // PullRequest holds normalized metadata about a pull request (or merge request).
 type PullRequest struct {
 	Number       int        `json:"number"`
@@ -241,8 +257,8 @@ type PullRequest struct {
 	Reviewers    []User     `json:"reviewers,omitempty"`
 	Labels       []Label    `json:"labels,omitempty"`
 	Milestone    *Milestone `json:"milestone,omitempty"`
-	Head         string     `json:"head"` // head branch
-	Base         string     `json:"base"` // base branch
+	Head         PRBranch   `json:"head"`
+	Base         PRBranch   `json:"base"`
 	Mergeable    bool       `json:"mergeable"`
 	Merged       bool       `json:"merged"`
 	MergedBy     *User      `json:"merged_by,omitempty"`

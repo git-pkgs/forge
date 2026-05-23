@@ -17,18 +17,10 @@ func TestBitbucketGetPR(t *testing.T) {
 			Title:       "Add feature",
 			Description: "New feature PR",
 			State:       "OPEN",
-			Source: struct {
-				Branch struct {
-					Name string `json:"name"`
-				} `json:"branch"`
-			}{Branch: struct {
+			Source: bbPRBranch{Branch: struct {
 				Name string `json:"name"`
 			}{Name: "feature-branch"}},
-			Destination: struct {
-				Branch struct {
-					Name string `json:"name"`
-				} `json:"branch"`
-			}{Branch: struct {
+			Destination: bbPRBranch{Branch: struct {
 				Name string `json:"name"`
 			}{Name: "main"}},
 			Author: &struct {
@@ -82,8 +74,8 @@ func TestBitbucketGetPR(t *testing.T) {
 	assertEqual(t, "Title", "Add feature", pr.Title)
 	assertEqual(t, "Body", "New feature PR", pr.Body)
 	assertEqual(t, "State", "open", pr.State)
-	assertEqual(t, "Head", "feature-branch", pr.Head)
-	assertEqual(t, "Base", "main", pr.Base)
+	assertEqual(t, "Head", "feature-branch", pr.Head.Ref)
+	assertEqual(t, "Base", "main", pr.Base.Ref)
 	assertEqual(t, "Author.Login", "author1", pr.Author.Login)
 	assertEqualInt(t, "Comments", 3, pr.Comments)
 	assertEqualBool(t, "Merged", false, pr.Merged)

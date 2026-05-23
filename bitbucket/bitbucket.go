@@ -17,6 +17,23 @@ var bitbucketAPI = "https://api.bitbucket.org/2.0"
 // setBitbucketAPI overrides the Bitbucket API base URL (for testing).
 func setBitbucketAPI(url string) { bitbucketAPI = url }
 
+type bbCloneLink struct {
+	Href string `json:"href"`
+	Name string `json:"name"` // "https" or "ssh"
+}
+
+func parseCloneURLs(links []bbCloneLink) (cloneURL, sshURL string) {
+	for _, link := range links {
+		switch link.Name {
+		case "https":
+			cloneURL = link.Href
+		case "ssh":
+			sshURL = link.Href
+		}
+	}
+	return
+}
+
 type bitbucketForge struct {
 	token      string
 	httpClient *http.Client
@@ -69,10 +86,7 @@ type bbRepository struct {
 		Avatar struct {
 			Href string `json:"href"`
 		} `json:"avatar"`
-		Clone []struct {
-			Href string `json:"href"`
-			Name string `json:"name"`
-		} `json:"clone"`
+		Clone []bbCloneLink `json:"clone"`
 	} `json:"links"`
 	CreatedOn string `json:"created_on"`
 	UpdatedOn string `json:"updated_on"`
@@ -157,14 +171,7 @@ func convertBitbucketRepo(bb bbRepository) forge.Repository {
 		LogoURL:     bb.Links.Avatar.Href,
 	}
 
-	for _, c := range bb.Links.Clone {
-		switch c.Name {
-		case "https":
-			result.CloneURL = c.Href
-		case "ssh":
-			result.SSHURL = c.Href
-		}
-	}
+	result.CloneURL, result.SSHURL = parseCloneURLs(bb.Links.Clone)
 
 	if bb.Owner != nil {
 		result.Owner = bb.Owner.Username
