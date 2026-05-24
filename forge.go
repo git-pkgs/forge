@@ -52,6 +52,8 @@ type Forge interface {
 	Collaborators() CollaboratorService
 	CommitStatuses() CommitStatusService
 	GetRateLimit(ctx context.Context) (*RateLimit, error)
+	// ParsePath parses URL path segments into owner, repo, resource type, and number.
+	ParsePath(pathParts []string) (owner, repo, resourceType string, number int, err error)
 }
 
 // Client routes requests to the appropriate Forge based on the URL domain.

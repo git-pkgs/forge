@@ -4,11 +4,12 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"strings"
 
-	"github.com/git-pkgs/forge"
+	forges "github.com/git-pkgs/forge"
 	"github.com/git-pkgs/forge/bitbucket"
 	"github.com/git-pkgs/forge/gitea"
 	ghforge "github.com/git-pkgs/forge/github"
@@ -135,6 +136,38 @@ func repoFromGitRemote(_ string) (forges.Forge, string, string, string, error) {
 		return nil, "", "", "", err
 	}
 	return f, owner, repo, domain, nil
+}
+
+// ResourceFromURL resolves a forge and resource details from a full forge URL.
+// Returns the resource type ("pr" or "issue") and number if present in the URL.
+func ResourceFromURL(rawURL string) (forge forges.Forge, owner, repo, domain string, resourceType string, number int, err error) {
+	u, err := url.Parse(rawURL)
+	if err != nil {
+		return nil, "", "", "", "", 0, fmt.Errorf("invalid URL: %w", err)
+	}
+	if u.Scheme == "" {
+		u, err = url.Parse("https://" + rawURL)
+		if err != nil {
+			return nil, "", "", "", "", 0, fmt.Errorf("invalid URL: %w", err)
+		}
+	}
+
+	domain = u.Hostname()
+	path := strings.Trim(u.Path, "/")
+
+	client := newClient(domain)
+	f, err := forgeForDomainMaybeConfig(context.Background(), client, domain)
+	if err != nil {
+		return nil, "", "", "", "", 0, err
+	}
+
+	parts := strings.Split(path, "/")
+	owner, repo, resourceType, number, err = f.ParsePath(parts)
+	if err != nil {
+		return nil, "", "", "", "", 0, err
+	}
+
+	return f, owner, repo, domain, resourceType, number, nil
 }
 
 func resolveRemote() (domain, owner, repo string, err error) {
