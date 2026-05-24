@@ -32,6 +32,11 @@ func convertGitLabIssue(i *gitlab.Issue) forge.Issue {
 		HTMLURL: i.WebURL,
 	}
 
+	// Normalize "opened" to "open"
+	if result.State == stateOpened {
+		result.State = stateOpen
+	}
+
 	if i.Author != nil {
 		result.Author = forge.User{
 			Login:     i.Author.Username,
