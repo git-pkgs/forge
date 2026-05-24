@@ -111,9 +111,11 @@ func TestDomainFromFlags(t *testing.T) {
 
 func TestGitCloneArgs(t *testing.T) {
 	tests := []struct {
-		name string
-		url  string
-		want []string
+		name     string
+		url      string
+		dest     string
+		gitFlags []string
+		want     []string
 	}{
 		{
 			name: "https url",
@@ -130,13 +132,32 @@ func TestGitCloneArgs(t *testing.T) {
 			url:  "--upload-pack=evil",
 			want: []string{"clone", "--", "--upload-pack=evil"},
 		},
+		{
+			name: "with destination",
+			url:  "https://github.com/owner/repo.git",
+			dest: "myrepo",
+			want: []string{"clone", "--", "https://github.com/owner/repo.git", "myrepo"},
+		},
+		{
+			name:     "with git flags",
+			url:      "https://github.com/owner/repo.git",
+			gitFlags: []string{"--depth", "1"},
+			want:     []string{"clone", "--depth", "1", "--", "https://github.com/owner/repo.git"},
+		},
+		{
+			name:     "with destination and git flags",
+			url:      "https://github.com/owner/repo.git",
+			dest:     "myrepo",
+			gitFlags: []string{"--bare"},
+			want:     []string{"clone", "--bare", "--", "https://github.com/owner/repo.git", "myrepo"},
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := gitCloneArgs(tt.url)
+			got := gitCloneArgs(tt.url, tt.dest, tt.gitFlags)
 			if !slices.Equal(got, tt.want) {
-				t.Errorf("gitCloneArgs(%q) = %v, want %v", tt.url, got, tt.want)
+				t.Errorf("gitCloneArgs(%q, %q, %v) = %v, want %v", tt.url, tt.dest, tt.gitFlags, got, tt.want)
 			}
 
 			// The url must appear after the -- separator so git cannot
