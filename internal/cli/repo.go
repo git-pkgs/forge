@@ -467,22 +467,26 @@ func repoCloneCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "clone <OWNER/REPO> [PATH] [-- <gitflags>...]",
 		Short: "Clone a repository locally",
-		Args:  cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			var repoArg, dest string
-			var gitFlags []string
-
 			dashIdx := cmd.ArgsLenAtDash()
-			if dashIdx == -1 {
-				repoArg = args[0]
-				if len(args) > 1 {
-					dest = args[1]
-				}
-			} else {
-				repoArg = args[0]
-				if dashIdx > 1 {
-					dest = args[1]
-				}
+			positional := len(args)
+			if dashIdx != -1 {
+				positional = dashIdx
+			}
+			if positional < 1 {
+				return fmt.Errorf("repository argument required")
+			}
+			if positional > 2 {
+				return fmt.Errorf("accepts at most 2 arg(s) before --, received %d", positional)
+			}
+
+			repoArg := args[0]
+			var dest string
+			if positional > 1 {
+				dest = args[1]
+			}
+			var gitFlags []string
+			if dashIdx != -1 {
 				gitFlags = args[dashIdx:]
 			}
 
