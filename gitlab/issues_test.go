@@ -37,14 +37,14 @@ func TestGitLabListIssuesWithOpenState(t *testing.T) {
 		gotState = r.URL.Query().Get("state")
 		_ = json.NewEncoder(w).Encode([]map[string]any{
 			{
-				"id":                1,
-				"iid":               1,
-				"title":             "Test issue",
-				"description":       "Body",
-				"state":             "opened",
-				"web_url":           "https://gitlab.com/mygroup/myrepo/-/issues/1",
-				"updated_at":        "2024-01-01T00:00:00Z",
-				"user_notes_count":  0,
+				"id":               1,
+				"iid":              1,
+				"title":            "Test issue",
+				"description":      "Body",
+				"state":            "opened",
+				"web_url":          "https://gitlab.com/mygroup/myrepo/-/issues/1",
+				"updated_at":       "2024-01-01T00:00:00Z",
+				"user_notes_count": 0,
 			},
 		})
 	})
