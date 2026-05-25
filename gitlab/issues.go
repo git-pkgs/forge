@@ -32,6 +32,11 @@ func convertGitLabIssue(i *gitlab.Issue) forge.Issue {
 		HTMLURL: i.WebURL,
 	}
 
+	// Normalize "opened" to "open"
+	if result.State == stateOpened {
+		result.State = stateOpen
+	}
+
 	if i.Author != nil {
 		result.Author = forge.User{
 			Login:     i.Author.Username,
@@ -131,7 +136,12 @@ func (s *gitLabIssueService) List(ctx context.Context, owner, repo string, opts 
 	}
 
 	if opts.State != "" && opts.State != stateAll {
-		glOpts.State = gitlab.Ptr(opts.State)
+		// GitLab uses "opened" not "open"
+		state := opts.State
+		if state == stateOpen {
+			state = stateOpened
+		}
+		glOpts.State = gitlab.Ptr(state)
 	}
 	if opts.Assignee != "" {
 		glOpts.AssigneeUsername = gitlab.Ptr(opts.Assignee)

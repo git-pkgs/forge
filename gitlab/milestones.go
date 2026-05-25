@@ -10,7 +10,8 @@ import (
 )
 
 const (
-	stateOpen = "open"
+	stateOpen   = "open"
+	stateActive = "active"
 )
 
 type gitLabMilestoneService struct {
@@ -27,6 +28,11 @@ func convertGitLabMilestone(m *gitlab.Milestone) forge.Milestone {
 		Number:      int(m.ID),
 		Description: m.Description,
 		State:       m.State,
+	}
+
+	// Normalize "active" to "open"
+	if result.State == stateActive {
+		result.State = stateOpen
 	}
 	if m.DueDate != nil {
 		t := time.Time(*m.DueDate)
@@ -51,7 +57,12 @@ func (s *gitLabMilestoneService) List(ctx context.Context, owner, repo string, o
 	}
 
 	if opts.State != "" && opts.State != stateAll {
-		glOpts.State = gitlab.Ptr(opts.State)
+		// GitLab uses "active" not "open"
+		state := opts.State
+		if state == stateOpen {
+			state = stateActive
+		}
+		glOpts.State = gitlab.Ptr(state)
 	}
 
 	var all []forge.Milestone
