@@ -660,21 +660,21 @@ func ensureRemote(ctx context.Context, preferredName, cloneURL string) (string, 
 }
 
 // remoteMatches reports whether existingURL points to the same repo as wantURL.
-// It first checks for an exact match, then falls back to comparing owner/repo
+// It first checks for an exact match, then falls back to comparing domain/owner/repo
 // so that SSH and HTTPS URLs for the same repository are treated as equivalent.
 func remoteMatches(existingURL, wantURL string) bool {
 	if existingURL == wantURL {
 		return true
 	}
-	_, wantOwner, wantRepo, err := forges.ParseRepoURL(wantURL)
+	wantDomain, wantOwner, wantRepo, err := forges.ParseRepoURL(wantURL)
 	if err != nil {
 		return false
 	}
-	_, owner, repo, err := forges.ParseRepoURL(existingURL)
+	domain, owner, repo, err := forges.ParseRepoURL(existingURL)
 	if err != nil {
 		return false
 	}
-	return owner == wantOwner && repo == wantRepo
+	return domain == wantDomain && owner == wantOwner && repo == wantRepo
 }
 
 func gitCheckout(ctx context.Context, remote, remoteRef, localBranch string, detach, force bool) error {

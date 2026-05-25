@@ -232,12 +232,12 @@ func TestEnsureRemote(t *testing.T) {
 		},
 	}
 
+	if testing.Short() {
+		t.Skip("skipping git integration test in short mode")
+	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if testing.Short() {
-				t.Skip("skipping git integration test in short mode")
-			}
-
 			dir := t.TempDir()
 
 			commands := [][]string{

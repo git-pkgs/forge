@@ -522,4 +522,27 @@ git_protocol = https
 	if got := GitProtocolFor("gitlab.example.com"); got != "https" {
 		t.Errorf("expected https override for gitlab.example.com, got %q", got)
 	}
+
+	// Uppercase values should be normalized
+	ResetCache()
+	_ = os.WriteFile(filepath.Join(cfgDir, "config"), []byte(`[default]
+git_protocol = SSH
+`), 0600)
+
+	if got := GitProtocolFor("github.com"); got != "ssh" {
+		t.Errorf("expected ssh (normalized from SSH), got %q", got)
+	}
+
+	// Invalid values should cause Load() to error
+	ResetCache()
+	_ = os.WriteFile(filepath.Join(cfgDir, "config"), []byte(`[default]
+git_protocol = typo
+`), 0600)
+
+	_, loadErr := Load()
+	if loadErr == nil {
+		t.Error("expected error for invalid git_protocol value")
+	} else if !strings.Contains(loadErr.Error(), "invalid git_protocol") {
+		t.Errorf("expected error about invalid git_protocol, got: %v", loadErr)
+	}
 }

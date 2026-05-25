@@ -83,6 +83,17 @@ func GitProtocolFor(domain string) string {
 	return "https"
 }
 
+func parseGitProtocol(v string) (string, error) {
+	switch strings.ToLower(v) {
+	case "ssh":
+		return "ssh", nil
+	case "https":
+		return "https", nil
+	default:
+		return "", fmt.Errorf("invalid git_protocol %q: must be \"https\" or \"ssh\"", v)
+	}
+}
+
 // ResetCache clears the cached config. Only useful in tests.
 func ResetCache() {
 	once = sync.Once{}
@@ -135,7 +146,11 @@ func loadFile(cfg *Config, path string, allowTokens bool) error {
 			cfg.Default.ForgeType = v
 		}
 		if v, ok := def["git_protocol"]; ok {
-			cfg.Default.GitProtocol = v
+			p, err := parseGitProtocol(v)
+			if err != nil {
+				return fmt.Errorf("%s: [default] %w", path, err)
+			}
+			cfg.Default.GitProtocol = p
 		}
 	}
 
@@ -148,7 +163,11 @@ func loadFile(cfg *Config, path string, allowTokens bool) error {
 			ds.Type = v
 		}
 		if v, ok := kv["git_protocol"]; ok {
-			ds.GitProtocol = v
+			p, err := parseGitProtocol(v)
+			if err != nil {
+				return fmt.Errorf("%s: [%s] %w", path, name, err)
+			}
+			ds.GitProtocol = p
 		}
 		if allowTokens {
 			if v, ok := kv["ssh_host"]; ok {
