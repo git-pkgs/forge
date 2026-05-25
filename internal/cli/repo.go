@@ -29,8 +29,13 @@ var repoCmd = &cobra.Command{
 // gitCloneArgs builds the argv for git clone. The -- separator stops git
 // from parsing a server-supplied CloneURL as an option (a malicious forge
 // could otherwise return something like --upload-pack=...).
-func gitCloneArgs(url string) []string {
-	return []string{"clone", "--", url}
+func gitCloneArgs(url string, dest string, gitFlags []string) []string {
+	args := append([]string{"clone"}, gitFlags...)
+	args = append(args, "--", url)
+	if dest != "" {
+		args = append(args, dest)
+	}
+	return args
 }
 
 func init() {
@@ -274,7 +279,7 @@ func repoCreateCmd() *cobra.Command {
 			_, _ = fmt.Fprintf(os.Stdout, "%s\n", repo.HTMLURL)
 
 			if flagClone && repo.CloneURL != "" {
-				cloneCmd := exec.CommandContext(cmd.Context(), "git", gitCloneArgs(repo.CloneURL)...)
+				cloneCmd := exec.CommandContext(cmd.Context(), "git", gitCloneArgs(repo.CloneURL, "", nil)...)
 				cloneCmd.Stdout = os.Stdout
 				cloneCmd.Stderr = os.Stderr
 				return cloneCmd.Run()
@@ -442,7 +447,7 @@ func repoForkCmd() *cobra.Command {
 			_, _ = fmt.Fprintf(os.Stdout, "%s\n", r.HTMLURL)
 
 			if flagClone && r.CloneURL != "" {
-				cloneCmd := exec.CommandContext(cmd.Context(), "git", gitCloneArgs(r.CloneURL)...)
+				cloneCmd := exec.CommandContext(cmd.Context(), "git", gitCloneArgs(r.CloneURL, "", nil)...)
 				cloneCmd.Stdout = os.Stdout
 				cloneCmd.Stderr = os.Stderr
 				return cloneCmd.Run()
@@ -460,11 +465,32 @@ func repoForkCmd() *cobra.Command {
 
 func repoCloneCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:   "clone <OWNER/REPO>",
+		Use:   "clone <OWNER/REPO> [PATH] [-- <gitflags>...]",
 		Short: "Clone a repository locally",
-		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			forge, owner, repoName, _, err := resolve.Repo(args[0], flagForgeType)
+			dashIdx := cmd.ArgsLenAtDash()
+			positional := len(args)
+			if dashIdx != -1 {
+				positional = dashIdx
+			}
+			if positional < 1 {
+				return fmt.Errorf("repository argument required")
+			}
+			if positional > 2 {
+				return fmt.Errorf("accepts at most 2 arg(s) before --, received %d", positional)
+			}
+
+			repoArg := args[0]
+			var dest string
+			if positional > 1 {
+				dest = args[1]
+			}
+			var gitFlags []string
+			if dashIdx != -1 {
+				gitFlags = args[dashIdx:]
+			}
+
+			forge, owner, repoName, _, err := resolve.Repo(repoArg, flagForgeType)
 			if err != nil {
 				return err
 			}
@@ -479,7 +505,7 @@ func repoCloneCmd() *cobra.Command {
 				cloneURL = r.HTMLURL + ".git"
 			}
 
-			cloneCmd := exec.CommandContext(cmd.Context(), "git", gitCloneArgs(cloneURL)...)
+			cloneCmd := exec.CommandContext(cmd.Context(), "git", gitCloneArgs(cloneURL, dest, gitFlags)...)
 			cloneCmd.Stdout = os.Stdout
 			cloneCmd.Stderr = os.Stderr
 			return cloneCmd.Run()
