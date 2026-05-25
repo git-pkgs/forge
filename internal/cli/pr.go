@@ -631,20 +631,12 @@ func checkoutSameRepoPR(ctx context.Context, remoteRef, localBranch string, deta
 }
 
 func ensureRemote(ctx context.Context, preferredName, cloneURL string) (string, error) {
-	_, wantOwner, wantRepo, err := forges.ParseRepoURL(cloneURL)
-	if err != nil {
-		return "", fmt.Errorf("parsing clone URL: %w", err)
-	}
-
 	remotes, err := exec.CommandContext(ctx, "git", "remote", "-v").Output()
 	if err == nil {
 		for _, line := range strings.Split(string(remotes), "\n") {
 			fields := strings.Fields(line)
-			if len(fields) >= 2 {
-				_, owner, repo, err := forges.ParseRepoURL(fields[1])
-				if err == nil && owner == wantOwner && repo == wantRepo {
-					return fields[0], nil
-				}
+			if len(fields) >= 2 && remoteMatches(fields[1], cloneURL) {
+				return fields[0], nil
 			}
 		}
 	}
@@ -660,16 +652,29 @@ func ensureRemote(ctx context.Context, preferredName, cloneURL string) (string, 
 		return preferredName, nil
 	}
 
-	// Fuzzy-match an existing remote on owner/repo. If the remote is SSH but
-	// we are trying to check it out as HTTPS, it's fine and we should not
-	// throw "remote already exists with different URL", but just use the
-	// remote silently.
-	_, existingOwner, existingRepo, err := forges.ParseRepoURL(strings.TrimSpace(string(existingURL)))
-	if err == nil && existingOwner == wantOwner && existingRepo == wantRepo {
+	if remoteMatches(strings.TrimSpace(string(existingURL)), cloneURL) {
 		return preferredName, nil
 	}
 
 	return "", fmt.Errorf("remote %q already exists with a different URL; use --remote-name to specify a different name", preferredName)
+}
+
+// remoteMatches reports whether existingURL points to the same repo as wantURL.
+// It first checks for an exact match, then falls back to comparing owner/repo
+// so that SSH and HTTPS URLs for the same repository are treated as equivalent.
+func remoteMatches(existingURL, wantURL string) bool {
+	if existingURL == wantURL {
+		return true
+	}
+	_, wantOwner, wantRepo, err := forges.ParseRepoURL(wantURL)
+	if err != nil {
+		return false
+	}
+	_, owner, repo, err := forges.ParseRepoURL(existingURL)
+	if err != nil {
+		return false
+	}
+	return owner == wantOwner && repo == wantRepo
 }
 
 func gitCheckout(ctx context.Context, remote, remoteRef, localBranch string, detach, force bool) error {
