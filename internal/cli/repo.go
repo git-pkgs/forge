@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/git-pkgs/forge"
+	"github.com/git-pkgs/forge/internal/config"
 	"github.com/git-pkgs/forge/internal/output"
 	"github.com/git-pkgs/forge/internal/resolve"
 	"github.com/spf13/cobra"
@@ -36,6 +37,21 @@ func gitCloneArgs(url string, dest string, gitFlags []string) []string {
 		args = append(args, dest)
 	}
 	return args
+}
+
+// cloneURL returns the appropriate clone URL based on the configured git protocol.
+// Falls back to the other URL if the preferred one is empty.
+func cloneURL(domain, httpsURL, sshURL string) string {
+	if config.GitProtocolFor(domain) == "ssh" {
+		if sshURL != "" {
+			return sshURL
+		}
+		return httpsURL
+	}
+	if httpsURL != "" {
+		return httpsURL
+	}
+	return sshURL
 }
 
 func init() {
@@ -278,11 +294,13 @@ func repoCreateCmd() *cobra.Command {
 
 			_, _ = fmt.Fprintf(os.Stdout, "%s\n", repo.HTMLURL)
 
-			if flagClone && repo.CloneURL != "" {
-				cloneCmd := exec.CommandContext(cmd.Context(), "git", gitCloneArgs(repo.CloneURL, "", nil)...)
-				cloneCmd.Stdout = os.Stdout
-				cloneCmd.Stderr = os.Stderr
-				return cloneCmd.Run()
+			if flagClone {
+				if url := cloneURL(domain, repo.CloneURL, repo.SSHURL); url != "" {
+					cloneCmd := exec.CommandContext(cmd.Context(), "git", gitCloneArgs(url, "", nil)...)
+					cloneCmd.Stdout = os.Stdout
+					cloneCmd.Stderr = os.Stderr
+					return cloneCmd.Run()
+				}
 			}
 
 			return nil
@@ -424,7 +442,7 @@ func repoForkCmd() *cobra.Command {
 				repo = args[0]
 			}
 
-			forge, owner, repoName, _, err := resolve.Repo(repo, flagForgeType)
+			forge, owner, repoName, domain, err := resolve.Repo(repo, flagForgeType)
 			if err != nil {
 				return err
 			}
@@ -446,11 +464,13 @@ func repoForkCmd() *cobra.Command {
 
 			_, _ = fmt.Fprintf(os.Stdout, "%s\n", r.HTMLURL)
 
-			if flagClone && r.CloneURL != "" {
-				cloneCmd := exec.CommandContext(cmd.Context(), "git", gitCloneArgs(r.CloneURL, "", nil)...)
-				cloneCmd.Stdout = os.Stdout
-				cloneCmd.Stderr = os.Stderr
-				return cloneCmd.Run()
+			if flagClone {
+				if url := cloneURL(domain, r.CloneURL, r.SSHURL); url != "" {
+					cloneCmd := exec.CommandContext(cmd.Context(), "git", gitCloneArgs(url, "", nil)...)
+					cloneCmd.Stdout = os.Stdout
+					cloneCmd.Stderr = os.Stderr
+					return cloneCmd.Run()
+				}
 			}
 
 			return nil
@@ -490,7 +510,7 @@ func repoCloneCmd() *cobra.Command {
 				gitFlags = args[dashIdx:]
 			}
 
-			forge, owner, repoName, _, err := resolve.Repo(repoArg, flagForgeType)
+			forge, owner, repoName, domain, err := resolve.Repo(repoArg, flagForgeType)
 			if err != nil {
 				return err
 			}
@@ -500,12 +520,12 @@ func repoCloneCmd() *cobra.Command {
 				return err
 			}
 
-			cloneURL := r.CloneURL
-			if cloneURL == "" {
-				cloneURL = r.HTMLURL + ".git"
+			url := cloneURL(domain, r.CloneURL, r.SSHURL)
+			if url == "" {
+				url = r.HTMLURL + ".git"
 			}
 
-			cloneCmd := exec.CommandContext(cmd.Context(), "git", gitCloneArgs(cloneURL, dest, gitFlags)...)
+			cloneCmd := exec.CommandContext(cmd.Context(), "git", gitCloneArgs(url, dest, gitFlags)...)
 			cloneCmd.Stdout = os.Stdout
 			cloneCmd.Stderr = os.Stderr
 			return cloneCmd.Run()

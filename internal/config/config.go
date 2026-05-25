@@ -23,14 +23,16 @@ type Config struct {
 }
 
 type DefaultSection struct {
-	Output    string // table, json, plain
-	ForgeType string // default forge type
+	Output      string // table, json, plain
+	ForgeType   string // default forge type
+	GitProtocol string // https or ssh
 }
 
 type DomainSection struct {
-	Type    string // github, gitlab, gitea, forgejo, bitbucket
-	Token   string // only from user config, never .forge
-	SSHHost string // alternate host for git-over-ssh; the section name remains the API host
+	Type        string // github, gitlab, gitea, forgejo, bitbucket
+	Token       string // only from user config, never .forge
+	SSHHost     string // alternate host for git-over-ssh; the section name remains the API host
+	GitProtocol string // https or ssh; overrides default
 }
 
 // DomainForSSHHost returns the API domain (the section name) whose ssh_host
@@ -63,6 +65,22 @@ func Load() (*Config, error) {
 		cached, cacheErr = load()
 	})
 	return cached, cacheErr
+}
+
+// GitProtocolFor returns the configured git protocol ("https" or "ssh") for the given domain.
+// Falls back to the default if not set for the domain. Returns "https" if not configured.
+func GitProtocolFor(domain string) string {
+	cfg, err := Load()
+	if err != nil || cfg == nil {
+		return "https"
+	}
+	if ds, ok := cfg.Domains[domain]; ok && ds.GitProtocol != "" {
+		return ds.GitProtocol
+	}
+	if cfg.Default.GitProtocol != "" {
+		return cfg.Default.GitProtocol
+	}
+	return "https"
 }
 
 // ResetCache clears the cached config. Only useful in tests.
@@ -116,6 +134,9 @@ func loadFile(cfg *Config, path string, allowTokens bool) error {
 		if v, ok := def["forge-type"]; ok {
 			cfg.Default.ForgeType = v
 		}
+		if v, ok := def["git_protocol"]; ok {
+			cfg.Default.GitProtocol = v
+		}
 	}
 
 	for name, kv := range sections {
@@ -125,6 +146,9 @@ func loadFile(cfg *Config, path string, allowTokens bool) error {
 		ds := cfg.Domains[name]
 		if v, ok := kv["type"]; ok {
 			ds.Type = v
+		}
+		if v, ok := kv["git_protocol"]; ok {
+			ds.GitProtocol = v
 		}
 		if allowTokens {
 			if v, ok := kv["ssh_host"]; ok {

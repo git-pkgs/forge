@@ -179,6 +179,107 @@ func pushBranchToRemote(t *testing.T, repoDir, remoteName, branchName string) {
 	}
 }
 
+func TestEnsureRemote(t *testing.T) {
+	tests := []struct {
+		name           string
+		existingURL    string
+		cloneURL       string
+		preferredName  string
+		wantRemoteName string
+		wantErr        string
+	}{
+		{
+			name:           "exact URL match",
+			existingURL:    "https://github.com/owner/repo.git",
+			cloneURL:       "https://github.com/owner/repo.git",
+			preferredName:  "fork",
+			wantRemoteName: "origin",
+		},
+		{
+			name:           "SSH to HTTPS same repo",
+			existingURL:    "git@github.com:owner/repo.git",
+			cloneURL:       "https://github.com/owner/repo.git",
+			preferredName:  "fork",
+			wantRemoteName: "origin",
+		},
+		{
+			name:           "HTTPS to SSH same repo",
+			existingURL:    "https://github.com/owner/repo.git",
+			cloneURL:       "git@github.com:owner/repo.git",
+			preferredName:  "fork",
+			wantRemoteName: "origin",
+		},
+		{
+			name:           "preferred name remote matches with different URL format",
+			existingURL:    "git@github.com:contributor/repo.git",
+			cloneURL:       "https://github.com/contributor/repo.git",
+			preferredName:  "origin",
+			wantRemoteName: "origin",
+		},
+		{
+			name:           "different repo adds new remote",
+			existingURL:    "https://github.com/owner/repo.git",
+			cloneURL:       "https://github.com/other/repo.git",
+			preferredName:  "other",
+			wantRemoteName: "other",
+		},
+		{
+			name:          "preferred name exists with different repo",
+			existingURL:   "https://github.com/owner/repo.git",
+			cloneURL:      "https://github.com/other/repo.git",
+			preferredName: "origin",
+			wantErr:       "already exists with a different URL",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if testing.Short() {
+				t.Skip("skipping git integration test in short mode")
+			}
+
+			dir := t.TempDir()
+
+			commands := [][]string{
+				{"git", "init"},
+				{"git", "config", "user.email", "test@test.com"},
+				{"git", "config", "user.name", "Test User"},
+				{"git", "remote", "add", "origin", tt.existingURL},
+			}
+
+			for _, args := range commands {
+				cmd := exec.Command(args[0], args[1:]...)
+				cmd.Dir = dir
+				if out, err := cmd.CombinedOutput(); err != nil {
+					t.Fatalf("git command %v failed: %v\n%s", args, err, out)
+				}
+			}
+
+			t.Chdir(dir)
+
+			gotRemote, err := ensureRemote(context.Background(), tt.preferredName, tt.cloneURL)
+
+			if tt.wantErr != "" {
+				if err == nil {
+					t.Fatalf("expected error containing %q, got nil", tt.wantErr)
+				}
+				if !strings.Contains(err.Error(), tt.wantErr) {
+					t.Errorf("expected error containing %q, got %q", tt.wantErr, err.Error())
+				}
+				return
+			}
+
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			if gotRemote != tt.wantRemoteName {
+				t.Errorf("remote name: want %q, got %q", tt.wantRemoteName, gotRemote)
+			}
+		})
+	}
+}
+
 func TestPRCheckout(t *testing.T) {
 	tests := []struct {
 		name        string

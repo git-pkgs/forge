@@ -482,3 +482,44 @@ token = old_token
 		t.Error("old token should be replaced")
 	}
 }
+
+func TestGitProtocolFor(t *testing.T) {
+	ResetCache()
+	defer ResetCache()
+
+	dir := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", dir)
+
+	// No config - should default to https
+	if got := GitProtocolFor("github.com"); got != "https" {
+		t.Errorf("expected https with no config, got %q", got)
+	}
+
+	// Create config with default git_protocol = ssh
+	ResetCache()
+	cfgDir := filepath.Join(dir, "forge")
+	_ = os.MkdirAll(cfgDir, 0700)
+	_ = os.WriteFile(filepath.Join(cfgDir, "config"), []byte(`[default]
+git_protocol = ssh
+`), 0600)
+
+	if got := GitProtocolFor("github.com"); got != "ssh" {
+		t.Errorf("expected ssh from default config, got %q", got)
+	}
+
+	// Per-domain override
+	ResetCache()
+	_ = os.WriteFile(filepath.Join(cfgDir, "config"), []byte(`[default]
+git_protocol = ssh
+
+[gitlab.example.com]
+git_protocol = https
+`), 0600)
+
+	if got := GitProtocolFor("github.com"); got != "ssh" {
+		t.Errorf("expected ssh from default for github.com, got %q", got)
+	}
+	if got := GitProtocolFor("gitlab.example.com"); got != "https" {
+		t.Errorf("expected https override for gitlab.example.com, got %q", got)
+	}
+}
