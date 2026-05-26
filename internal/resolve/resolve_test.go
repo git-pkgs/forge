@@ -63,6 +63,8 @@ func TestTokenForDomain(t *testing.T) {
 	}
 
 	// FORGE_TOKEN is a fallback for any domain
+	t.Setenv("GITHUB_TOKEN", "")
+	t.Setenv("GH_TOKEN", "")
 	t.Setenv("FORGE_TOKEN", "forge-tok")
 	got = TokenForDomain("github.com")
 	if got != "forge-tok" {
@@ -105,6 +107,8 @@ func TestTokenForDomainEnvSpecificOverridesFallback(t *testing.T) {
 }
 
 func TestTokenForDomainEnvFallbackToForgeToken(t *testing.T) {
+	t.Setenv("GITHUB_TOKEN", "")
+	t.Setenv("GH_TOKEN", "")
 	t.Setenv("FORGE_TOKEN", "forge-fallback")
 
 	got := TokenForDomainEnv("github.com")
