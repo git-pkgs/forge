@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	forges "github.com/git-pkgs/forge"
+	"github.com/git-pkgs/forge"
 	"github.com/git-pkgs/forge/internal/resolve"
 )
 

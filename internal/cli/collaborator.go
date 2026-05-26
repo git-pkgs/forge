@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	forges "github.com/git-pkgs/forge"
+	"github.com/git-pkgs/forge"
 	"github.com/git-pkgs/forge/internal/output"
 	"github.com/git-pkgs/forge/internal/resolve"
 	"github.com/spf13/cobra"

@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"strings"
 
-	forges "github.com/git-pkgs/forge"
+	"github.com/git-pkgs/forge"
 	"github.com/git-pkgs/forge/internal/output"
 	"github.com/git-pkgs/forge/internal/resolve"
 	"github.com/spf13/cobra"
@@ -586,7 +586,7 @@ The argument can be a PR number or a full URL:
 				var resourceType string
 				forge, owner, repoName, domain, resourceType, number, err = resolve.ResourceFromURL(args[0])
 				if err != nil {
-					return fmt.Errorf("invalid PR number or URL: %s", args[0])
+					return fmt.Errorf("invalid PR number or URL %q: %w", args[0], err)
 				}
 				if resourceType != "pr" {
 					return fmt.Errorf("URL does not point to a pull request: %s", args[0])

@@ -9,7 +9,7 @@ import (
 	"os/exec"
 	"strings"
 
-	forges "github.com/git-pkgs/forge"
+	"github.com/git-pkgs/forge"
 	"github.com/git-pkgs/forge/bitbucket"
 	"github.com/git-pkgs/forge/gitea"
 	ghforge "github.com/git-pkgs/forge/github"
@@ -155,10 +155,15 @@ func ResourceFromURL(rawURL string) (forge forges.Forge, owner, repo, domain str
 	domain = u.Hostname()
 	path := strings.Trim(u.Path, "/")
 
-	client := newClient(domain)
-	f, err := forgeForDomainMaybeConfig(context.Background(), client, domain)
-	if err != nil {
-		return nil, "", "", "", "", 0, err
+	var f forges.Forge
+	if testForge != nil {
+		f = testForge
+	} else {
+		client := newClient(domain)
+		f, err = forgeForDomainMaybeConfig(context.Background(), client, domain)
+		if err != nil {
+			return nil, "", "", "", "", 0, err
+		}
 	}
 
 	parts := strings.Split(path, "/")
