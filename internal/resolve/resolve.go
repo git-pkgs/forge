@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"strings"
@@ -135,6 +136,42 @@ func repoFromGitRemote(_ string) (forges.Forge, string, string, string, error) {
 		return nil, "", "", "", err
 	}
 	return f, owner, repo, domain, nil
+}
+
+// ResourceFromURL resolves a forge and resource details from a full forge URL.
+func ResourceFromURL(rawURL string) (forge forges.Forge, domain string, ref *forges.ResourceRef, err error) {
+	u, err := url.Parse(rawURL)
+	if err != nil {
+		return nil, "", nil, fmt.Errorf("invalid URL: %w", err)
+	}
+	if u.Scheme == "" {
+		u, err = url.Parse("https://" + rawURL)
+		if err != nil {
+			return nil, "", nil, fmt.Errorf("invalid URL: %w", err)
+		}
+	}
+
+	domain = u.Hostname()
+	path := strings.Trim(u.Path, "/")
+
+	var f forges.Forge
+	if testForge != nil {
+		f = testForge
+	} else {
+		client := newClient(domain)
+		f, err = forgeForDomainMaybeConfig(context.Background(), client, domain)
+		if err != nil {
+			return nil, "", nil, err
+		}
+	}
+
+	parts := strings.Split(path, "/")
+	ref, err = f.ParsePath(parts)
+	if err != nil {
+		return nil, "", nil, err
+	}
+
+	return f, domain, ref, nil
 }
 
 func resolveRemote() (domain, owner, repo string, err error) {

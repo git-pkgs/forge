@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"strings"
 
-	forges "github.com/git-pkgs/forge"
+	"github.com/git-pkgs/forge"
 	"github.com/git-pkgs/forge/internal/output"
 	"github.com/git-pkgs/forge/internal/resolve"
 	"github.com/spf13/cobra"
@@ -551,7 +551,7 @@ func prCheckoutCmd() *cobra.Command {
 	)
 
 	cmd := &cobra.Command{
-		Use:   "checkout <number>",
+		Use:   "checkout <number-or-url>",
 		Short: "Check out a pull request locally",
 		Long: `Check out a pull request's head branch locally.
 
@@ -559,17 +559,39 @@ If the PR is from a fork, the fork repository is added as a remote
 (named after the fork owner by default), and the branch is fetched
 and checked out with upstream tracking configured.
 
-For same-repo PRs, the branch is fetched and checked out.`,
+For same-repo PRs, the branch is fetched and checked out.
+
+The argument can be a PR number or a full URL:
+  forge pr checkout 123
+  forge pr checkout https://github.com/owner/repo/pull/123`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			number, err := strconv.Atoi(args[0])
-			if err != nil {
-				return fmt.Errorf("invalid PR number: %s", args[0])
-			}
+			var (
+				forge           forges.Forge
+				owner, repoName string
+				domain          string
+				number          int
+				err             error
+			)
 
-			forge, owner, repoName, domain, err := resolve.Repo(flagRepo, flagForgeType)
-			if err != nil {
-				return err
+			// Try parsing as a number first
+			if n, parseErr := strconv.Atoi(args[0]); parseErr == nil {
+				number = n
+				forge, owner, repoName, domain, err = resolve.Repo(flagRepo, flagForgeType)
+				if err != nil {
+					return err
+				}
+			} else {
+				// Try parsing as a URL
+				var ref *forges.ResourceRef
+				forge, domain, ref, err = resolve.ResourceFromURL(args[0])
+				if err != nil {
+					return fmt.Errorf("invalid PR number or URL %q: %w", args[0], err)
+				}
+				if ref.Type != forges.ResourceTypePR {
+					return fmt.Errorf("URL does not point to a pull request: %s", args[0])
+				}
+				owner, repoName, number = ref.Owner, ref.Repo, ref.Number
 			}
 
 			ctx := cmd.Context()

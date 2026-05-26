@@ -4,7 +4,7 @@ import (
 	"errors"
 	"testing"
 
-	forges "github.com/git-pkgs/forge"
+	"github.com/git-pkgs/forge"
 )
 
 func TestNotSupportedWrapsError(t *testing.T) {

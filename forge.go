@@ -23,6 +23,22 @@ var ErrNotSupported = errors.New("not supported by this forge")
 // ErrLabelExists is returned when creating a label that already exists.
 var ErrLabelExists = errors.New("label already exists")
 
+// ResourceType identifies the kind of resource a URL points to.
+type ResourceType string
+
+const (
+	ResourceTypePR    ResourceType = "pr"
+	ResourceTypeIssue ResourceType = "issue"
+)
+
+// ResourceRef identifies a resource (PR, issue, etc.) within a repository.
+type ResourceRef struct {
+	Owner  string
+	Repo   string
+	Type   ResourceType
+	Number int
+}
+
 // HTTPError represents a non-OK HTTP response from a forge API.
 type HTTPError struct {
 	StatusCode int
@@ -52,6 +68,8 @@ type Forge interface {
 	Collaborators() CollaboratorService
 	CommitStatuses() CommitStatusService
 	GetRateLimit(ctx context.Context) (*RateLimit, error)
+	// ParsePath parses URL path segments into a resource reference.
+	ParsePath(pathParts []string) (*ResourceRef, error)
 }
 
 // Client routes requests to the appropriate Forge based on the URL domain.

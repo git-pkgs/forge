@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	forges "github.com/git-pkgs/forge"
+	"github.com/git-pkgs/forge"
 	"github.com/git-pkgs/forge/internal/config"
 	"github.com/git-pkgs/forge/internal/output"
 	"github.com/git-pkgs/forge/internal/resolve"

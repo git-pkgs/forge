@@ -505,6 +505,10 @@ func (m *mockForge) GetRateLimit(_ context.Context) (*RateLimit, error) {
 	return nil, ErrNotSupported
 }
 
+func (m *mockForge) ParsePath(_ []string) (*ResourceRef, error) {
+	return &ResourceRef{}, nil
+}
+
 type mockFileService struct{}
 
 func (m *mockFileService) Get(_ context.Context, _, _, _, _ string) (*FileContent, error) {
