@@ -96,7 +96,12 @@ func (m *mockForge) GetRateLimit(_ context.Context) (*forges.RateLimit, error) {
 }
 
 func (m *mockForge) ParsePath(_ []string) (*forges.ResourceRef, error) {
-	return &forges.ResourceRef{}, nil
+	return &forges.ResourceRef{
+		Owner:  "testowner",
+		Repo:   "testrepo",
+		Type:   forges.ResourceTypePR,
+		Number: 42,
+	}, nil
 }
 
 // setupTestRepo creates a temporary git repository with an initial commit
@@ -371,6 +376,19 @@ func TestPRCheckout(t *testing.T) {
 			args:        []string{"pr", "checkout", "42", "-b", "my-local-branch"},
 			setupOrigin: true,
 			wantBranch:  "my-local-branch",
+		},
+		{
+			name: "checkout by URL",
+			pr: &forges.PullRequest{
+				Number: 42,
+				Head: forges.PRBranch{
+					Ref: "feature-branch",
+					SHA: "abc123",
+				},
+			},
+			args:        []string{"pr", "checkout", "https://github.com/testowner/testrepo/pull/42"},
+			setupOrigin: true,
+			wantBranch:  "feature-branch",
 		},
 		{
 			name:    "invalid PR number",
