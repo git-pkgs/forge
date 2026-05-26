@@ -55,7 +55,21 @@ func TestMapSSHHostNoConfig(t *testing.T) {
 	}
 }
 
+func clearTokenEnv(t *testing.T) {
+	t.Helper()
+	for _, v := range []string{
+		"GITHUB_TOKEN", "GH_TOKEN",
+		"GITLAB_TOKEN", "GLAB_TOKEN",
+		"GITEA_TOKEN", "BITBUCKET_TOKEN",
+		"FORGE_TOKEN",
+	} {
+		t.Setenv(v, "")
+	}
+}
+
 func TestTokenForDomain(t *testing.T) {
+	clearTokenEnv(t)
+
 	// With no env vars set, should return empty
 	got := TokenForDomain("example.com")
 	if got != "" {
@@ -63,8 +77,6 @@ func TestTokenForDomain(t *testing.T) {
 	}
 
 	// FORGE_TOKEN is a fallback for any domain
-	t.Setenv("GITHUB_TOKEN", "")
-	t.Setenv("GH_TOKEN", "")
 	t.Setenv("FORGE_TOKEN", "forge-tok")
 	got = TokenForDomain("github.com")
 	if got != "forge-tok" {
@@ -97,6 +109,7 @@ func TestTokenForDomain(t *testing.T) {
 }
 
 func TestTokenForDomainEnvSpecificOverridesFallback(t *testing.T) {
+	clearTokenEnv(t)
 	t.Setenv("GITHUB_TOKEN", "gh-specific")
 	t.Setenv("FORGE_TOKEN", "forge-fallback")
 
@@ -107,8 +120,7 @@ func TestTokenForDomainEnvSpecificOverridesFallback(t *testing.T) {
 }
 
 func TestTokenForDomainEnvFallbackToForgeToken(t *testing.T) {
-	t.Setenv("GITHUB_TOKEN", "")
-	t.Setenv("GH_TOKEN", "")
+	clearTokenEnv(t)
 	t.Setenv("FORGE_TOKEN", "forge-fallback")
 
 	got := TokenForDomainEnv("github.com")
@@ -118,6 +130,7 @@ func TestTokenForDomainEnvFallbackToForgeToken(t *testing.T) {
 }
 
 func TestTokenForDomainEnvFallbackForUnknownDomain(t *testing.T) {
+	clearTokenEnv(t)
 	t.Setenv("FORGE_TOKEN", "forge-fallback")
 
 	got := TokenForDomainEnv("custom.example.com")
