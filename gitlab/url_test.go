@@ -1,6 +1,10 @@
 package gitlab
 
-import "testing"
+import (
+	"testing"
+
+	forges "github.com/git-pkgs/forge"
+)
 
 func TestParsePath(t *testing.T) {
 	tests := []struct {
@@ -8,7 +12,7 @@ func TestParsePath(t *testing.T) {
 		parts        []string
 		wantOwner    string
 		wantRepo     string
-		wantResource string
+		wantResource forges.ResourceType
 		wantNumber   int
 		wantErr      bool
 	}{
@@ -26,19 +30,19 @@ func TestParsePath(t *testing.T) {
 			name:      "merge request",
 			parts:     []string{"group", "project", "-", "merge_requests", "123"},
 			wantOwner: "group", wantRepo: "project",
-			wantResource: "pr", wantNumber: 123,
+			wantResource: forges.ResourceTypePR, wantNumber: 123,
 		},
 		{
 			name:      "nested group merge request",
 			parts:     []string{"group", "subgroup", "project", "-", "merge_requests", "123"},
 			wantOwner: "group/subgroup", wantRepo: "project",
-			wantResource: "pr", wantNumber: 123,
+			wantResource: forges.ResourceTypePR, wantNumber: 123,
 		},
 		{
 			name:      "issue",
 			parts:     []string{"group", "project", "-", "issues", "456"},
 			wantOwner: "group", wantRepo: "project",
-			wantResource: "issue", wantNumber: 456,
+			wantResource: forges.ResourceTypeIssue, wantNumber: 456,
 		},
 		{
 			name:    "missing repo",
@@ -52,9 +56,10 @@ func TestParsePath(t *testing.T) {
 		},
 	}
 
+	f := &gitLabForge{}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			owner, repo, resource, number, err := parsePath(tt.parts)
+			ref, err := f.ParsePath(tt.parts)
 			if tt.wantErr {
 				if err == nil {
 					t.Fatal("expected error")
@@ -64,17 +69,17 @@ func TestParsePath(t *testing.T) {
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
-			if owner != tt.wantOwner {
-				t.Errorf("owner: got %q, want %q", owner, tt.wantOwner)
+			if ref.Owner != tt.wantOwner {
+				t.Errorf("owner: got %q, want %q", ref.Owner, tt.wantOwner)
 			}
-			if repo != tt.wantRepo {
-				t.Errorf("repo: got %q, want %q", repo, tt.wantRepo)
+			if ref.Repo != tt.wantRepo {
+				t.Errorf("repo: got %q, want %q", ref.Repo, tt.wantRepo)
 			}
-			if resource != tt.wantResource {
-				t.Errorf("resource: got %q, want %q", resource, tt.wantResource)
+			if ref.Type != tt.wantResource {
+				t.Errorf("resource: got %q, want %q", ref.Type, tt.wantResource)
 			}
-			if number != tt.wantNumber {
-				t.Errorf("number: got %d, want %d", number, tt.wantNumber)
+			if ref.Number != tt.wantNumber {
+				t.Errorf("number: got %d, want %d", ref.Number, tt.wantNumber)
 			}
 		})
 	}

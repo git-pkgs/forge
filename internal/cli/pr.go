@@ -583,14 +583,15 @@ The argument can be a PR number or a full URL:
 				}
 			} else {
 				// Try parsing as a URL
-				var resourceType string
-				forge, owner, repoName, domain, resourceType, number, err = resolve.ResourceFromURL(args[0])
+				var ref *forges.ResourceRef
+				forge, domain, ref, err = resolve.ResourceFromURL(args[0])
 				if err != nil {
 					return fmt.Errorf("invalid PR number or URL %q: %w", args[0], err)
 				}
-				if resourceType != "pr" {
+				if ref.Type != forges.ResourceTypePR {
 					return fmt.Errorf("URL does not point to a pull request: %s", args[0])
 				}
+				owner, repoName, number = ref.Owner, ref.Repo, ref.Number
 			}
 
 			ctx := cmd.Context()

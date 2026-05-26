@@ -139,16 +139,15 @@ func repoFromGitRemote(_ string) (forges.Forge, string, string, string, error) {
 }
 
 // ResourceFromURL resolves a forge and resource details from a full forge URL.
-// Returns the resource type ("pr" or "issue") and number if present in the URL.
-func ResourceFromURL(rawURL string) (forge forges.Forge, owner, repo, domain string, resourceType string, number int, err error) {
+func ResourceFromURL(rawURL string) (forge forges.Forge, domain string, ref *forges.ResourceRef, err error) {
 	u, err := url.Parse(rawURL)
 	if err != nil {
-		return nil, "", "", "", "", 0, fmt.Errorf("invalid URL: %w", err)
+		return nil, "", nil, fmt.Errorf("invalid URL: %w", err)
 	}
 	if u.Scheme == "" {
 		u, err = url.Parse("https://" + rawURL)
 		if err != nil {
-			return nil, "", "", "", "", 0, fmt.Errorf("invalid URL: %w", err)
+			return nil, "", nil, fmt.Errorf("invalid URL: %w", err)
 		}
 	}
 
@@ -162,17 +161,17 @@ func ResourceFromURL(rawURL string) (forge forges.Forge, owner, repo, domain str
 		client := newClient(domain)
 		f, err = forgeForDomainMaybeConfig(context.Background(), client, domain)
 		if err != nil {
-			return nil, "", "", "", "", 0, err
+			return nil, "", nil, err
 		}
 	}
 
 	parts := strings.Split(path, "/")
-	owner, repo, resourceType, number, err = f.ParsePath(parts)
+	ref, err = f.ParsePath(parts)
 	if err != nil {
-		return nil, "", "", "", "", 0, err
+		return nil, "", nil, err
 	}
 
-	return f, owner, repo, domain, resourceType, number, nil
+	return f, domain, ref, nil
 }
 
 func resolveRemote() (domain, owner, repo string, err error) {

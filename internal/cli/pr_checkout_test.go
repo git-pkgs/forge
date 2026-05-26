@@ -95,8 +95,8 @@ func (m *mockForge) GetRateLimit(_ context.Context) (*forges.RateLimit, error) {
 	return nil, forges.ErrNotSupported
 }
 
-func (m *mockForge) ParsePath(_ []string) (string, string, string, int, error) {
-	return "", "", "", 0, nil
+func (m *mockForge) ParsePath(_ []string) (*forges.ResourceRef, error) {
+	return &forges.ResourceRef{}, nil
 }
 
 // setupTestRepo creates a temporary git repository with an initial commit
