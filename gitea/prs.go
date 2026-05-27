@@ -293,7 +293,7 @@ func (s *giteaPRService) Merge(ctx context.Context, owner, repo string, number i
 		gOpts.Style = gitea.MergeStyleMerge
 	}
 	if opts.Delete {
-		gOpts.DeleteBranchAfterMerge = gitea.OptionalBool(true)
+		gOpts.DeleteBranchAfterMerge = true
 	}
 
 	_, resp, err := s.client.MergePullRequest(owner, repo, int64(number), gOpts)

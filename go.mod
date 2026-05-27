@@ -1,9 +1,9 @@
 module github.com/git-pkgs/forge
 
-go 1.26
+go 1.25.6
 
 require (
-	code.gitea.io/sdk/gitea v0.25.1
+	code.gitea.io/sdk/gitea v0.23.2
 	github.com/git-pkgs/purl v0.1.12
 	github.com/google/go-github/v82 v82.0.0
 	github.com/spf13/cobra v1.10.2
