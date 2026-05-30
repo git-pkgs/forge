@@ -45,6 +45,7 @@ func prViewCmd() *cobra.Command {
 	var (
 		flagComments bool
 		flagWeb      bool
+		flagJSON     string
 	)
 
 	cmd := &cobra.Command{
@@ -52,6 +53,10 @@ func prViewCmd() *cobra.Command {
 		Short: "View a pull request",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if cmd.Flags().Changed("json") {
+				return fmt.Errorf("--json is not supported; use --output json instead (field selection is not supported)\n\nTry: forge --output json pr view %s", strings.Join(args, " "))
+			}
+
 			number, err := strconv.Atoi(args[0])
 			if err != nil {
 				return fmt.Errorf("invalid PR number: %s", args[0])
@@ -96,6 +101,8 @@ func prViewCmd() *cobra.Command {
 
 	cmd.Flags().BoolVarP(&flagComments, "comments", "c", false, "Show comments")
 	cmd.Flags().BoolVarP(&flagWeb, "web", "w", false, "Open in browser")
+	cmd.Flags().StringVar(&flagJSON, "json", "", "Not supported; use --output json")
+	_ = cmd.Flags().MarkHidden("json")
 	return cmd
 }
 
