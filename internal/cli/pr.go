@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -48,18 +49,30 @@ func prViewCmd() *cobra.Command {
 	)
 
 	cmd := &cobra.Command{
-		Use:   "view <number>",
+		Use:   "view [<number>]",
 		Short: "View a pull request",
-		Args:  cobra.ExactArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
-			number, err := strconv.Atoi(args[0])
-			if err != nil {
-				return fmt.Errorf("invalid PR number: %s", args[0])
-			}
+		Long: `View a pull request by number, or view the PR for the current branch.
 
+If no number is given, finds and displays the pull request whose head
+branch matches the current git branch.`,
+		Args: cobra.MaximumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
 			forge, owner, repoName, _, err := resolve.Repo(flagRepo, flagForgeType)
 			if err != nil {
 				return err
+			}
+
+			var number int
+			if len(args) > 0 {
+				number, err = strconv.Atoi(args[0])
+				if err != nil {
+					return fmt.Errorf("invalid PR number: %s", args[0])
+				}
+			} else {
+				number, err = findPRForCurrentBranch(cmd.Context(), forge, owner, repoName)
+				if err != nil {
+					return err
+				}
 			}
 
 			pr, err := forge.PullRequests().Get(cmd.Context(), owner, repoName, number)
@@ -610,10 +623,13 @@ The argument can be a PR number or a full URL:
 				localBranch = flagBranch
 			}
 
+			if !flagDetach {
+				_ = storePRForBranch(ctx, localBranch, number)
+			}
+
 			if pr.Head.Fork != nil {
 				return checkoutForkPR(ctx, domain, pr, remoteRef, localBranch, flagRemoteName, flagDetach, flagForce)
 			}
-
 			return checkoutSameRepoPR(ctx, remoteRef, localBranch, flagDetach, flagForce)
 		},
 	}
@@ -743,4 +759,95 @@ func gitCheckout(ctx context.Context, remote, remoteRef, localBranch string, det
 	resetCmd.Stdout = os.Stdout
 	resetCmd.Stderr = os.Stderr
 	return resetCmd.Run()
+}
+
+func findPRForCurrentBranch(ctx context.Context, f forges.Forge, owner, repo string) (int, error) {
+	out, err := exec.CommandContext(ctx, "git", "branch", "--show-current").Output()
+	if err != nil {
+		return 0, fmt.Errorf("getting current branch: %w (not in a git repository?)", err)
+	}
+	localBranch := strings.TrimSpace(string(out))
+	if localBranch == "" {
+		return 0, fmt.Errorf("not on a branch (detached HEAD state)")
+	}
+
+	// Check cache first (set by 'pr checkout')
+	if n, err := loadPRForBranch(ctx, localBranch); err == nil {
+		return n, nil
+	}
+
+	// If that yields nothing, fall back to API query. This API call is really
+	// slow for Gitea since the Head filter is not actually implemented.
+	headOwner := owner
+	if remoteOwner, err := resolve.OwnerForBranch(localBranch); err == nil {
+		headOwner = remoteOwner
+	}
+
+	prs, err := f.PullRequests().List(ctx, owner, repo, forges.ListPROpts{
+		Head:  headOwner + ":" + localBranch,
+		State: "all",
+		Limit: 100,
+	})
+	if err != nil {
+		return 0, fmt.Errorf("listing PRs for branch %q: %w", localBranch, err)
+	}
+
+	// Need to filter the results again for owner:branch since the API results
+	// don't respect the filter in case of Gitea.
+	var matching []forges.PullRequest
+	for _, pr := range prs {
+		prHeadOwner := owner
+		if pr.Head.Fork != nil {
+			prHeadOwner = pr.Head.Fork.Owner
+		}
+		if pr.Head.Ref == localBranch && prHeadOwner == headOwner {
+			matching = append(matching, pr)
+		}
+	}
+
+	if len(matching) < 1 {
+		return 0, fmt.Errorf("no pull request found for branch %q", localBranch)
+	}
+
+	if len(matching) > 1 {
+		return 0, fmt.Errorf("multiple pull request found for branch %q, might be a bug?", localBranch)
+	}
+
+	for _, pr := range matching {
+		if pr.State == "open" {
+			// Store the PR number into local git config so that the new 'forge
+			// pr view' call is a lot faster.
+			_ = storePRForBranch(ctx, localBranch, pr.Number)
+			return pr.Number, nil
+		}
+	}
+
+	return 0, fmt.Errorf("no matching pull request found for branch %q", localBranch)
+}
+
+func storePRForBranch(ctx context.Context, branch string, number int) error {
+	key := fmt.Sprintf("branch.%s.forge-pr", branch)
+	return exec.CommandContext(ctx, "git", "config", "--local", key, strconv.Itoa(number)).Run()
+}
+
+var prRefRE = regexp.MustCompile(`^refs/pull/(\d+)/head$`)
+
+func loadPRForBranch(ctx context.Context, branch string) (int, error) {
+	key := fmt.Sprintf("branch.%s.forge-pr", branch)
+	out, err := exec.CommandContext(ctx, "git", "config", "--get", key).Output()
+	if err == nil {
+		return strconv.Atoi(strings.TrimSpace(string(out)))
+	}
+
+	// Fall back to gh CLI's format (refs/pull/<n>/head in branch.<name>.merge)
+	mergeKey := fmt.Sprintf("branch.%s.merge", branch)
+	out, err = exec.CommandContext(ctx, "git", "config", "--get", mergeKey).Output()
+	if err != nil {
+		return 0, err
+	}
+	m := prRefRE.FindStringSubmatch(strings.TrimSpace(string(out)))
+	if m == nil {
+		return 0, fmt.Errorf("not a PR ref")
+	}
+	return strconv.Atoi(m[1])
 }

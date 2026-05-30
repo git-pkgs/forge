@@ -367,6 +367,64 @@ func TestRemoteUnknownNameError(t *testing.T) {
 	}
 }
 
+func TestOwnerForBranch(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not installed")
+	}
+
+	dir := t.TempDir()
+	t.Chdir(dir)
+
+	mustGit(t, "init", "-q")
+	mustGit(t, "config", "user.email", "test@test.com")
+	mustGit(t, "config", "user.name", "Test")
+	mustGit(t, "remote", "add", "origin", "https://github.com/mainowner/repo.git")
+	mustGit(t, "remote", "add", "fork", "https://github.com/forkowner/repo.git")
+
+	// Create initial commit so we can create branches
+	if err := os.WriteFile(filepath.Join(dir, "README"), []byte("test"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	mustGit(t, "add", "README")
+	mustGit(t, "commit", "-m", "init")
+
+	// Create a branch tracking origin
+	mustGit(t, "checkout", "-b", "origin-branch")
+	mustGit(t, "config", "branch.origin-branch.remote", "origin")
+
+	// Create a branch tracking fork
+	mustGit(t, "checkout", "-b", "fork-branch")
+	mustGit(t, "config", "branch.fork-branch.remote", "fork")
+
+	tests := []struct {
+		branch    string
+		wantOwner string
+		wantErr   bool
+	}{
+		{"origin-branch", "mainowner", false},
+		{"fork-branch", "forkowner", false},
+		{"nonexistent", "", true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.branch, func(t *testing.T) {
+			owner, err := OwnerForBranch(tt.branch)
+			if tt.wantErr {
+				if err == nil {
+					t.Fatal("expected error")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if owner != tt.wantOwner {
+				t.Errorf("owner = %q, want %q", owner, tt.wantOwner)
+			}
+		})
+	}
+}
+
 func mustGit(t *testing.T, args ...string) {
 	t.Helper()
 	cmd := exec.Command("git", args...)

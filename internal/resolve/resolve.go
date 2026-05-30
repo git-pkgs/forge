@@ -211,6 +211,32 @@ func gitRemoteURL(name string) (string, error) {
 	return strings.TrimSpace(string(out)), nil
 }
 
+// OwnerForBranch returns the repository owner for the remote that the given
+// branch tracks. This is useful for determining which fork a branch was pushed
+// to when creating pull requests.
+func OwnerForBranch(branch string) (string, error) {
+	remoteKey := fmt.Sprintf("branch.%s.remote", branch)
+	out, err := exec.Command("git", "config", "--get", remoteKey).Output()
+	if err != nil {
+		return "", err
+	}
+	remote := strings.TrimSpace(string(out))
+	if remote == "" {
+		return "", fmt.Errorf("no remote configured")
+	}
+
+	remoteURL, err := gitRemoteURL(remote)
+	if err != nil {
+		return "", err
+	}
+
+	_, owner, _, err := forges.ParseRepoURL(remoteURL)
+	if err != nil {
+		return "", err
+	}
+	return owner, nil
+}
+
 func newClient(domain string) *forges.Client {
 	token := TokenForDomain(domain)
 	var opts []forges.Option
