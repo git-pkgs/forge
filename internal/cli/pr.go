@@ -809,20 +809,18 @@ func findPRForCurrentBranch(ctx context.Context, f forges.Forge, owner, repo str
 		return 0, fmt.Errorf("no pull request found for branch %q", localBranch)
 	}
 
-	if len(matching) > 1 {
-		return 0, fmt.Errorf("multiple pull request found for branch %q, might be a bug?", localBranch)
-	}
-
+	// Prefer open PRs over closed/merged ones (a branch may be reused)
 	for _, pr := range matching {
 		if pr.State == "open" {
-			// Store the PR number into local git config so that the new 'forge
+			// Store the PR number into local git config so that the next 'forge
 			// pr view' call is a lot faster.
 			_ = storePRForBranch(ctx, localBranch, pr.Number)
 			return pr.Number, nil
 		}
 	}
 
-	return 0, fmt.Errorf("no matching pull request found for branch %q", localBranch)
+	// No open PR, return the first match (closed/merged) but don't cache it
+	return matching[0].Number, nil
 }
 
 func storePRForBranch(ctx context.Context, branch string, number int) error {
