@@ -54,7 +54,15 @@ func prViewCmd() *cobra.Command {
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if cmd.Flags().Changed("json") {
-				return fmt.Errorf("--json is not supported; use --output json instead (field selection is not supported)\n\nTry: forge --output json pr view <number>")
+				var hints []string
+				hints = append(hints, "forge --output json pr view <number>")
+				if strings.Contains(flagJSON, "comments") {
+					hints = append(hints, "forge pr view --comments <number>")
+				}
+				if strings.Contains(flagJSON, "reviews") {
+					hints = append(hints, "forge pr review list <number>")
+				}
+				return fmt.Errorf("--json is not supported; use --output json instead (field selection is not supported)\n\nTry: %s", strings.Join(hints, "\n     "))
 			}
 
 			number, err := strconv.Atoi(args[0])
