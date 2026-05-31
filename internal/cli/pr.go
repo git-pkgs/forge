@@ -102,6 +102,7 @@ func prViewCmd() *cobra.Command {
 	cmd.Flags().BoolVarP(&flagComments, "comments", "c", false, "Show comments")
 	cmd.Flags().BoolVarP(&flagWeb, "web", "w", false, "Open in browser")
 	cmd.Flags().StringVar(&flagJSON, "json", "", "Not supported; use --output json")
+	cmd.Flags().Lookup("json").NoOptDefVal = " "
 	_ = cmd.Flags().MarkHidden("json")
 	return cmd
 }
