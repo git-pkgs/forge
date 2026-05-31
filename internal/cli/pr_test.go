@@ -142,3 +142,19 @@ func TestPRDiffRequiresArg(t *testing.T) {
 		t.Fatal("expected error for missing argument")
 	}
 }
+
+func TestPRViewJSONFlagNotSupported(t *testing.T) {
+	var buf bytes.Buffer
+	rootCmd.SetOut(&buf)
+	rootCmd.SetErr(&buf)
+	rootCmd.SetArgs([]string{"pr", "view", "--json", "title"})
+
+	err := rootCmd.Execute()
+	if err == nil {
+		t.Fatal("expected error for --json flag")
+	}
+	want := "--json is not supported; use --output json instead (field selection is not supported)\n\nTry: forge --output json pr view <number>"
+	if err.Error() != want {
+		t.Errorf("unexpected error:\ngot:  %s\nwant: %s", err.Error(), want)
+	}
+}
