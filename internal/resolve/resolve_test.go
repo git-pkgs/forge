@@ -1,6 +1,7 @@
 package resolve
 
 import (
+	"context"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -408,7 +409,7 @@ func TestOwnerForBranch(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.branch, func(t *testing.T) {
-			owner, err := OwnerForBranch(tt.branch)
+			owner, err := OwnerForBranch(context.Background(), tt.branch)
 			if tt.wantErr {
 				if err == nil {
 					t.Fatal("expected error")

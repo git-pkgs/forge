@@ -779,10 +779,12 @@ func findPRForCurrentBranch(ctx context.Context, f forges.Forge, owner, repo str
 	// If that yields nothing, fall back to API query. This API call is really
 	// slow for Gitea since the Head filter is not actually implemented.
 	headOwner := owner
-	if remoteOwner, err := resolve.OwnerForBranch(localBranch); err == nil {
+	if remoteOwner, err := resolve.OwnerForBranch(ctx, localBranch); err == nil {
 		headOwner = remoteOwner
 	}
 
+	// TODO: Limit 100 with no pagination means repos with >100 PRs may miss
+	// the match on a fresh checkout (cache hides this in normal use).
 	prs, err := f.PullRequests().List(ctx, owner, repo, forges.ListPROpts{
 		Head:  headOwner + ":" + localBranch,
 		State: "all",
@@ -837,7 +839,9 @@ func loadPRForBranch(ctx context.Context, branch string) (int, error) {
 		return strconv.Atoi(strings.TrimSpace(string(out)))
 	}
 
-	// Fall back to gh CLI's format (refs/pull/<n>/head in branch.<name>.merge)
+	// Fall back to gh CLI's format (refs/pull/<n>/head in branch.<name>.merge).
+	// The regex only matches refs/pull/<n>/head, so refs/heads/* values are
+	// safely rejected.
 	mergeKey := fmt.Sprintf("branch.%s.merge", branch)
 	out, err = exec.CommandContext(ctx, "git", "config", "--get", mergeKey).Output()
 	if err != nil {

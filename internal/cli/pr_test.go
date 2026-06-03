@@ -269,6 +269,136 @@ func TestFindPRForCurrentBranch(t *testing.T) {
 	}
 }
 
+func TestFindPRForCurrentBranch_OpenWinsOverClosed(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not installed")
+	}
+
+	dir := t.TempDir()
+	t.Chdir(dir)
+
+	mustGitCmd(t, "init", "-q")
+	mustGitCmd(t, "config", "user.email", "test@test.com")
+	mustGitCmd(t, "config", "user.name", "Test")
+	mustGitCmd(t, "remote", "add", "origin", "https://github.com/testowner/testrepo.git")
+
+	if err := os.WriteFile(filepath.Join(dir, "README"), []byte("test"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	mustGitCmd(t, "add", "README")
+	mustGitCmd(t, "commit", "-m", "init")
+	mustGitCmd(t, "checkout", "-b", "feature")
+	mustGitCmd(t, "config", "branch.feature.remote", "origin")
+
+	// Mock forge returns both a closed and open PR for the same branch
+	mockPR := &mockPRService{
+		listResult: []forges.PullRequest{
+			{
+				Number: 50,
+				State:  "closed",
+				Head: forges.PRBranch{
+					Ref: "feature",
+				},
+			},
+			{
+				Number: 99,
+				State:  "open",
+				Head: forges.PRBranch{
+					Ref: "feature",
+				},
+			},
+		},
+	}
+	resolve.SetTestForge(
+		&mockForge{prService: mockPR},
+		"testowner", "testrepo", "github.com",
+	)
+	t.Cleanup(resolve.ResetTestForge)
+
+	ctx := context.Background()
+	forge, owner, repo, _, err := resolve.Repo("", "")
+	if err != nil {
+		t.Fatalf("resolve.Repo: %v", err)
+	}
+
+	n, err := findPRForCurrentBranch(ctx, forge, owner, repo)
+	if err != nil {
+		t.Fatalf("findPRForCurrentBranch: %v", err)
+	}
+	if n != 99 {
+		t.Errorf("got %d, want 99 (the open PR should win over closed)", n)
+	}
+
+	// The open PR should be cached
+	cached, err := loadPRForBranch(ctx, "feature")
+	if err != nil {
+		t.Fatalf("loadPRForBranch after find: %v", err)
+	}
+	if cached != 99 {
+		t.Errorf("cached PR = %d, want 99", cached)
+	}
+}
+
+func TestFindPRForCurrentBranch_ClosedPRNotCached(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not installed")
+	}
+
+	dir := t.TempDir()
+	t.Chdir(dir)
+
+	mustGitCmd(t, "init", "-q")
+	mustGitCmd(t, "config", "user.email", "test@test.com")
+	mustGitCmd(t, "config", "user.name", "Test")
+	mustGitCmd(t, "remote", "add", "origin", "https://github.com/testowner/testrepo.git")
+
+	if err := os.WriteFile(filepath.Join(dir, "README"), []byte("test"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	mustGitCmd(t, "add", "README")
+	mustGitCmd(t, "commit", "-m", "init")
+	mustGitCmd(t, "checkout", "-b", "feature")
+	mustGitCmd(t, "config", "branch.feature.remote", "origin")
+
+	// Mock forge returns only a closed PR
+	mockPR := &mockPRService{
+		listResult: []forges.PullRequest{
+			{
+				Number: 42,
+				State:  "closed",
+				Head: forges.PRBranch{
+					Ref: "feature",
+				},
+			},
+		},
+	}
+	resolve.SetTestForge(
+		&mockForge{prService: mockPR},
+		"testowner", "testrepo", "github.com",
+	)
+	t.Cleanup(resolve.ResetTestForge)
+
+	ctx := context.Background()
+	forge, owner, repo, _, err := resolve.Repo("", "")
+	if err != nil {
+		t.Fatalf("resolve.Repo: %v", err)
+	}
+
+	n, err := findPRForCurrentBranch(ctx, forge, owner, repo)
+	if err != nil {
+		t.Fatalf("findPRForCurrentBranch: %v", err)
+	}
+	if n != 42 {
+		t.Errorf("got %d, want 42 (the closed PR should be returned)", n)
+	}
+
+	// Closed PRs should NOT be cached - loadPRForBranch should find nothing
+	_, err = loadPRForBranch(ctx, "feature")
+	if err == nil {
+		t.Error("expected loadPRForBranch to return error for uncached closed PR, got nil")
+	}
+}
+
 func mustGitCmd(t *testing.T, args ...string) {
 	t.Helper()
 	cmd := exec.Command("git", args...)
