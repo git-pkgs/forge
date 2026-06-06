@@ -313,6 +313,9 @@ func TokenForDomainEnv(domain string) string {
 			return t
 		}
 	case "codeberg.org":
+		if t := os.Getenv("FORGEJO_TOKEN"); t != "" {
+			return t
+		}
 		if t := os.Getenv("GITEA_TOKEN"); t != "" {
 			return t
 		}

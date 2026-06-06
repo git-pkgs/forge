@@ -60,7 +60,7 @@ func clearTokenEnv(t *testing.T) {
 	for _, v := range []string{
 		"GITHUB_TOKEN", "GH_TOKEN",
 		"GITLAB_TOKEN", "GLAB_TOKEN",
-		"GITEA_TOKEN", "BITBUCKET_TOKEN",
+		"FORGEJO_TOKEN", "GITEA_TOKEN", "BITBUCKET_TOKEN",
 		"FORGE_TOKEN",
 	} {
 		t.Setenv(v, "")
@@ -106,6 +106,29 @@ func TestTokenForDomain(t *testing.T) {
 		t.Errorf("expected gl-tok, got %q", got)
 	}
 	t.Setenv("GITLAB_TOKEN", "")
+
+	// Codeberg (Forgejo / Gitea)
+	t.Setenv("GITEA_TOKEN", "gitea-tok")
+	got = TokenForDomain("codeberg.org")
+	if got != "gitea-tok" {
+		t.Errorf("expected gitea-tok, got %q", got)
+	}
+	t.Setenv("GITEA_TOKEN", "")
+
+	t.Setenv("FORGEJO_TOKEN", "forgejo-tok")
+	got = TokenForDomain("codeberg.org")
+	if got != "forgejo-tok" {
+		t.Errorf("expected forgejo-tok, got %q", got)
+	}
+
+	// FORGEJO_TOKEN should override GITEA_TOKEN
+	t.Setenv("GITEA_TOKEN", "gitea-tok")
+	got = TokenForDomain("codeberg.org")
+	if got != "forgejo-tok" {
+		t.Errorf("expected forgejo-tok to override gitea-tok, got %q", got)
+	}
+	t.Setenv("FORGEJO_TOKEN", "")
+	t.Setenv("GITEA_TOKEN", "")
 }
 
 func TestTokenForDomainEnvSpecificOverridesFallback(t *testing.T) {
