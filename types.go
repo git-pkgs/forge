@@ -240,7 +240,7 @@ type ForkInfo struct {
 // PRBranch holds branch info including the repository it belongs to.
 // For same-repo PRs, Fork is nil. For fork PRs, Fork points to the source repo.
 type PRBranch struct {
-	Ref  string    `json:"ref"`            // branch name
+	Ref  string    `json:"ref"`            // branch name, or a full ref (e.g. refs/pull/<n>/head) for a branchless PR
 	SHA  string    `json:"sha,omitempty"`  // commit SHA
 	Fork *ForkInfo `json:"fork,omitempty"` // nil if same repo as target
 }
