@@ -146,16 +146,16 @@ func TestStorePRForBranch(t *testing.T) {
 	dir := t.TempDir()
 	t.Chdir(dir)
 
-	mustGitCmd(t, "init", "-q")
-	mustGitCmd(t, "config", "user.email", "test@test.com")
-	mustGitCmd(t, "config", "user.name", "Test")
+	mustGit(t, dir, "init", "-q")
+	mustGit(t, dir, "config", "user.email", "test@test.com")
+	mustGit(t, dir, "config", "user.name", "Test")
 
 	if err := os.WriteFile(filepath.Join(dir, "README"), []byte("test"), 0644); err != nil {
 		t.Fatal(err)
 	}
-	mustGitCmd(t, "add", "README")
-	mustGitCmd(t, "commit", "-m", "init")
-	mustGitCmd(t, "checkout", "-b", "feature")
+	mustGit(t, dir, "add", "README")
+	mustGit(t, dir, "commit", "-m", "init")
+	mustGit(t, dir, "checkout", "-b", "feature")
 
 	ctx := context.Background()
 
@@ -182,19 +182,19 @@ func TestLoadPRForBranchGhFormat(t *testing.T) {
 	dir := t.TempDir()
 	t.Chdir(dir)
 
-	mustGitCmd(t, "init", "-q")
-	mustGitCmd(t, "config", "user.email", "test@test.com")
-	mustGitCmd(t, "config", "user.name", "Test")
+	mustGit(t, dir, "init", "-q")
+	mustGit(t, dir, "config", "user.email", "test@test.com")
+	mustGit(t, dir, "config", "user.name", "Test")
 
 	if err := os.WriteFile(filepath.Join(dir, "README"), []byte("test"), 0644); err != nil {
 		t.Fatal(err)
 	}
-	mustGitCmd(t, "add", "README")
-	mustGitCmd(t, "commit", "-m", "init")
-	mustGitCmd(t, "checkout", "-b", "pr-branch")
+	mustGit(t, dir, "add", "README")
+	mustGit(t, dir, "commit", "-m", "init")
+	mustGit(t, dir, "checkout", "-b", "pr-branch")
 
 	// Set up gh CLI's format: branch.<name>.merge = refs/pull/<n>/head
-	mustGitCmd(t, "config", "branch.pr-branch.merge", "refs/pull/123/head")
+	mustGit(t, dir, "config", "branch.pr-branch.merge", "refs/pull/123/head")
 
 	ctx := context.Background()
 	n, err := loadPRForBranch(ctx, "pr-branch")
@@ -214,18 +214,18 @@ func TestFindPRForCurrentBranch(t *testing.T) {
 	dir := t.TempDir()
 	t.Chdir(dir)
 
-	mustGitCmd(t, "init", "-q")
-	mustGitCmd(t, "config", "user.email", "test@test.com")
-	mustGitCmd(t, "config", "user.name", "Test")
-	mustGitCmd(t, "remote", "add", "origin", "https://github.com/testowner/testrepo.git")
+	mustGit(t, dir, "init", "-q")
+	mustGit(t, dir, "config", "user.email", "test@test.com")
+	mustGit(t, dir, "config", "user.name", "Test")
+	mustGit(t, dir, "remote", "add", "origin", "https://github.com/testowner/testrepo.git")
 
 	if err := os.WriteFile(filepath.Join(dir, "README"), []byte("test"), 0644); err != nil {
 		t.Fatal(err)
 	}
-	mustGitCmd(t, "add", "README")
-	mustGitCmd(t, "commit", "-m", "init")
-	mustGitCmd(t, "checkout", "-b", "feature")
-	mustGitCmd(t, "config", "branch.feature.remote", "origin")
+	mustGit(t, dir, "add", "README")
+	mustGit(t, dir, "commit", "-m", "init")
+	mustGit(t, dir, "checkout", "-b", "feature")
+	mustGit(t, dir, "config", "branch.feature.remote", "origin")
 
 	// Set up mock forge that returns a PR for our branch
 	mockPR := &mockPRService{
@@ -277,18 +277,18 @@ func TestFindPRForCurrentBranch_OpenWinsOverClosed(t *testing.T) {
 	dir := t.TempDir()
 	t.Chdir(dir)
 
-	mustGitCmd(t, "init", "-q")
-	mustGitCmd(t, "config", "user.email", "test@test.com")
-	mustGitCmd(t, "config", "user.name", "Test")
-	mustGitCmd(t, "remote", "add", "origin", "https://github.com/testowner/testrepo.git")
+	mustGit(t, dir, "init", "-q")
+	mustGit(t, dir, "config", "user.email", "test@test.com")
+	mustGit(t, dir, "config", "user.name", "Test")
+	mustGit(t, dir, "remote", "add", "origin", "https://github.com/testowner/testrepo.git")
 
 	if err := os.WriteFile(filepath.Join(dir, "README"), []byte("test"), 0644); err != nil {
 		t.Fatal(err)
 	}
-	mustGitCmd(t, "add", "README")
-	mustGitCmd(t, "commit", "-m", "init")
-	mustGitCmd(t, "checkout", "-b", "feature")
-	mustGitCmd(t, "config", "branch.feature.remote", "origin")
+	mustGit(t, dir, "add", "README")
+	mustGit(t, dir, "commit", "-m", "init")
+	mustGit(t, dir, "checkout", "-b", "feature")
+	mustGit(t, dir, "config", "branch.feature.remote", "origin")
 
 	// Mock forge returns both a closed and open PR for the same branch
 	mockPR := &mockPRService{
@@ -347,18 +347,18 @@ func TestFindPRForCurrentBranch_ClosedPRNotCached(t *testing.T) {
 	dir := t.TempDir()
 	t.Chdir(dir)
 
-	mustGitCmd(t, "init", "-q")
-	mustGitCmd(t, "config", "user.email", "test@test.com")
-	mustGitCmd(t, "config", "user.name", "Test")
-	mustGitCmd(t, "remote", "add", "origin", "https://github.com/testowner/testrepo.git")
+	mustGit(t, dir, "init", "-q")
+	mustGit(t, dir, "config", "user.email", "test@test.com")
+	mustGit(t, dir, "config", "user.name", "Test")
+	mustGit(t, dir, "remote", "add", "origin", "https://github.com/testowner/testrepo.git")
 
 	if err := os.WriteFile(filepath.Join(dir, "README"), []byte("test"), 0644); err != nil {
 		t.Fatal(err)
 	}
-	mustGitCmd(t, "add", "README")
-	mustGitCmd(t, "commit", "-m", "init")
-	mustGitCmd(t, "checkout", "-b", "feature")
-	mustGitCmd(t, "config", "branch.feature.remote", "origin")
+	mustGit(t, dir, "add", "README")
+	mustGit(t, dir, "commit", "-m", "init")
+	mustGit(t, dir, "checkout", "-b", "feature")
+	mustGit(t, dir, "config", "branch.feature.remote", "origin")
 
 	// Mock forge returns only a closed PR
 	mockPR := &mockPRService{
@@ -399,9 +399,12 @@ func TestFindPRForCurrentBranch_ClosedPRNotCached(t *testing.T) {
 	}
 }
 
-func mustGitCmd(t *testing.T, args ...string) {
+// mustGit runs a git command in dir (with global/system config isolated),
+// failing the test on error. Passing "" for dir runs in the current directory.
+func mustGit(t *testing.T, dir string, args ...string) {
 	t.Helper()
 	cmd := exec.Command("git", args...)
+	cmd.Dir = dir
 	cmd.Env = append(os.Environ(),
 		"GIT_CONFIG_GLOBAL=/dev/null",
 		"GIT_CONFIG_SYSTEM=/dev/null",

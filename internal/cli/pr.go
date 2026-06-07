@@ -623,14 +623,21 @@ The argument can be a PR number or a full URL:
 				localBranch = flagBranch
 			}
 
+			if pr.Head.Fork != nil {
+				err = checkoutForkPR(ctx, domain, pr, remoteRef, localBranch, flagRemoteName, flagDetach, flagForce)
+			} else {
+				err = checkoutSameRepoPR(ctx, remoteRef, localBranch, flagDetach, flagForce)
+			}
+			if err != nil {
+				return err
+			}
+
+			// Cache the PR number for the branch only after a successful
+			// checkout, so a failed checkout doesn't leave a stale entry.
 			if !flagDetach {
 				_ = storePRForBranch(ctx, localBranch, number)
 			}
-
-			if pr.Head.Fork != nil {
-				return checkoutForkPR(ctx, domain, pr, remoteRef, localBranch, flagRemoteName, flagDetach, flagForce)
-			}
-			return checkoutSameRepoPR(ctx, remoteRef, localBranch, flagDetach, flagForce)
+			return nil
 		},
 	}
 
