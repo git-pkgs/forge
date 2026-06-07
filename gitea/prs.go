@@ -5,6 +5,7 @@ import (
 	"fmt"
 	forge "github.com/git-pkgs/forge"
 	"net/http"
+	"strings"
 
 	"code.gitea.io/sdk/gitea"
 )
@@ -57,13 +58,20 @@ func convertGiteaPR(pr *gitea.PullRequest) forge.PullRequest {
 		baseRepoID = pr.Base.RepoID
 	}
 	if pr.Head != nil {
+		// Gitea/Forgejo report the head branch name in Ref while it exists, but
+		// fall back to the refs/pull/<n>/head ref when the PR has no head branch
+		// (AGit flow, pushed to refs/for/* and never branched; or a deleted
+		// branch). Normalize that into a clean branch name (empty when absent)
+		// plus the always-present pull ref, so callers never see a raw ref in
+		// Ref.
+		headBranch := pr.Head.Ref
+		if strings.HasPrefix(headBranch, "refs/") {
+			headBranch = ""
+		}
 		result.Head = forge.PRBranch{
-			// Ref is the head branch name when one exists, but Gitea/Forgejo
-			// fall back to a refs/pull/<n>/head ref when there is no head
-			// branch: AGit-flow PRs (pushed to refs/for/*, never branched) or
-			// PRs whose branch was deleted. Callers must tolerate a full ref.
-			Ref: pr.Head.Ref,
-			SHA: pr.Head.Sha,
+			Ref:     headBranch,
+			SHA:     pr.Head.Sha,
+			PullRef: fmt.Sprintf("refs/pull/%d/head", pr.Index),
 		}
 		if pr.Head.RepoID != baseRepoID && pr.Head.Repository != nil && pr.Head.Repository.Owner != nil {
 			result.Head.Fork = &forge.ForkInfo{

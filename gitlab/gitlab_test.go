@@ -203,3 +203,30 @@ func TestGitLabListTags(t *testing.T) {
 	assertEqual(t, "Tag[1].Name", "v1.0.0", tags[1].Name)
 	assertEqual(t, "Tag[1].Commit", "bbb222", tags[1].Commit)
 }
+
+func TestGitLabGetMergeRequestPullRef(t *testing.T) {
+	// GitLab exposes a PR head via refs/merge-requests/<iid>/head, which
+	// checkout uses to fetch branchless MRs (e.g. a deleted source branch).
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /api/v4/projects/mygroup%2Fmyrepo/merge_requests/7", func(w http.ResponseWriter, r *http.Request) {
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"iid":           7,
+			"title":         "Add feature",
+			"state":         "opened",
+			"source_branch": "feature-branch",
+			"target_branch": "main",
+			"web_url":       "https://gitlab.com/mygroup/myrepo/-/merge_requests/7",
+		})
+	})
+
+	srv := httptest.NewServer(mux)
+	defer srv.Close()
+
+	pr, err := New(srv.URL, "test-token", nil).PullRequests().Get(context.Background(), "mygroup", "myrepo", 7)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	assertEqual(t, "Head.Ref", "feature-branch", pr.Head.Ref)
+	assertEqual(t, "Head.PullRef", "refs/merge-requests/7/head", pr.Head.PullRef)
+}

@@ -217,8 +217,8 @@ func pushToRemoteRef(t *testing.T, repoDir, remoteName, ref string) {
 	}
 }
 
-// TestPRCheckoutPullRef covers Gitea/Forgejo PRs whose head.ref is a full
-// refs/pull/<n>/head ref rather than a branch name. The ref must be fetched
+// TestPRCheckoutPullRef covers branchless PRs (e.g. Gitea/Forgejo AGit flow):
+// Head.Ref is empty and only Head.PullRef is set. The pull ref must be fetched
 // as-is (not under refs/heads/) and the local branch falls back to pr-<number>.
 func TestPRCheckoutPullRef(t *testing.T) {
 	if testing.Short() {
@@ -240,7 +240,7 @@ func TestPRCheckoutPullRef(t *testing.T) {
 
 	pr := &forges.PullRequest{
 		Number: 42,
-		Head:   forges.PRBranch{Ref: "refs/pull/42/head", SHA: "abc123"},
+		Head:   forges.PRBranch{PullRef: "refs/pull/42/head", SHA: "abc123"},
 	}
 	resolve.SetTestForge(
 		&mockForge{prService: &mockPRService{pr: pr}},

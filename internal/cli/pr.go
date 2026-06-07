@@ -99,11 +99,20 @@ func prViewCmd() *cobra.Command {
 	return cmd
 }
 
+// prHeadLabel is a display label for a PR's head: the branch name, or the pull
+// ref when the PR has no head branch (AGit flow / deleted branch).
+func prHeadLabel(h forges.PRBranch) string {
+	if h.Ref != "" {
+		return h.Ref
+	}
+	return h.PullRef
+}
+
 func printPRDetails(pr *forges.PullRequest) {
 	_, _ = fmt.Fprintf(os.Stdout, "#%d %s\n", pr.Number, output.Sanitize(pr.Title))
 	_, _ = fmt.Fprintf(os.Stdout, "State:   %s\n", pr.State)
 	_, _ = fmt.Fprintf(os.Stdout, "Author:  %s\n", output.Sanitize(pr.Author.Login))
-	_, _ = fmt.Fprintf(os.Stdout, "Branch:  %s -> %s\n", pr.Head.Ref, pr.Base.Ref)
+	_, _ = fmt.Fprintf(os.Stdout, "Branch:  %s -> %s\n", prHeadLabel(pr.Head), pr.Base.Ref)
 
 	if pr.Draft {
 		_, _ = fmt.Fprintln(os.Stdout, "Draft:   yes")
@@ -211,7 +220,7 @@ func prListCmd() *cobra.Command {
 					strconv.Itoa(pr.Number),
 					title,
 					output.Sanitize(pr.Author.Login),
-					pr.Head.Ref,
+					prHeadLabel(pr.Head),
 					pr.UpdatedAt.Format("2006-01-02"),
 				}
 			}
@@ -601,26 +610,31 @@ The argument can be a PR number or a full URL:
 				return fmt.Errorf("getting PR #%d: %w", number, err)
 			}
 
-			// remoteRef is usually the PR's head branch name, but Gitea/Forgejo
-			// report a refs/pull/<n>/head ref when there is no head branch
-			// (AGit-flow PRs, or PRs whose branch was deleted). Such a ref only
-			// lives on the base repo.
-			remoteRef := pr.Head.Ref
+			head := pr.Head
 
-			// localBranch is what we'll name the local branch (defaults to the
-			// head branch name, or pr-<number> when only a pull ref is known).
+			// A PR with a head branch is fetched by branch name (from the fork
+			// remote when it lives on a fork). A branchless PR (e.g. AGit flow)
+			// has no branch to fetch, so fall back to its pull ref, which the
+			// forge exposes on the base repo.
+			if head.Ref != "" {
+				localBranch := flagBranch
+				if localBranch == "" {
+					localBranch = head.Ref
+				}
+				if head.Fork != nil {
+					return checkoutForkPR(ctx, domain, pr, head.Ref, localBranch, flagRemoteName, flagDetach, flagForce)
+				}
+				return checkoutSameRepoPR(ctx, head.Ref, localBranch, flagDetach, flagForce)
+			}
+
+			if head.PullRef == "" {
+				return fmt.Errorf("PR #%d has no head branch to check out", pr.Number)
+			}
 			localBranch := flagBranch
 			if localBranch == "" {
-				localBranch = defaultLocalBranch(pr)
+				localBranch = fmt.Sprintf("pr-%d", pr.Number)
 			}
-
-			// A pull ref isn't present on the fork remote, only on origin, so
-			// route it through the same-repo path even for fork PRs.
-			if pr.Head.Fork != nil && !isFullRef(remoteRef) {
-				return checkoutForkPR(ctx, domain, pr, remoteRef, localBranch, flagRemoteName, flagDetach, flagForce)
-			}
-
-			return checkoutSameRepoPR(ctx, remoteRef, localBranch, flagDetach, flagForce)
+			return checkoutSameRepoPR(ctx, head.PullRef, localBranch, flagDetach, flagForce)
 		},
 	}
 
@@ -705,28 +719,12 @@ func remoteMatches(existingURL, wantURL string) bool {
 	return domain == wantDomain && owner == wantOwner && repo == wantRepo
 }
 
-// isFullRef reports whether ref is a fully-qualified git ref (e.g.
-// refs/pull/<n>/head) rather than a bare branch name.
-func isFullRef(ref string) bool {
-	return strings.HasPrefix(ref, "refs/")
-}
-
-// defaultLocalBranch picks the local branch name for a checked-out PR. It uses
-// the head branch name when available, but falls back to pr-<number> when only
-// a pull ref is known (Gitea/Forgejo PRs with no head branch, e.g. AGit flow).
-func defaultLocalBranch(pr *forges.PullRequest) string {
-	if isFullRef(pr.Head.Ref) {
-		return fmt.Sprintf("pr-%d", pr.Number)
-	}
-	return pr.Head.Ref
-}
-
 func gitCheckout(ctx context.Context, remote, remoteRef, localBranch string, detach, force bool) error {
-	// A bare branch name needs the refs/heads/ prefix; a full ref (e.g.
-	// refs/pull/<n>/head) is fetched as-is. The remote-tracking ref is named
-	// after localBranch so a pull ref doesn't leak into refs/remotes/.
+	// A bare branch name needs the refs/heads/ prefix; an already-qualified ref
+	// (e.g. a refs/pull/<n>/head pull ref) is fetched as-is. The remote-tracking
+	// ref is named after localBranch so a pull ref doesn't leak into refs/remotes/.
 	src := remoteRef
-	if !isFullRef(src) {
+	if !strings.HasPrefix(src, "refs/") {
 		src = "refs/heads/" + src
 	}
 	refspec := fmt.Sprintf("+%s:refs/remotes/%s/%s", src, remote, localBranch)

@@ -70,6 +70,7 @@ func TestGitHubGetPR(t *testing.T) {
 	assertEqualBool(t, "Merged", false, pr.Merged)
 	assertEqualBool(t, "Mergeable", true, pr.Mergeable)
 	assertEqual(t, "Head", "feature-branch", pr.Head.Ref)
+	assertEqual(t, "Head.PullRef", "refs/pull/1/head", pr.Head.PullRef)
 	assertEqual(t, "Base", "main", pr.Base.Ref)
 	assertEqual(t, "Author.Login", "octocat", pr.Author.Login)
 	assertEqualInt(t, "Comments", 2, pr.Comments)

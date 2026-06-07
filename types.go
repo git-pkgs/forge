@@ -240,9 +240,16 @@ type ForkInfo struct {
 // PRBranch holds branch info including the repository it belongs to.
 // For same-repo PRs, Fork is nil. For fork PRs, Fork points to the source repo.
 type PRBranch struct {
-	Ref  string    `json:"ref"`            // branch name
+	Ref  string    `json:"ref"`            // branch name; empty if the PR has no head branch
 	SHA  string    `json:"sha,omitempty"`  // commit SHA
 	Fork *ForkInfo `json:"fork,omitempty"` // nil if same repo as target
+	// PullRef is a read-only ref on the base repo that always resolves the head
+	// commit: refs/pull/<n>/head on GitHub and Gitea/Forgejo,
+	// refs/merge-requests/<n>/head on GitLab. It is the only way to fetch a
+	// branchless PR (e.g. one created via AGit flow, or whose head branch was
+	// deleted), so checkout uses it as a fallback when Ref is empty. Empty when
+	// the forge exposes no such ref (e.g. Bitbucket Cloud).
+	PullRef string `json:"pull_ref,omitempty"`
 }
 
 // PullRequest holds normalized metadata about a pull request (or merge request).
