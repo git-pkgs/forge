@@ -29,7 +29,7 @@ func convertGitLabMR(mr *gitlab.MergeRequest) forge.PullRequest {
 		Body:     mr.Description,
 		State:    mr.State, // "opened", "closed", "merged"
 		Draft:    mr.Draft,
-		Head:     forge.PRBranch{Ref: mr.SourceBranch, SHA: mr.SHA, PullRef: fmt.Sprintf("refs/merge-requests/%d/head", mr.IID)},
+		Head:     forge.PRBranch{Ref: mr.SourceBranch, SHA: mr.SHA},
 		Base:     forge.PRBranch{Ref: mr.TargetBranch},
 		Merged:   mr.State == "merged",
 		Comments: int(mr.UserNotesCount),
@@ -118,7 +118,7 @@ func convertBasicGitLabMR(mr *gitlab.BasicMergeRequest) forge.PullRequest {
 		Body:    mr.Description,
 		State:   mr.State,
 		Draft:   mr.Draft,
-		Head:    forge.PRBranch{Ref: mr.SourceBranch, PullRef: fmt.Sprintf("refs/merge-requests/%d/head", mr.IID)},
+		Head:    forge.PRBranch{Ref: mr.SourceBranch},
 		Base:    forge.PRBranch{Ref: mr.TargetBranch},
 		Merged:  mr.State == "merged",
 		HTMLURL: mr.WebURL,

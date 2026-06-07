@@ -93,9 +93,8 @@ func convertGitHubPR(pr *github.PullRequest) forge.PullRequest {
 	}
 	if h := pr.GetHead(); h != nil {
 		result.Head = forge.PRBranch{
-			Ref:     h.GetRef(),
-			SHA:     h.GetSHA(),
-			PullRef: fmt.Sprintf("refs/pull/%d/head", pr.GetNumber()),
+			Ref: h.GetRef(),
+			SHA: h.GetSHA(),
 		}
 		if repo := h.GetRepo(); repo != nil {
 			if repo.GetFullName() != baseFullName {

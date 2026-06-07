@@ -284,57 +284,6 @@ func TestGiteaListReposFallbackToUser(t *testing.T) {
 	assertEqual(t, "repos[0].FullName", "someuser/personal", repos[0].FullName)
 }
 
-func TestGiteaGetPullRequestHeadRef(t *testing.T) {
-	// Gitea/Forgejo put the head branch name in "ref" while it exists, but fall
-	// back to refs/pull/<n>/head for branchless PRs (AGit flow / deleted
-	// branch). The converter must surface a clean branch name (empty when
-	// absent) plus the always-present pull ref.
-	tests := []struct {
-		name        string
-		headRef     string
-		wantRef     string
-		wantPullRef string
-	}{
-		{
-			name:        "live branch",
-			headRef:     "feature-branch",
-			wantRef:     "feature-branch",
-			wantPullRef: "refs/pull/42/head",
-		},
-		{
-			name:        "branchless (AGit) PR",
-			headRef:     "refs/pull/42/head",
-			wantRef:     "",
-			wantPullRef: "refs/pull/42/head",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			mux := http.NewServeMux()
-			mux.HandleFunc("GET /api/v1/version", giteaVersionHandler)
-			mux.HandleFunc("GET /api/v1/repos/testorg/testrepo/pulls/42", func(w http.ResponseWriter, r *http.Request) {
-				_ = json.NewEncoder(w).Encode(map[string]any{
-					"number": 42,
-					"head":   map[string]any{"ref": tt.headRef, "sha": "headsha"},
-					"base":   map[string]any{"ref": "main", "sha": "basesha"},
-				})
-			})
-
-			srv := httptest.NewServer(mux)
-			defer srv.Close()
-
-			pr, err := New(srv.URL, "", nil).PullRequests().Get(context.Background(), "testorg", "testrepo", 42)
-			if err != nil {
-				t.Fatalf("unexpected error: %v", err)
-			}
-
-			assertEqual(t, "Head.Ref", tt.wantRef, pr.Head.Ref)
-			assertEqual(t, "Head.PullRef", tt.wantPullRef, pr.Head.PullRef)
-		})
-	}
-}
-
 func TestGiteaListTags(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/v1/version", giteaVersionHandler)
