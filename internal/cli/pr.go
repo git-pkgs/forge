@@ -601,16 +601,22 @@ The argument can be a PR number or a full URL:
 				return fmt.Errorf("getting PR #%d: %w", number, err)
 			}
 
-			// remoteRef is the branch name on the remote (PR's head branch)
+			// remoteRef is usually the PR's head branch name, but Gitea/Forgejo
+			// report a refs/pull/<n>/head ref when there is no head branch
+			// (AGit-flow PRs, or PRs whose branch was deleted). Such a ref only
+			// lives on the base repo.
 			remoteRef := pr.Head.Ref
 
-			// localBranch is what we'll name the local branch (defaults to remote ref)
-			localBranch := remoteRef
-			if flagBranch != "" {
-				localBranch = flagBranch
+			// localBranch is what we'll name the local branch (defaults to the
+			// head branch name, or pr-<number> when only a pull ref is known).
+			localBranch := flagBranch
+			if localBranch == "" {
+				localBranch = defaultLocalBranch(pr)
 			}
 
-			if pr.Head.Fork != nil {
+			// A pull ref isn't present on the fork remote, only on origin, so
+			// route it through the same-repo path even for fork PRs.
+			if pr.Head.Fork != nil && !isFullRef(remoteRef) {
 				return checkoutForkPR(ctx, domain, pr, remoteRef, localBranch, flagRemoteName, flagDetach, flagForce)
 			}
 
@@ -699,8 +705,31 @@ func remoteMatches(existingURL, wantURL string) bool {
 	return domain == wantDomain && owner == wantOwner && repo == wantRepo
 }
 
+// isFullRef reports whether ref is a fully-qualified git ref (e.g.
+// refs/pull/<n>/head) rather than a bare branch name.
+func isFullRef(ref string) bool {
+	return strings.HasPrefix(ref, "refs/")
+}
+
+// defaultLocalBranch picks the local branch name for a checked-out PR. It uses
+// the head branch name when available, but falls back to pr-<number> when only
+// a pull ref is known (Gitea/Forgejo PRs with no head branch, e.g. AGit flow).
+func defaultLocalBranch(pr *forges.PullRequest) string {
+	if isFullRef(pr.Head.Ref) {
+		return fmt.Sprintf("pr-%d", pr.Number)
+	}
+	return pr.Head.Ref
+}
+
 func gitCheckout(ctx context.Context, remote, remoteRef, localBranch string, detach, force bool) error {
-	refspec := fmt.Sprintf("+refs/heads/%s:refs/remotes/%s/%s", remoteRef, remote, remoteRef)
+	// A bare branch name needs the refs/heads/ prefix; a full ref (e.g.
+	// refs/pull/<n>/head) is fetched as-is. The remote-tracking ref is named
+	// after localBranch so a pull ref doesn't leak into refs/remotes/.
+	src := remoteRef
+	if !isFullRef(src) {
+		src = "refs/heads/" + src
+	}
+	refspec := fmt.Sprintf("+%s:refs/remotes/%s/%s", src, remote, localBranch)
 	fetchCmd := exec.CommandContext(ctx, "git", "fetch", "--", remote, refspec)
 	fetchCmd.Stdout = os.Stdout
 	fetchCmd.Stderr = os.Stderr
@@ -708,7 +737,7 @@ func gitCheckout(ctx context.Context, remote, remoteRef, localBranch string, det
 		return fmt.Errorf("fetching %s/%s: %w", remote, remoteRef, err)
 	}
 
-	ref := remote + "/" + remoteRef
+	ref := remote + "/" + localBranch
 
 	if detach {
 		cmd := exec.CommandContext(ctx, "git", "checkout", "--detach", ref)

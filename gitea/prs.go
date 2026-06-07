@@ -58,6 +58,10 @@ func convertGiteaPR(pr *gitea.PullRequest) forge.PullRequest {
 	}
 	if pr.Head != nil {
 		result.Head = forge.PRBranch{
+			// Ref is the head branch name when one exists, but Gitea/Forgejo
+			// fall back to a refs/pull/<n>/head ref when there is no head
+			// branch: AGit-flow PRs (pushed to refs/for/*, never branched) or
+			// PRs whose branch was deleted. Callers must tolerate a full ref.
 			Ref: pr.Head.Ref,
 			SHA: pr.Head.Sha,
 		}
