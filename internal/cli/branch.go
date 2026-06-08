@@ -168,7 +168,7 @@ It first checks for a cached base branch name under the local git config key
 'branch.<branch>.forge-merge-base' in .git/config. If not found, it queries the
 forge API for an open pull request, caches the resolved target branch name back in
 the local git configuration, and returns it.`,
-		Args:  cobra.MaximumNArgs(1),
+		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var branch string
 			if len(args) > 0 {
@@ -193,4 +193,3 @@ the local git configuration, and returns it.`,
 	cmd.Flags().BoolVarP(&flagRefresh, "refresh", "r", false, "Force query the forge API and update cached base branch")
 	return cmd
 }
-

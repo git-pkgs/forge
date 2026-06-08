@@ -56,9 +56,8 @@ func GetOrFetchBaseBranch(ctx context.Context, f forges.Forge, owner, repo, bran
 	}
 
 	// 3. Cache the resolved base branch in local git config
-	if _, err := runGit(ctx, "config", "--local", configKey, baseBranch); err != nil {
-		// Even if caching fails, we still return the resolved base branch.
-	}
+	// Even if caching fails, we still return the resolved base branch.
+	_, _ = runGit(ctx, "config", "--local", configKey, baseBranch)
 
 	return baseBranch, nil
 }
