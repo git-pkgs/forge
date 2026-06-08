@@ -93,6 +93,13 @@ branch matches the current git branch.`,
 				return fmt.Errorf("getting PR #%d: %w", number, err)
 			}
 
+			if pr.State == "open" && pr.Head.Ref != "" && pr.Base.Ref != "" {
+				headBranch := pr.Head.Ref
+				if exec.CommandContext(cmd.Context(), "git", "show-ref", "--verify", "--quiet", "refs/heads/"+headBranch).Run() == nil {
+					_ = exec.CommandContext(cmd.Context(), "git", "config", "--local", fmt.Sprintf("branch.%s.forge-merge-base", headBranch), pr.Base.Ref).Run()
+				}
+			}
+
 			if flagWeb {
 				return openBrowser(pr.HTMLURL)
 			}
@@ -308,6 +315,10 @@ func prCreateCmd() *cobra.Command {
 			pr, err := forge.PullRequests().Create(cmd.Context(), owner, repoName, opts)
 			if err != nil {
 				return fmt.Errorf("creating pull request: %w", err)
+			}
+
+			if flagHead != "" && pr.Base.Ref != "" {
+				_ = exec.CommandContext(cmd.Context(), "git", "config", "--local", fmt.Sprintf("branch.%s.forge-merge-base", flagHead), pr.Base.Ref).Run()
 			}
 
 			p := printer()
@@ -658,6 +669,9 @@ The argument can be a PR number or a full URL:
 			// checkout, so a failed checkout doesn't leave a stale entry.
 			if !flagDetach {
 				_ = storePRForBranch(ctx, localBranch, number)
+				if localBranch != "" && pr.Base.Ref != "" {
+					_ = exec.CommandContext(ctx, "git", "config", "--local", fmt.Sprintf("branch.%s.forge-merge-base", localBranch), pr.Base.Ref).Run()
+				}
 			}
 			return nil
 		},

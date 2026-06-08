@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/git-pkgs/forge"
+	"github.com/git-pkgs/forge/git"
 	"github.com/git-pkgs/forge/internal/output"
 	"github.com/git-pkgs/forge/internal/resolve"
 	"github.com/spf13/cobra"
@@ -22,6 +23,7 @@ func init() {
 	branchCmd.AddCommand(branchListCmd())
 	branchCmd.AddCommand(branchCreateCmd())
 	branchCmd.AddCommand(branchDeleteCmd())
+	branchCmd.AddCommand(branchShowBaseCmd())
 }
 
 func branchListCmd() *cobra.Command {
@@ -153,3 +155,42 @@ func branchDeleteCmd() *cobra.Command {
 	cmd.Flags().BoolVarP(&flagYes, "yes", "y", false, "Skip confirmation")
 	return cmd
 }
+
+func branchShowBaseCmd() *cobra.Command {
+	var flagRefresh bool
+
+	cmd := &cobra.Command{
+		Use:   "show-base [branch]",
+		Short: "Show the base branch for a branch",
+		Long: `Show the base branch for the specified branch (defaults to the current branch).
+
+It first checks for a cached base branch name under the local git config key
+'branch.<branch>.forge-merge-base' in .git/config. If not found, it queries the
+forge API for an open pull request, caches the resolved target branch name back in
+the local git configuration, and returns it.`,
+		Args:  cobra.MaximumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			var branch string
+			if len(args) > 0 {
+				branch = args[0]
+			}
+
+			forge, owner, repoName, _, err := resolve.Repo(flagRepo, flagForgeType)
+			if err != nil {
+				return err
+			}
+
+			base, err := git.GetOrFetchBaseBranch(cmd.Context(), forge, owner, repoName, branch, flagRefresh)
+			if err != nil {
+				return err
+			}
+
+			fmt.Println(base)
+			return nil
+		},
+	}
+
+	cmd.Flags().BoolVarP(&flagRefresh, "refresh", "r", false, "Force query the forge API and update cached base branch")
+	return cmd
+}
+
