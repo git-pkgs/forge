@@ -1,3 +1,4 @@
+// Package git provides helpers for interacting with local git repositories and configurations.
 package git
 
 import (
@@ -14,9 +15,9 @@ import (
 // If not found, it queries the forge API for an open pull request for the branch,
 // caches the base branch name in the local git configuration, and returns it.
 // If branch is empty, it uses the current branch.
-func GetOrFetchBaseBranch(ctx context.Context, f forges.Forge, owner, repo, branch string, forceRefresh bool) (string, error) {
+func GetOrFetchBaseBranch(ctx context.Context, f forges.Forge, dir, owner, repo, branch string, forceRefresh bool) (string, error) {
 	if branch == "" {
-		curr, err := runGit(ctx, "branch", "--show-current")
+		curr, err := runGit(ctx, dir, "branch", "--show-current")
 		if err != nil {
 			return "", fmt.Errorf("failed to get current branch: %w", err)
 		}
@@ -29,7 +30,7 @@ func GetOrFetchBaseBranch(ctx context.Context, f forges.Forge, owner, repo, bran
 	// 1. Check local git config
 	configKey := fmt.Sprintf("branch.%s.forge-merge-base", branch)
 	if !forceRefresh {
-		if cached, err := runGit(ctx, "config", "--get", configKey); err == nil && cached != "" {
+		if cached, err := runGit(ctx, dir, "config", "--get", configKey); err == nil && cached != "" {
 			return cached, nil
 		}
 	}
@@ -45,7 +46,9 @@ func GetOrFetchBaseBranch(ctx context.Context, f forges.Forge, owner, repo, bran
 
 	var baseBranch string
 	for _, pr := range prs {
-		if pr.Head.Ref == branch || strings.HasSuffix(pr.Head.Ref, ":"+branch) {
+		// GitLab, Gitea, and Bitbucket do not support filtering by Head on the server side,
+		// so we must filter client-side. We check if the head branch ref matches the requested branch.
+		if pr.Head.Ref == branch {
 			baseBranch = pr.Base.Ref
 			break
 		}
@@ -57,13 +60,27 @@ func GetOrFetchBaseBranch(ctx context.Context, f forges.Forge, owner, repo, bran
 
 	// 3. Cache the resolved base branch in local git config
 	// Even if caching fails, we still return the resolved base branch.
-	_, _ = runGit(ctx, "config", "--local", configKey, baseBranch)
+	_ = SetBaseBranch(ctx, dir, branch, baseBranch)
 
 	return baseBranch, nil
 }
 
-func runGit(ctx context.Context, args ...string) (string, error) {
+// SetBaseBranch caches the base branch for a branch in the local git configuration.
+func SetBaseBranch(ctx context.Context, dir, branch, base string) error {
+	if branch == "" {
+		return fmt.Errorf("empty branch name")
+	}
+	if base == "" {
+		return fmt.Errorf("empty base branch name")
+	}
+	configKey := fmt.Sprintf("branch.%s.forge-merge-base", branch)
+	_, err := runGit(ctx, dir, "config", "--local", configKey, base)
+	return err
+}
+
+func runGit(ctx context.Context, dir string, args ...string) (string, error) {
 	cmd := exec.CommandContext(ctx, "git", args...)
+	cmd.Dir = dir
 	var stderr strings.Builder
 	cmd.Stderr = &stderr
 	out, err := cmd.Output()

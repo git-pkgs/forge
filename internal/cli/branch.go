@@ -5,7 +5,7 @@ import (
 	"os"
 
 	"github.com/git-pkgs/forge"
-	"github.com/git-pkgs/forge/git"
+	"github.com/git-pkgs/forge/internal/git"
 	"github.com/git-pkgs/forge/internal/output"
 	"github.com/git-pkgs/forge/internal/resolve"
 	"github.com/spf13/cobra"
@@ -180,7 +180,7 @@ the local git configuration, and returns it.`,
 				return err
 			}
 
-			base, err := git.GetOrFetchBaseBranch(cmd.Context(), forge, owner, repoName, branch, flagRefresh)
+			base, err := git.GetOrFetchBaseBranch(cmd.Context(), forge, "", owner, repoName, branch, flagRefresh)
 			if err != nil {
 				return err
 			}
@@ -190,6 +190,6 @@ the local git configuration, and returns it.`,
 		},
 	}
 
-	cmd.Flags().BoolVarP(&flagRefresh, "refresh", "r", false, "Force query the forge API and update cached base branch")
+	cmd.Flags().BoolVar(&flagRefresh, "refresh", false, "Force query the forge API and update cached base branch")
 	return cmd
 }

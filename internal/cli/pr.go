@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/git-pkgs/forge"
+	"github.com/git-pkgs/forge/internal/git"
 	"github.com/git-pkgs/forge/internal/output"
 	"github.com/git-pkgs/forge/internal/resolve"
 	"github.com/spf13/cobra"
@@ -93,10 +94,10 @@ branch matches the current git branch.`,
 				return fmt.Errorf("getting PR #%d: %w", number, err)
 			}
 
-			if pr.State == "open" && pr.Head.Ref != "" && pr.Base.Ref != "" {
+			if pr.State == "open" && pr.Head.Ref != "" && pr.Base.Ref != "" && pr.Head.Fork == nil {
 				headBranch := pr.Head.Ref
 				if exec.CommandContext(cmd.Context(), "git", "show-ref", "--verify", "--quiet", "refs/heads/"+headBranch).Run() == nil {
-					_ = exec.CommandContext(cmd.Context(), "git", "config", "--local", fmt.Sprintf("branch.%s.forge-merge-base", headBranch), pr.Base.Ref).Run()
+					_ = git.SetBaseBranch(cmd.Context(), "", headBranch, pr.Base.Ref)
 				}
 			}
 
@@ -318,7 +319,7 @@ func prCreateCmd() *cobra.Command {
 			}
 
 			if flagHead != "" && pr.Base.Ref != "" {
-				_ = exec.CommandContext(cmd.Context(), "git", "config", "--local", fmt.Sprintf("branch.%s.forge-merge-base", flagHead), pr.Base.Ref).Run()
+				_ = git.SetBaseBranch(cmd.Context(), "", flagHead, pr.Base.Ref)
 			}
 
 			p := printer()
@@ -669,8 +670,8 @@ The argument can be a PR number or a full URL:
 			// checkout, so a failed checkout doesn't leave a stale entry.
 			if !flagDetach {
 				_ = storePRForBranch(ctx, localBranch, number)
-				if localBranch != "" && pr.Base.Ref != "" {
-					_ = exec.CommandContext(ctx, "git", "config", "--local", fmt.Sprintf("branch.%s.forge-merge-base", localBranch), pr.Base.Ref).Run()
+				if pr.Base.Ref != "" {
+					_ = git.SetBaseBranch(ctx, "", localBranch, pr.Base.Ref)
 				}
 			}
 			return nil
