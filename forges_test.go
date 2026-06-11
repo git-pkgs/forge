@@ -322,6 +322,36 @@ func TestDetectForgeTypeGitHubAPI(t *testing.T) {
 	}
 }
 
+func TestDetectForgeTypeTangledAPI(t *testing.T) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+	mux.HandleFunc("GET /api/v1/version", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+	})
+	mux.HandleFunc("GET /api/v4/version", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+	})
+	mux.HandleFunc("GET /api/v3/meta", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+	})
+	mux.HandleFunc("GET /xrpc/sh.tangled.knot.version", func(w http.ResponseWriter, r *http.Request) {
+		_, _ = fmt.Fprintf(w, `{"version":"0.1.0"}`)
+	})
+
+	srv := httptest.NewServer(mux)
+	defer srv.Close()
+
+	ft, err := detectFromAPI(context.Background(), http.DefaultClient, srv.URL)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if ft != Tangled {
+		t.Errorf("want Tangled, got %s", ft)
+	}
+}
+
 func TestClientListRepositoriesRoutes(t *testing.T) {
 	mock := &mockForge{
 		repoService: &mockRepoService{

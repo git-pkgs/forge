@@ -73,6 +73,11 @@ func detectFromAPI(ctx context.Context, client *http.Client, baseURL string) (Fo
 		return GitHub, nil
 	}
 
+	// Try Tangled knot/appview XRPC endpoint.
+	if ok, err := probeURL(ctx, client, baseURL+"/xrpc/sh.tangled.knot.version"); err == nil && ok {
+		return Tangled, nil
+	}
+
 	return Unknown, fmt.Errorf("could not detect forge type for %s", baseURL)
 }
 
