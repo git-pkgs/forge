@@ -27,14 +27,9 @@ func convertGitLabIssue(i *gitlab.Issue) forge.Issue {
 		Number:  int(i.IID),
 		Title:   i.Title,
 		Body:    i.Description,
-		State:   i.State,
+		State:   forge.NormalizeIssueState(i.State),
 		Locked:  i.DiscussionLocked,
 		HTMLURL: i.WebURL,
-	}
-
-	// Normalize "opened" to "open"
-	if result.State == stateOpened {
-		result.State = stateOpen
 	}
 
 	if i.Author != nil {

@@ -24,7 +24,7 @@ func convertGitHubPR(pr *github.PullRequest) forge.PullRequest {
 		Number:       pr.GetNumber(),
 		Title:        pr.GetTitle(),
 		Body:         pr.GetBody(),
-		State:        pr.GetState(),
+		State:        forge.NormalizePRStatus(pr.GetState()),
 		Draft:        pr.GetDraft(),
 		Mergeable:    pr.GetMergeable(),
 		Merged:       pr.GetMerged(),
@@ -37,7 +37,7 @@ func convertGitHubPR(pr *github.PullRequest) forge.PullRequest {
 	}
 
 	if pr.GetMerged() {
-		result.State = "merged"
+		result.State = forge.PRStatusMerged
 	}
 
 	if u := pr.GetUser(); u != nil {

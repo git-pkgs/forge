@@ -56,7 +56,7 @@ func statusListCmd() *cobra.Command {
 			rows := make([][]string, len(statuses))
 			for i, s := range statuses {
 				rows[i] = []string{
-					s.State,
+					string(s.State),
 					s.Context,
 					s.Description,
 					s.TargetURL,
@@ -90,7 +90,7 @@ func statusSetCmd() *cobra.Command {
 			}
 
 			opts := forges.SetCommitStatusOpts{
-				State:       flagState,
+				State:       forges.CommitStatusState(flagState),
 				Context:     flagContext,
 				Description: flagDescription,
 				TargetURL:   flagURL,

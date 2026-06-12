@@ -27,7 +27,7 @@ func convertGitLabMR(mr *gitlab.MergeRequest) forge.PullRequest {
 		Number:   int(mr.IID),
 		Title:    mr.Title,
 		Body:     mr.Description,
-		State:    mr.State, // "opened", "closed", "merged"
+		State:    forge.NormalizePRStatus(mr.State),
 		Draft:    mr.Draft,
 		Head:     forge.PRBranch{Ref: mr.SourceBranch, SHA: mr.SHA},
 		Base:     forge.PRBranch{Ref: mr.TargetBranch},
@@ -35,11 +35,6 @@ func convertGitLabMR(mr *gitlab.MergeRequest) forge.PullRequest {
 		Comments: int(mr.UserNotesCount),
 		// ChangesCount is a string in the GitLab API
 		HTMLURL: mr.WebURL,
-	}
-
-	// Normalize "opened" to "open"
-	if result.State == stateOpened {
-		result.State = stateOpen
 	}
 
 	if mr.Author != nil {
@@ -116,16 +111,12 @@ func convertBasicGitLabMR(mr *gitlab.BasicMergeRequest) forge.PullRequest {
 		Number:  int(mr.IID),
 		Title:   mr.Title,
 		Body:    mr.Description,
-		State:   mr.State,
+		State:   forge.NormalizePRStatus(mr.State),
 		Draft:   mr.Draft,
 		Head:    forge.PRBranch{Ref: mr.SourceBranch},
 		Base:    forge.PRBranch{Ref: mr.TargetBranch},
 		Merged:  mr.State == "merged",
 		HTMLURL: mr.WebURL,
-	}
-
-	if result.State == stateOpened {
-		result.State = stateOpen
 	}
 
 	if mr.Author != nil {

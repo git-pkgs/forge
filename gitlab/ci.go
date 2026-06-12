@@ -20,7 +20,7 @@ func (f *gitLabForge) CI() forge.CIService {
 func convertGitLabPipeline(p *gitlab.PipelineInfo) forge.CIRun {
 	result := forge.CIRun{
 		ID:      int64(p.ID),
-		Status:  p.Status,
+		Status:  forge.NormalizeCIStatus(p.Status),
 		Branch:  p.Ref,
 		SHA:     p.SHA,
 		HTMLURL: p.WebURL,
@@ -37,7 +37,7 @@ func convertGitLabPipeline(p *gitlab.PipelineInfo) forge.CIRun {
 func convertGitLabPipelineDetail(p *gitlab.Pipeline) forge.CIRun {
 	result := forge.CIRun{
 		ID:      int64(p.ID),
-		Status:  p.Status,
+		Status:  forge.NormalizeCIStatus(p.Status),
 		Branch:  p.Ref,
 		SHA:     p.SHA,
 		HTMLURL: p.WebURL,
@@ -127,7 +127,7 @@ func (s *gitLabCIService) GetRun(ctx context.Context, owner, repo string, runID 
 			job := forge.CIJob{
 				ID:      int64(j.ID),
 				Name:    j.Name,
-				Status:  j.Status,
+				Status:  forge.NormalizeCIStatus(j.Status),
 				HTMLURL: j.WebURL,
 			}
 			if j.StartedAt != nil {

@@ -29,7 +29,7 @@ func (s *gitHubCommitStatusService) List(ctx context.Context, owner, repo, sha s
 		}
 		for _, st := range statuses {
 			cs := forge.CommitStatus{
-				State:       st.GetState(),
+				State:       forge.NormalizeCommitStatusState(st.GetState()),
 				Context:     st.GetContext(),
 				Description: st.GetDescription(),
 				TargetURL:   st.GetTargetURL(),
@@ -51,8 +51,9 @@ func (s *gitHubCommitStatusService) List(ctx context.Context, owner, repo, sha s
 }
 
 func (s *gitHubCommitStatusService) Set(ctx context.Context, owner, repo, sha string, opts forge.SetCommitStatusOpts) (*forge.CommitStatus, error) {
+	state := string(opts.State)
 	status := github.RepoStatus{
-		State:       &opts.State,
+		State:       &state,
 		Context:     &opts.Context,
 		Description: &opts.Description,
 		TargetURL:   &opts.TargetURL,
@@ -67,7 +68,7 @@ func (s *gitHubCommitStatusService) Set(ctx context.Context, owner, repo, sha st
 	}
 
 	cs := &forge.CommitStatus{
-		State:       result.GetState(),
+		State:       forge.NormalizeCommitStatusState(result.GetState()),
 		Context:     result.GetContext(),
 		Description: result.GetDescription(),
 		TargetURL:   result.GetTargetURL(),

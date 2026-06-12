@@ -15,9 +15,9 @@ func parseTime(s string) time.Time {
 	return t
 }
 
-func assertEqual(t *testing.T, field, want, got string) {
+func assertEqual[T ~string](t *testing.T, field, want string, got T) {
 	t.Helper()
-	if want != got {
+	if want != string(got) {
 		t.Errorf("%s: want %q, got %q", field, want, got)
 	}
 }

@@ -107,13 +107,7 @@ func convertBitbucketIssue(bb bbIssue) forge.Issue {
 		HTMLURL: bb.Links.HTML.Href,
 	}
 
-	// Normalize Bitbucket states to open/closed
-	switch bb.State {
-	case "new", stateOpen:
-		result.State = stateOpen
-	default:
-		result.State = stateClosed
-	}
+	result.State = forge.NormalizeIssueState(bb.State)
 
 	if bb.Reporter != nil {
 		result.Author = forge.User{
