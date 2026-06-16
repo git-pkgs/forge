@@ -14,7 +14,6 @@ import (
 	"golang.org/x/term"
 )
 
-
 var authCmd = &cobra.Command{
 	Use:   "auth",
 	Short: "Manage authentication",
