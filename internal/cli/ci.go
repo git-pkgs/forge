@@ -157,7 +157,7 @@ func ciViewCmd() *cobra.Command {
 					if j.Conclusion != "" {
 						jStatus = j.Conclusion
 					}
-					_, _ = fmt.Fprintf(os.Stdout, "  %s  %s\n", j.Name, jStatus)
+					_, _ = fmt.Fprintf(os.Stdout, "  %d  %s  %s\n", j.ID, j.Name, jStatus)
 				}
 			}
 

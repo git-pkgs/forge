@@ -413,3 +413,49 @@ func mustGit(t *testing.T, dir string, args ...string) {
 		t.Fatalf("git %v: %v\n%s", args, err, out)
 	}
 }
+
+func TestPRViewJSONFlagNotSupported(t *testing.T) {
+	tests := []struct {
+		name string
+		args []string
+		want string
+	}{
+		{
+			name: "generic field",
+			args: []string{"pr", "view", "--json=title", "1"},
+			want: "--json is not supported; use --output json instead (field selection is not supported)\n\nTry: forge --output json pr view <number>",
+		},
+		{
+			name: "comments field",
+			args: []string{"pr", "view", "--json=comments", "1"},
+			want: "--json is not supported; use --output json instead (field selection is not supported)\n\nTry: forge --output json pr view <number>\n     forge pr view --comments <number>",
+		},
+		{
+			name: "reviews field",
+			args: []string{"pr", "view", "--json=reviews", "1"},
+			want: "--json is not supported; use --output json instead (field selection is not supported)\n\nTry: forge --output json pr view <number>\n     forge pr review list <number>",
+		},
+		{
+			name: "both fields",
+			args: []string{"pr", "view", "--json=reviews,comments", "1"},
+			want: "--json is not supported; use --output json instead (field selection is not supported)\n\nTry: forge --output json pr view <number>\n     forge pr view --comments <number>\n     forge pr review list <number>",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var buf bytes.Buffer
+			rootCmd.SetOut(&buf)
+			rootCmd.SetErr(&buf)
+			rootCmd.SetArgs(tt.args)
+
+			err := rootCmd.Execute()
+			if err == nil {
+				t.Fatal("expected error for --json flag")
+			}
+			if err.Error() != tt.want {
+				t.Errorf("unexpected error:\ngot:  %s\nwant: %s", err.Error(), tt.want)
+			}
+		})
+	}
+}

@@ -156,6 +156,86 @@ func pushBranchToRemote(t *testing.T, repoDir, remoteName, branchName string) {
 	mustGit(t, repoDir, "checkout", "-")
 }
 
+// pushToRemoteRef creates a commit and pushes it to an arbitrary ref on the
+// remote (e.g. refs/pull/42/head), mimicking Gitea/Forgejo PRs whose head
+// branch is gone and only the pull ref remains.
+func pushToRemoteRef(t *testing.T, repoDir, remoteName, ref string) {
+	t.Helper()
+
+	testFile := filepath.Join(repoDir, "pullref.txt")
+	if err := os.WriteFile(testFile, []byte("content for "+ref+"\n"), 0644); err != nil {
+		t.Fatalf("writing test file: %v", err)
+	}
+
+	commands := [][]string{
+		{"git", "checkout", "-b", "tmp-pushref"},
+		{"git", "add", "."},
+		{"git", "commit", "-m", "commit for " + ref},
+		{"git", "push", remoteName, "HEAD:" + ref},
+		{"git", "checkout", "-"},
+		{"git", "branch", "-D", "tmp-pushref"},
+	}
+
+	for _, args := range commands {
+		cmd := exec.Command(args[0], args[1:]...)
+		cmd.Dir = repoDir
+		if out, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("git command %v failed: %v\n%s", args, err, out)
+		}
+	}
+}
+
+// TestPRCheckoutPullRef covers Gitea/Forgejo PRs whose head.ref is a full
+// refs/pull/<n>/head ref rather than a branch name. The ref must be fetched
+// as-is (not under refs/heads/) and the local branch falls back to pr-<number>.
+func TestPRCheckoutPullRef(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping git integration test in short mode")
+	}
+
+	checkoutCmd, _, _ := rootCmd.Find([]string{"pr", "checkout"})
+	if checkoutCmd != nil {
+		_ = checkoutCmd.Flags().Set("detach", "false")
+		_ = checkoutCmd.Flags().Set("force", "false")
+		_ = checkoutCmd.Flags().Set("branch", "")
+		_ = checkoutCmd.Flags().Set("remote-name", "")
+	}
+
+	originDir := setupBareRepo(t)
+	workDir := setupTestRepo(t, originDir)
+	pushToRemoteRef(t, workDir, "origin", "refs/pull/42/head")
+	t.Chdir(workDir)
+
+	pr := &forges.PullRequest{
+		Number: 42,
+		Head:   forges.PRBranch{Ref: "refs/pull/42/head", SHA: "abc123"},
+	}
+	resolve.SetTestForge(
+		&mockForge{prService: &mockPRService{pr: pr}},
+		"testowner", "testrepo", "github.com",
+	)
+	t.Cleanup(resolve.ResetTestForge)
+
+	var buf bytes.Buffer
+	rootCmd.SetOut(&buf)
+	rootCmd.SetErr(&buf)
+	rootCmd.SetArgs([]string{"pr", "checkout", "42"})
+
+	if err := rootCmd.Execute(); err != nil {
+		t.Fatalf("unexpected error: %v\noutput: %s", err, buf.String())
+	}
+
+	cmd := exec.Command("git", "branch", "--show-current")
+	cmd.Dir = workDir
+	out, err := cmd.Output()
+	if err != nil {
+		t.Fatalf("getting current branch: %v", err)
+	}
+	if got := strings.TrimSpace(string(out)); got != "pr-42" {
+		t.Errorf("branch: want %q, got %q", "pr-42", got)
+	}
+}
+
 func TestEnsureRemote(t *testing.T) {
 	tests := []struct {
 		name           string
