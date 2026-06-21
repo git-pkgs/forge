@@ -830,6 +830,12 @@ func findPRForCurrentBranch(ctx context.Context, f forges.Forge, owner, repo str
 
 	// If that yields nothing, fall back to API query. This API call is really
 	// slow for Gitea since the Head filter is not actually implemented.
+	//
+	// This path assumes the local branch name matches the PR's remote head ref.
+	// That breaks if the branch was checked out under a different name (e.g.
+	// 'pr checkout 42 --branch myfork'), since the filter below compares against
+	// localBranch. Such checkouts rely on the cache above being intact; there's
+	// no way to recover the real head ref here once the cache is gone.
 	headOwner := owner
 	if remoteOwner, err := resolve.OwnerForBranch(ctx, localBranch); err == nil {
 		headOwner = remoteOwner
