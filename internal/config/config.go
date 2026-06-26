@@ -41,7 +41,7 @@ type DomainSection struct {
 // executes the command and returns its output; otherwise it returns Token.
 func (ds DomainSection) ResolveToken(domain string) (string, error) {
 	if ds.TokenExec != "" {
-		return execValue(ds.TokenExec[1:], domain)
+		return execValue(ds.TokenExec, domain)
 	}
 	return ds.Token, nil
 }
@@ -210,7 +210,7 @@ func loadFile(cfg *Config, path string, allowTokens bool) error {
 		if allowTokens {
 			if v, ok := kv["token"]; ok {
 				if strings.HasPrefix(v, "!") {
-					ds.TokenExec = v
+					ds.TokenExec = v[1:]
 				} else {
 					ds.Token = v
 				}

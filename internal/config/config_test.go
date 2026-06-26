@@ -499,8 +499,8 @@ token = !echo mytoken
 	if ds.Token != "" {
 		t.Errorf("loadFile should not resolve token command, got Token=%q", ds.Token)
 	}
-	if ds.TokenExec != "!echo mytoken" {
-		t.Errorf("expected TokenExec=%q, got %q", "!echo mytoken", ds.TokenExec)
+	if ds.TokenExec != "echo mytoken" {
+		t.Errorf("expected TokenExec=%q, got %q", "echo mytoken", ds.TokenExec)
 	}
 
 	resolved, err := ds.ResolveToken("github.com")

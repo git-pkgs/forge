@@ -162,7 +162,10 @@ func readRawToken(fd int, oldState *term.State, r io.Reader) (string, error) {
 // Returns the command prefixed with "!" for storage in the config.
 func readCommandInteractive(domain string) (string, error) {
 	_, _ = fmt.Fprintf(os.Stderr, "Command for token (e.g. rbw get %s): ", domain)
-	line, _ := bufio.NewReader(os.Stdin).ReadString('\n')
+	line, err := bufio.NewReader(os.Stdin).ReadString('\n')
+	if err != nil && line == "" {
+		return "", fmt.Errorf("reading command: %w", err)
+	}
 	cmd := strings.TrimSpace(line)
 	if cmd == "" {
 		return "", fmt.Errorf("command cannot be empty")

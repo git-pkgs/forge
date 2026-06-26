@@ -149,7 +149,7 @@ token = !echo secret
 	}
 
 	out := buf.String()
-	if !strings.Contains(out, "cmd: !echo secret") {
+	if !strings.Contains(out, "cmd: echo secret") {
 		t.Errorf("expected command source in output, got: %s", out)
 	}
 }
