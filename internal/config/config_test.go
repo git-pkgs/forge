@@ -496,11 +496,19 @@ token = !echo mytoken
 	}
 
 	ds := cfg.Domains["github.com"]
-	if ds.Token != "mytoken" {
-		t.Errorf("expected resolved token %q, got %q", "mytoken", ds.Token)
+	if ds.Token != "" {
+		t.Errorf("loadFile should not resolve token command, got Token=%q", ds.Token)
 	}
 	if ds.TokenExec != "!echo mytoken" {
 		t.Errorf("expected TokenExec=%q, got %q", "!echo mytoken", ds.TokenExec)
+	}
+
+	resolved, err := ds.ResolveToken("github.com")
+	if err != nil {
+		t.Fatalf("ResolveToken: %v", err)
+	}
+	if resolved != "mytoken" {
+		t.Errorf("expected resolved token %q, got %q", "mytoken", resolved)
 	}
 }
 
@@ -516,9 +524,12 @@ token = !echo $FORGE_DOMAIN
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	ds := cfg.Domains["gitlab.example.com"]
-	if ds.Token != "gitlab.example.com" {
-		t.Errorf("expected FORGE_DOMAIN=gitlab.example.com, got %q", ds.Token)
+	resolved, err := cfg.Domains["gitlab.example.com"].ResolveToken("gitlab.example.com")
+	if err != nil {
+		t.Fatalf("ResolveToken: %v", err)
+	}
+	if resolved != "gitlab.example.com" {
+		t.Errorf("expected FORGE_DOMAIN=gitlab.example.com, got %q", resolved)
 	}
 }
 
@@ -530,12 +541,13 @@ token = !false
 `), 0600)
 
 	cfg := &Config{Domains: make(map[string]DomainSection)}
-	err := loadFile(cfg, path, true)
+	if err := loadFile(cfg, path, true); err != nil {
+		t.Fatalf("loadFile should not fail on bad command, got: %v", err)
+	}
+
+	_, err := cfg.Domains["github.com"].ResolveToken("github.com")
 	if err == nil {
 		t.Fatal("expected error from failing command, got nil")
-	}
-	if !strings.Contains(err.Error(), "token command") {
-		t.Errorf("expected error to mention token command, got: %v", err)
 	}
 }
 
@@ -547,7 +559,11 @@ token = !no-such-binary-xyz
 `), 0600)
 
 	cfg := &Config{Domains: make(map[string]DomainSection)}
-	err := loadFile(cfg, path, true)
+	if err := loadFile(cfg, path, true); err != nil {
+		t.Fatalf("loadFile should not fail on missing binary, got: %v", err)
+	}
+
+	_, err := cfg.Domains["github.com"].ResolveToken("github.com")
 	if err == nil {
 		t.Fatal("expected error for missing binary, got nil")
 	}

@@ -317,7 +317,8 @@ func TokenForDomain(domain string) string {
 	if err != nil || cfg == nil {
 		return ""
 	}
-	return cfg.Domains[domain].Token
+	token, _ := cfg.Domains[domain].ResolveToken(domain)
+	return token
 }
 
 // TokenForDomainEnv looks up a token from environment variables only.

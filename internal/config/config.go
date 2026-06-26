@@ -37,6 +37,15 @@ type DomainSection struct {
 	GitProtocol string // https or ssh; overrides default
 }
 
+// ResolveToken returns the token for this domain. If TokenExec is set, it
+// executes the command and returns its output; otherwise it returns Token.
+func (ds DomainSection) ResolveToken(domain string) (string, error) {
+	if ds.TokenExec != "" {
+		return execValue(ds.TokenExec[1:], domain)
+	}
+	return ds.Token, nil
+}
+
 // DomainForSSHHost returns the API domain (the section name) whose ssh_host
 // matches the given host, or "" if none. Self-hosted GitLab in particular can
 // serve git-over-ssh on a different host than the web/API, so a remote URL like
@@ -99,18 +108,23 @@ func parseGitProtocol(v string) (string, error) {
 // execValue runs cmd via sh -c and returns its trimmed stdout.
 // Shell features (pipes, quotes, substitutions) are supported.
 // FORGE_DOMAIN is set to domain in the command environment.
+// Stdin and stderr are wired to the terminal so interactive prompts
+// (e.g. pinentry, rbw unlock) work and error output is visible directly.
 func execValue(cmd, domain string) (string, error) {
 	cmd = strings.TrimSpace(cmd)
 	if cmd == "" {
 		return "", fmt.Errorf("empty command")
 	}
+	var stdout strings.Builder
 	c := exec.Command("sh", "-c", cmd)
 	c.Env = append(os.Environ(), "FORGE_DOMAIN="+domain)
-	out, err := c.Output()
-	if err != nil {
+	c.Stdin = os.Stdin
+	c.Stdout = &stdout
+	c.Stderr = os.Stderr
+	if err := c.Run(); err != nil {
 		return "", fmt.Errorf("%q: %w", cmd, err)
 	}
-	return strings.TrimSpace(string(out)), nil
+	return strings.TrimSpace(stdout.String()), nil
 }
 
 // ResetCache clears the cached config. Only useful in tests.
@@ -196,11 +210,6 @@ func loadFile(cfg *Config, path string, allowTokens bool) error {
 		if allowTokens {
 			if v, ok := kv["token"]; ok {
 				if strings.HasPrefix(v, "!") {
-					resolved, err := execValue(v[1:], name)
-					if err != nil {
-						return fmt.Errorf("%s: [%s] token command: %w", path, name, err)
-					}
-					ds.Token = resolved
 					ds.TokenExec = v
 				} else {
 					ds.Token = v

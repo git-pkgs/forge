@@ -75,10 +75,10 @@ type = gitea
 token = abc123
 ```
 
-Token values can be replaced with a shell command prefixed by `!`. The command
-is executed each time forge needs the token and its stdout is used as the value.
-This lets you fetch secrets from a password manager instead of storing them in
-plain text:
+Token values can be replaced with a shell command prefixed by `!` (Unix only).
+The command is executed via `sh -c` each time forge needs the token and its
+stdout is used as the value. This lets you fetch secrets from a password manager
+instead of storing them in plain text:
 
 ```ini
 [github.com]

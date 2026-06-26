@@ -200,12 +200,10 @@ func authStatusCmd() *cobra.Command {
 				if envToken != "" {
 					sources = append(sources, "env")
 				}
-				if cfgSection.Token != "" {
-					if cfgSection.TokenExec != "" {
-						sources = append(sources, fmt.Sprintf("config (cmd: %s)", cfgSection.TokenExec))
-					} else {
-						sources = append(sources, "config")
-					}
+				if cfgSection.TokenExec != "" {
+					sources = append(sources, fmt.Sprintf("config (cmd: %s)", cfgSection.TokenExec))
+				} else if cfgSection.Token != "" {
+					sources = append(sources, "config")
 				}
 
 				status := "no token"
