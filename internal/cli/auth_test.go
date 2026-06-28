@@ -8,7 +8,23 @@ import (
 	"testing"
 
 	"github.com/git-pkgs/forge/internal/config"
+	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 )
+
+// resetCmd resets flag values and Changed state across the command tree so
+// tests using the shared rootCmd don't leak flag state into each other.
+func resetCmd(cmd *cobra.Command) {
+	reset := func(f *pflag.Flag) {
+		f.Changed = false
+		_ = f.Value.Set(f.DefValue)
+	}
+	cmd.Flags().VisitAll(reset)
+	cmd.PersistentFlags().VisitAll(reset)
+	for _, sub := range cmd.Commands() {
+		resetCmd(sub)
+	}
+}
 
 func TestAuthCmd(t *testing.T) {
 	cmd := authCmd
@@ -36,6 +52,7 @@ func TestAuthCmd(t *testing.T) {
 }
 
 func TestAuthLoginRequiresDomainNonInteractive(t *testing.T) {
+	resetCmd(rootCmd)
 	// Replace stdin with a pipe so term.IsTerminal returns false
 	origStdin := os.Stdin
 	r, w, _ := os.Pipe()
@@ -58,6 +75,7 @@ func TestAuthLoginRequiresDomainNonInteractive(t *testing.T) {
 }
 
 func TestAuthLoginNonInteractive(t *testing.T) {
+	resetCmd(rootCmd)
 	dir := t.TempDir()
 	t.Setenv("XDG_CONFIG_HOME", dir)
 	config.ResetCache()
@@ -96,6 +114,7 @@ func TestAuthLoginNonInteractive(t *testing.T) {
 }
 
 func TestAuthLoginTokenCmd(t *testing.T) {
+	resetCmd(rootCmd)
 	dir := t.TempDir()
 	t.Setenv("XDG_CONFIG_HOME", dir)
 	config.ResetCache()
@@ -125,6 +144,7 @@ func TestAuthLoginTokenCmd(t *testing.T) {
 }
 
 func TestAuthLoginTokenAndTokenCmdMutuallyExclusive(t *testing.T) {
+	resetCmd(rootCmd)
 	var buf bytes.Buffer
 	rootCmd.SetOut(&buf)
 	rootCmd.SetErr(&buf)
@@ -141,6 +161,7 @@ func TestAuthLoginTokenAndTokenCmdMutuallyExclusive(t *testing.T) {
 }
 
 func TestAuthStatus(t *testing.T) {
+	resetCmd(rootCmd)
 	dir := t.TempDir()
 	t.Setenv("XDG_CONFIG_HOME", dir)
 	config.ResetCache()
@@ -172,6 +193,7 @@ token = some_token
 }
 
 func TestAuthStatusWithTokenCmd(t *testing.T) {
+	resetCmd(rootCmd)
 	dir := t.TempDir()
 	t.Setenv("XDG_CONFIG_HOME", dir)
 	config.ResetCache()
