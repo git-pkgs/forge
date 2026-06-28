@@ -23,7 +23,6 @@ func init() {
 	rootCmd.AddCommand(authCmd)
 	authCmd.AddCommand(authLoginCmd())
 	authCmd.AddCommand(authStatusCmd())
-	authCmd.AddCommand(authTokenCmd())
 }
 
 func authLoginCmd() *cobra.Command {
