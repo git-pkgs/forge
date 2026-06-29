@@ -175,7 +175,7 @@ func TestDomain(t *testing.T) {
 		{"gitea", "codeberg.org"},
 		{"forgejo", "codeberg.org"},
 		{"bitbucket", "bitbucket.org"},
-		{"gerrit", "github.com"},
+		{"gerrit", ""},
 		{"unknown", "github.com"},
 	}
 

@@ -43,7 +43,7 @@ func (s *gerritRepoService) convertProject(p gerritProjectInfo) forge.Repository
 		Owner:               owner,
 		Name:                repo,
 		Description:         p.Description,
-		HTMLURL:             s.forge.baseURL + "/" + name,
+		HTMLURL:             s.forge.baseURL + "/admin/repos/" + encodeID(name),
 		CloneURL:            s.forge.baseURL + "/" + name,
 		DefaultBranch:       trimRefPrefix(p.Branches["HEAD"]),
 		Archived:            p.State == "READ_ONLY",
@@ -260,6 +260,5 @@ func (s *gerritRepoService) ReleasesURL(repoHTMLURL string) string {
 }
 
 func (s *gerritRepoService) BlobURL(repoHTMLURL, ref, filePath string) string {
-	base := strings.TrimRight(repoHTMLURL, "/")
-	return base + "/+/refs/heads/" + url.PathEscape(ref) + "/" + strings.TrimLeft(filePath, "/")
+	return repoHTMLURL
 }
