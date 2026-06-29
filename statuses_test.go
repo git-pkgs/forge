@@ -2,6 +2,27 @@ package forges
 
 import "testing"
 
+func TestNormalizeIssueState(t *testing.T) {
+	tests := []struct {
+		in   string
+		want IssueState
+	}{
+		{"open", IssueStateOpen},
+		{"on_hold", IssueStateOpen},
+		{"closed", IssueStateClosed},
+		{"invalid", IssueStateClosed},
+		{"duplicate", IssueStateClosed},
+		{"wontfix", IssueStateClosed},
+		{"unexpected", IssueStateUnknown},
+	}
+
+	for _, tt := range tests {
+		if got := NormalizeIssueState(tt.in); got != tt.want {
+			t.Errorf("NormalizeIssueState(%q) = %q, want %q", tt.in, got, tt.want)
+		}
+	}
+}
+
 func TestNormalizePRStatus(t *testing.T) {
 	tests := []struct {
 		in   string
@@ -51,9 +72,12 @@ func TestNormalizeAccessLevel(t *testing.T) {
 	}{
 		{"pull", AccessLevelRead},
 		{"reporter", AccessLevelRead},
+		{"triage", AccessLevelRead},
+		{"planner", AccessLevelRead},
 		{"push", AccessLevelWrite},
 		{"developer", AccessLevelWrite},
 		{"maintainer", AccessLevelAdmin},
+		{"maintain", AccessLevelAdmin},
 		{"owner", AccessLevelAdmin},
 		{"", AccessLevelNone},
 		{"custom", AccessLevelUnknown},
