@@ -169,7 +169,7 @@ func readRawToken(fd int, oldState *term.State, r io.Reader) (string, error) {
 				if _, err := r.Read(b); err != nil {
 					return "", err
 				}
-				if b[0] >= 'A' && b[0] <= '~' {
+				if b[0] >= '@' && b[0] <= '~' {
 					break
 				}
 			}

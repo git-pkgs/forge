@@ -111,6 +111,9 @@ func parseGitProtocol(v string) (string, error) {
 // Stdin and stderr are wired to the terminal so interactive prompts
 // (e.g. pinentry, rbw unlock) work and error output is visible directly.
 func execValue(cmd, domain string) (string, error) {
+	if runtime.GOOS == goosWindows {
+		return "", fmt.Errorf("token-cmd is not supported on Windows")
+	}
 	cmd = strings.TrimSpace(cmd)
 	if cmd == "" {
 		return "", fmt.Errorf("empty command")

@@ -80,7 +80,7 @@ token = abc123
 
 ### Token commands
 
-Instead of a literal `token`, use `token-cmd` to specify a shell command (Unix only).
+Instead of a literal `token`, use `token-cmd` to specify a shell command (not supported on Windows).
 The command is executed via `sh -c` each time forge needs the token and its
 stdout is used as the value. This lets you fetch secrets from a password manager
 instead of storing them in plain text:
