@@ -61,7 +61,7 @@ func collaboratorListCmd() *cobra.Command {
 			headers := []string{"LOGIN", "PERMISSION"}
 			rows := make([][]string, len(collabs))
 			for i, c := range collabs {
-				rows[i] = []string{c.Login, c.Permission}
+				rows[i] = []string{c.Login, string(c.Permission)}
 			}
 			p.PrintTable(headers, rows)
 			return nil
@@ -88,7 +88,7 @@ func collaboratorAddCmd() *cobra.Command {
 			}
 
 			opts := forges.AddCollaboratorOpts{
-				Permission: flagPermission,
+				Permission: forges.NormalizeAccessLevel(flagPermission),
 			}
 
 			if err := forge.Collaborators().Add(cmd.Context(), owner, repoName, username, opts); err != nil {

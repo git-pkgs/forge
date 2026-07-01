@@ -78,9 +78,9 @@ func ciListCmd() *cobra.Command {
 			headers := []string{"ID", "TITLE", "STATUS", "BRANCH", "EVENT", "CREATED"}
 			rows := make([][]string, len(runs))
 			for i, r := range runs {
-				status := r.Status
+				status := string(r.Status)
 				if r.Conclusion != "" {
-					status = r.Conclusion
+					status = string(r.Conclusion)
 				}
 				created := ""
 				if !r.CreatedAt.IsZero() {
@@ -134,9 +134,9 @@ func ciViewCmd() *cobra.Command {
 				return p.PrintJSON(run)
 			}
 
-			status := run.Status
+			status := string(run.Status)
 			if run.Conclusion != "" {
-				status = run.Conclusion
+				status = string(run.Conclusion)
 			}
 
 			_, _ = fmt.Fprintf(os.Stdout, "#%d %s\n", run.ID, run.Title)
@@ -153,9 +153,9 @@ func ciViewCmd() *cobra.Command {
 				_, _ = fmt.Fprintln(os.Stdout)
 				_, _ = fmt.Fprintln(os.Stdout, "Jobs:")
 				for _, j := range run.Jobs {
-					jStatus := j.Status
+					jStatus := string(j.Status)
 					if j.Conclusion != "" {
-						jStatus = j.Conclusion
+						jStatus = string(j.Conclusion)
 					}
 					_, _ = fmt.Fprintf(os.Stdout, "  %d  %s  %s\n", j.ID, j.Name, jStatus)
 				}

@@ -17,22 +17,22 @@ func (f *gitLabForge) Collaborators() forge.CollaboratorService {
 	return &gitLabCollaboratorService{client: f.client}
 }
 
-func convertGitLabAccessLevel(level gitlab.AccessLevelValue) string {
+func convertGitLabAccessLevel(level gitlab.AccessLevelValue) forge.AccessLevel {
 	switch {
 	case level >= gitlab.OwnerPermissions:
-		return "admin"
+		return forge.AccessLevelAdmin
 	case level >= gitlab.MaintainerPermissions:
-		return "admin"
+		return forge.AccessLevelAdmin
 	case level >= gitlab.DeveloperPermissions:
-		return "write"
+		return forge.AccessLevelWrite
 	default:
-		return "read"
+		return forge.AccessLevelRead
 	}
 }
 
-func parseGitLabAccessLevel(permission string) *gitlab.AccessLevelValue {
+func parseGitLabAccessLevel(permission forge.AccessLevel) *gitlab.AccessLevelValue {
 	var level gitlab.AccessLevelValue
-	switch permission {
+	switch string(permission) {
 	case "guest":
 		level = gitlab.GuestPermissions
 	case "reporter":
@@ -44,7 +44,14 @@ func parseGitLabAccessLevel(permission string) *gitlab.AccessLevelValue {
 	case "owner":
 		level = gitlab.OwnerPermissions
 	default:
-		level = gitlab.DeveloperPermissions
+		switch forge.NormalizeAccessLevel(string(permission)) {
+		case forge.AccessLevelRead:
+			level = gitlab.ReporterPermissions
+		case forge.AccessLevelAdmin:
+			level = gitlab.MaintainerPermissions
+		default:
+			level = gitlab.DeveloperPermissions
+		}
 	}
 	return &level
 }

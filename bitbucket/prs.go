@@ -123,14 +123,9 @@ func convertBitbucketPR(bb bbPullRequest) forge.PullRequest {
 		}
 	}
 
-	switch bb.State {
-	case "OPEN":
-		result.State = "open"
-	case "MERGED":
-		result.State = "merged"
+	result.State = forge.NormalizePRStatus(bb.State)
+	if result.State == forge.PRStatusMerged {
 		result.Merged = true
-	default:
-		result.State = "closed"
 	}
 
 	if bb.Author != nil {
