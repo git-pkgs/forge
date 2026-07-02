@@ -41,11 +41,11 @@ func convertGiteaPR(pr *gitea.PullRequest) forge.PullRequest {
 
 	switch {
 	case pr.HasMerged:
-		result.State = "merged"
+		result.State = forge.PRStatusMerged
 	case pr.State == gitea.StateClosed:
-		result.State = stateClosed
+		result.State = forge.PRStatusClosed
 	default:
-		result.State = stateOpen
+		result.State = forge.PRStatusOpen
 	}
 
 	var baseRepoID int64

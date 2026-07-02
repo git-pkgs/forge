@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -30,9 +31,19 @@ type DefaultSection struct {
 
 type DomainSection struct {
 	Type        string // github, gitlab, gitea, forgejo, bitbucket, gerrit
-	Token       string // only from user config, never .forge
+	Token       string // resolved token value; only from user config, never .forge
+	TokenExec   string // non-empty when token is retrieved via a shell command (from "token-cmd" config key)
 	SSHHost     string // alternate host for git-over-ssh; the section name remains the API host
 	GitProtocol string // https or ssh; overrides default
+}
+
+// ResolveToken returns the token for this domain. If TokenExec is set, it
+// executes the command and returns its output; otherwise it returns Token.
+func (ds DomainSection) ResolveToken(domain string) (string, error) {
+	if ds.TokenExec != "" {
+		return execValue(ds.TokenExec, domain)
+	}
+	return ds.Token, nil
 }
 
 // DomainForSSHHost returns the API domain (the section name) whose ssh_host
@@ -92,6 +103,31 @@ func parseGitProtocol(v string) (string, error) {
 	default:
 		return "", fmt.Errorf("invalid git_protocol %q: must be \"https\" or \"ssh\"", v)
 	}
+}
+
+// execValue runs cmd via sh -c and returns its trimmed stdout.
+// Shell features (pipes, quotes, substitutions) are supported.
+// FORGE_DOMAIN is set to domain in the command environment.
+// Stdin and stderr are wired to the terminal so interactive prompts
+// (e.g. pinentry, rbw unlock) work and error output is visible directly.
+func execValue(cmd, domain string) (string, error) {
+	if runtime.GOOS == goosWindows {
+		return "", fmt.Errorf("token-cmd is not supported on Windows")
+	}
+	cmd = strings.TrimSpace(cmd)
+	if cmd == "" {
+		return "", fmt.Errorf("empty command")
+	}
+	var stdout strings.Builder
+	c := exec.Command("sh", "-c", cmd)
+	c.Env = append(os.Environ(), "FORGE_DOMAIN="+domain)
+	c.Stdin = os.Stdin
+	c.Stdout = &stdout
+	c.Stderr = os.Stderr
+	if err := c.Run(); err != nil {
+		return "", fmt.Errorf("%q: %w", cmd, err)
+	}
+	return strings.TrimSpace(stdout.String()), nil
 }
 
 // ResetCache clears the cached config. Only useful in tests.
@@ -175,8 +211,16 @@ func loadFile(cfg *Config, path string, allowTokens bool) error {
 			}
 		}
 		if allowTokens {
-			if v, ok := kv["token"]; ok {
-				ds.Token = v
+			_, hasToken := kv["token"]
+			_, hasTokenCmd := kv["token-cmd"]
+			if hasToken && hasTokenCmd {
+				return fmt.Errorf("%s: [%s] token and token-cmd are mutually exclusive", path, name)
+			}
+			if hasToken {
+				ds.Token = kv["token"]
+			}
+			if hasTokenCmd {
+				ds.TokenExec = kv["token-cmd"]
 			}
 		}
 		cfg.Domains[name] = ds
@@ -266,7 +310,7 @@ func findProjectConfig(dir string) string {
 // SetDomain updates or adds a domain section in the user config file.
 // Creates the config directory if needed. Sets file permissions to 0600
 // since the file may contain tokens.
-func SetDomain(domain, token, forgeType string) error {
+func SetDomain(domain, token, tokenCmd, forgeType string) error {
 	path := UserConfigPath()
 	if path == "" {
 		return fmt.Errorf("cannot determine config path")
@@ -291,6 +335,11 @@ func SetDomain(domain, token, forgeType string) error {
 	}
 	if token != "" {
 		sections[domain]["token"] = token
+		delete(sections[domain], "token-cmd")
+	}
+	if tokenCmd != "" {
+		sections[domain]["token-cmd"] = tokenCmd
+		delete(sections[domain], "token")
 	}
 	if forgeType != "" {
 		sections[domain]["type"] = forgeType

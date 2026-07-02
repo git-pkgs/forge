@@ -43,7 +43,7 @@ func convertGitHubCollaborator(u *github.User) forge.Collaborator {
 	}
 	return forge.Collaborator{
 		Login:      u.GetLogin(),
-		Permission: perm,
+		Permission: forge.NormalizeAccessLevel(perm),
 	}
 }
 
@@ -89,7 +89,7 @@ func (s *gitHubCollaboratorService) List(ctx context.Context, owner, repo string
 func (s *gitHubCollaboratorService) Add(ctx context.Context, owner, repo, username string, opts forge.AddCollaboratorOpts) error {
 	ghOpts := &github.RepositoryAddCollaboratorOptions{}
 	if opts.Permission != "" {
-		ghOpts.Permission = opts.Permission
+		ghOpts.Permission = githubPermission(opts.Permission)
 	}
 
 	_, resp, err := s.client.Repositories.AddCollaborator(ctx, owner, repo, username, ghOpts)
@@ -100,6 +100,19 @@ func (s *gitHubCollaboratorService) Add(ctx context.Context, owner, repo, userna
 		return err
 	}
 	return nil
+}
+
+func githubPermission(permission forge.AccessLevel) string {
+	switch forge.NormalizeAccessLevel(string(permission)) {
+	case forge.AccessLevelRead:
+		return "pull"
+	case forge.AccessLevelWrite:
+		return "push"
+	case forge.AccessLevelAdmin:
+		return "admin"
+	default:
+		return string(permission)
+	}
 }
 
 func (s *gitHubCollaboratorService) Remove(ctx context.Context, owner, repo, username string) error {

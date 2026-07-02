@@ -15,8 +15,10 @@ import (
 
 // mockPRService implements forges.PullRequestService for testing.
 type mockPRService struct {
-	pr  *forges.PullRequest
-	err error
+	pr         *forges.PullRequest
+	err        error
+	listResult []forges.PullRequest
+	listErr    error
 }
 
 func (m *mockPRService) Get(_ context.Context, _, _ string, _ int) (*forges.PullRequest, error) {
@@ -24,7 +26,7 @@ func (m *mockPRService) Get(_ context.Context, _, _ string, _ int) (*forges.Pull
 }
 
 func (m *mockPRService) List(_ context.Context, _, _ string, _ forges.ListPROpts) ([]forges.PullRequest, error) {
-	return nil, nil
+	return m.listResult, m.listErr
 }
 
 func (m *mockPRService) Create(_ context.Context, _, _ string, _ forges.CreatePROpts) (*forges.PullRequest, error) {
@@ -110,19 +112,9 @@ func setupTestRepo(t *testing.T, originURL string) string {
 	t.Helper()
 	dir := t.TempDir()
 
-	commands := [][]string{
-		{"git", "init"},
-		{"git", "config", "user.email", "test@test.com"},
-		{"git", "config", "user.name", "Test User"},
-	}
-
-	for _, args := range commands {
-		cmd := exec.Command(args[0], args[1:]...)
-		cmd.Dir = dir
-		if out, err := cmd.CombinedOutput(); err != nil {
-			t.Fatalf("git command %v failed: %v\n%s", args, err, out)
-		}
-	}
+	mustGit(t, dir, "init")
+	mustGit(t, dir, "config", "user.email", "test@test.com")
+	mustGit(t, dir, "config", "user.name", "Test User")
 
 	// Create an initial commit so we have a valid HEAD
 	testFile := filepath.Join(dir, "README.md")
@@ -130,19 +122,9 @@ func setupTestRepo(t *testing.T, originURL string) string {
 		t.Fatalf("writing test file: %v", err)
 	}
 
-	commands = [][]string{
-		{"git", "add", "README.md"},
-		{"git", "commit", "-m", "Initial commit"},
-		{"git", "remote", "add", "origin", originURL},
-	}
-
-	for _, args := range commands {
-		cmd := exec.Command(args[0], args[1:]...)
-		cmd.Dir = dir
-		if out, err := cmd.CombinedOutput(); err != nil {
-			t.Fatalf("git command %v failed: %v\n%s", args, err, out)
-		}
-	}
+	mustGit(t, dir, "add", "README.md")
+	mustGit(t, dir, "commit", "-m", "Initial commit")
+	mustGit(t, dir, "remote", "add", "origin", originURL)
 
 	return dir
 }
@@ -152,11 +134,7 @@ func setupBareRepo(t *testing.T) string {
 	t.Helper()
 	dir := t.TempDir()
 
-	cmd := exec.Command("git", "init", "--bare")
-	cmd.Dir = dir
-	if out, err := cmd.CombinedOutput(); err != nil {
-		t.Fatalf("git init --bare failed: %v\n%s", err, out)
-	}
+	mustGit(t, dir, "init", "--bare")
 
 	return dir
 }
@@ -171,21 +149,11 @@ func pushBranchToRemote(t *testing.T, repoDir, remoteName, branchName string) {
 		t.Fatalf("writing test file: %v", err)
 	}
 
-	commands := [][]string{
-		{"git", "checkout", "-b", branchName},
-		{"git", "add", "."},
-		{"git", "commit", "-m", "Add " + branchName},
-		{"git", "push", remoteName, branchName},
-		{"git", "checkout", "-"},
-	}
-
-	for _, args := range commands {
-		cmd := exec.Command(args[0], args[1:]...)
-		cmd.Dir = repoDir
-		if out, err := cmd.CombinedOutput(); err != nil {
-			t.Fatalf("git command %v failed: %v\n%s", args, err, out)
-		}
-	}
+	mustGit(t, repoDir, "checkout", "-b", branchName)
+	mustGit(t, repoDir, "add", ".")
+	mustGit(t, repoDir, "commit", "-m", "Add "+branchName)
+	mustGit(t, repoDir, "push", remoteName, branchName)
+	mustGit(t, repoDir, "checkout", "-")
 }
 
 // pushToRemoteRef creates a commit and pushes it to an arbitrary ref on the
@@ -329,20 +297,10 @@ func TestEnsureRemote(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			dir := t.TempDir()
 
-			commands := [][]string{
-				{"git", "init"},
-				{"git", "config", "user.email", "test@test.com"},
-				{"git", "config", "user.name", "Test User"},
-				{"git", "remote", "add", "origin", tt.existingURL},
-			}
-
-			for _, args := range commands {
-				cmd := exec.Command(args[0], args[1:]...)
-				cmd.Dir = dir
-				if out, err := cmd.CombinedOutput(); err != nil {
-					t.Fatalf("git command %v failed: %v\n%s", args, err, out)
-				}
-			}
+			mustGit(t, dir, "init")
+			mustGit(t, dir, "config", "user.email", "test@test.com")
+			mustGit(t, dir, "config", "user.name", "Test User")
+			mustGit(t, dir, "remote", "add", "origin", tt.existingURL)
 
 			t.Chdir(dir)
 
@@ -528,17 +486,9 @@ func TestPRCheckout(t *testing.T) {
 					tt.pr.Head.Fork.CloneURL = forkDir
 
 					branchName := tt.pr.Head.Ref
-					cmd := exec.Command("git", "remote", "add", "tempfork", forkDir)
-					cmd.Dir = workDir
-					if out, err := cmd.CombinedOutput(); err != nil {
-						t.Fatalf("adding temp fork remote: %v\n%s", err, out)
-					}
+					mustGit(t, workDir, "remote", "add", "tempfork", forkDir)
 					pushBranchToRemote(t, workDir, "tempfork", branchName)
-					cmd = exec.Command("git", "remote", "remove", "tempfork")
-					cmd.Dir = workDir
-					if out, err := cmd.CombinedOutput(); err != nil {
-						t.Fatalf("removing temp fork remote: %v\n%s", err, out)
-					}
+					mustGit(t, workDir, "remote", "remove", "tempfork")
 				}
 			} else if tt.pr != nil {
 				// For error tests that still need a git context, create a minimal repo

@@ -27,7 +27,7 @@ func convertGitHubIssue(i *github.Issue) forge.Issue {
 		Number:  i.GetNumber(),
 		Title:   i.GetTitle(),
 		Body:    i.GetBody(),
-		State:   i.GetState(),
+		State:   forge.NormalizeIssueState(i.GetState()),
 		Locked:  i.GetLocked(),
 		HTMLURL: i.GetHTMLURL(),
 	}

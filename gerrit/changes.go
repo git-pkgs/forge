@@ -79,16 +79,16 @@ func (s *gerritPRService) convertAccount(a *gerritAccountInfo) forge.User {
 }
 
 func (s *gerritPRService) convertChange(c gerritChangeInfo) forge.PullRequest {
-	state := strings.ToLower(c.Status)
+	state := forge.NormalizePRStatus(strings.ToLower(c.Status))
 	merged := false
 	switch c.Status {
 	case "NEW":
-		state = stateOpen
+		state = forge.PRStatusOpen
 	case "MERGED":
-		state = stateMerged
+		state = forge.PRStatusMerged
 		merged = true
 	case "ABANDONED":
-		state = stateClosed
+		state = forge.PRStatusClosed
 	}
 
 	head := forge.PRBranch{SHA: c.CurrentRevision}

@@ -43,6 +43,18 @@ forge auth login                          # interactive: asks domain + token
 forge auth login --domain github.com --token ghp_abc123
 forge auth login --domain gitea.example.com --token abc123 --type gitea
 forge auth login --domain gerrit.example.com --token user:http_password --type gerrit
+forge auth login --domain github.com --token-cmd 'rbw get github-token'
+```
+
+`--token-cmd` stores a shell command instead of a literal token; the command
+is run each time the token is needed (see [token commands](#token-commands) below).
+
+When prompted for a token interactively, press **Ctrl+E** as the first key
+to enter a command instead:
+
+```
+Token for github.com (Ctrl+E first for command):
+Command for token (e.g. rbw get github.com): rbw get github-token
 ```
 
 Check what's configured with `forge auth status`.
@@ -70,6 +82,38 @@ token = abc123
 type = gerrit
 token = user:http_password
 ```
+
+### Token commands
+
+Instead of a literal `token`, use `token-cmd` to specify a shell command (not supported on Windows).
+The command is executed via `sh -c` each time forge needs the token and its
+stdout is used as the value. This lets you fetch secrets from a password manager
+instead of storing them in plain text:
+
+```ini
+[github.com]
+token-cmd = rbw get github-token
+
+[gitlab.com]
+token-cmd = pass show forge/gitlab
+
+[myhostedgitlab.example.com]
+token-cmd = rbw get --raw myhostedgitlab | jq -r '.fields | map(select(.name == "token"))[0].value'
+```
+
+The variable `FORGE_DOMAIN` is set to the domain name when the command runs,
+so a single command can serve multiple domains:
+
+```ini
+[github.com]
+token-cmd = pass show forge/$FORGE_DOMAIN
+
+[myhostedgitlab.example.com]
+token-cmd = pass show forge/$FORGE_DOMAIN
+```
+
+`forge auth login` sets this up interactively (Ctrl+E at the token prompt).
+`forge auth status` shows the command source instead of the resolved value.
 
 `.forge` in the repo root is for per-project settings, committed to the repo, no tokens:
 

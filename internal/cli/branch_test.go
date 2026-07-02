@@ -5,9 +5,10 @@ import "testing"
 func TestBranchSubcommands(t *testing.T) {
 	subs := branchCmd.Commands()
 	want := map[string]bool{
-		"list":   false,
-		"create": false,
-		"delete": false,
+		"list":      false,
+		"create":    false,
+		"delete":    false,
+		"show-base": false,
 	}
 
 	for _, cmd := range subs {

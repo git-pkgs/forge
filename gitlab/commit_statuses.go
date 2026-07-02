@@ -34,7 +34,7 @@ func (s *gitLabCommitStatusService) List(ctx context.Context, owner, repo, sha s
 		}
 		for _, st := range statuses {
 			cs := forge.CommitStatus{
-				State:       st.Status,
+				State:       forge.NormalizeCommitStatusState(st.Status),
 				Context:     st.Name,
 				Description: st.Description,
 				TargetURL:   st.TargetURL,
@@ -56,7 +56,7 @@ func (s *gitLabCommitStatusService) List(ctx context.Context, owner, repo, sha s
 func (s *gitLabCommitStatusService) Set(ctx context.Context, owner, repo, sha string, opts forge.SetCommitStatusOpts) (*forge.CommitStatus, error) {
 	pid := owner + "/" + repo
 	glOpts := &gitlab.SetCommitStatusOptions{
-		State:       gitlab.BuildStateValue(opts.State),
+		State:       gitlab.BuildStateValue(string(opts.State)),
 		Name:        gitlab.Ptr(opts.Context),
 		Description: gitlab.Ptr(opts.Description),
 		TargetURL:   gitlab.Ptr(opts.TargetURL),
@@ -71,7 +71,7 @@ func (s *gitLabCommitStatusService) Set(ctx context.Context, owner, repo, sha st
 	}
 
 	cs := &forge.CommitStatus{
-		State:       result.Status,
+		State:       forge.NormalizeCommitStatusState(result.Status),
 		Context:     result.Name,
 		Description: result.Description,
 		TargetURL:   result.TargetURL,

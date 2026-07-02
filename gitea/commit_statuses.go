@@ -57,7 +57,7 @@ func (s *giteaCommitStatusService) List(ctx context.Context, owner, repo, sha st
 		}
 		for _, st := range statuses {
 			cs := forge.CommitStatus{
-				State:       string(st.State),
+				State:       forge.NormalizeCommitStatusState(string(st.State)),
 				Context:     st.Context,
 				Description: st.Description,
 				TargetURL:   st.TargetURL,
@@ -78,7 +78,7 @@ func (s *giteaCommitStatusService) List(ctx context.Context, owner, repo, sha st
 
 func (s *giteaCommitStatusService) Set(ctx context.Context, owner, repo, sha string, opts forge.SetCommitStatusOpts) (*forge.CommitStatus, error) {
 	result, resp, err := s.client.CreateStatus(owner, repo, sha, gitea.CreateStatusOption{
-		State:       gitea.StatusState(opts.State),
+		State:       gitea.StatusState(string(opts.State)),
 		TargetURL:   opts.TargetURL,
 		Description: opts.Description,
 		Context:     opts.Context,
@@ -91,7 +91,7 @@ func (s *giteaCommitStatusService) Set(ctx context.Context, owner, repo, sha str
 	}
 
 	cs := &forge.CommitStatus{
-		State:       string(result.State),
+		State:       forge.NormalizeCommitStatusState(string(result.State)),
 		Context:     result.Context,
 		Description: result.Description,
 		TargetURL:   result.TargetURL,
