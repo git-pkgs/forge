@@ -23,7 +23,7 @@ func convertGiteaWorkflowRun(r *gitea.ActionWorkflowRun) forge.CIRun {
 	result := forge.CIRun{
 		ID:        r.ID,
 		Title:     r.DisplayTitle,
-		Status:    r.Status,
+		Status:    forge.NormalizeCIStatus(r.Status),
 		Branch:    r.HeadBranch,
 		SHA:       r.HeadSha,
 		Event:     r.Event,
@@ -32,7 +32,7 @@ func convertGiteaWorkflowRun(r *gitea.ActionWorkflowRun) forge.CIRun {
 	}
 
 	if r.Conclusion != "" {
-		result.Conclusion = r.Conclusion
+		result.Conclusion = forge.NormalizeCIConclusion(r.Conclusion)
 	}
 
 	if r.Actor != nil {
@@ -54,8 +54,8 @@ func convertGiteaWorkflowJob(j *gitea.ActionWorkflowJob) forge.CIJob {
 	job := forge.CIJob{
 		ID:         j.ID,
 		Name:       j.Name,
-		Status:     j.Status,
-		Conclusion: j.Conclusion,
+		Status:     forge.NormalizeCIStatus(j.Status),
+		Conclusion: forge.NormalizeCIConclusion(j.Conclusion),
 		HTMLURL:    j.HTMLURL,
 	}
 	if !j.StartedAt.IsZero() {

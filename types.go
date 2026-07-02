@@ -176,7 +176,7 @@ type Issue struct {
 	Number    int        `json:"number"`
 	Title     string     `json:"title"`
 	Body      string     `json:"body"`
-	State     string     `json:"state"` // "open" or "closed"
+	State     IssueState `json:"state"`
 	Author    User       `json:"author"`
 	Assignees []User     `json:"assignees,omitempty"`
 	Labels    []Label    `json:"labels,omitempty"`
@@ -251,7 +251,7 @@ type PullRequest struct {
 	Number       int        `json:"number"`
 	Title        string     `json:"title"`
 	Body         string     `json:"body"`
-	State        string     `json:"state"` // "open", "closed", or "merged"
+	State        PRStatus   `json:"state"`
 	Draft        bool       `json:"draft"`
 	Author       User       `json:"author"`
 	Assignees    []User     `json:"assignees,omitempty"`
@@ -438,30 +438,30 @@ type ListBranchOpts struct {
 
 // CIRun holds normalized metadata about a CI pipeline or workflow run.
 type CIRun struct {
-	ID         int64      `json:"id"`
-	Title      string     `json:"title"`
-	Status     string     `json:"status"`     // queued, running, completed, failed, success, cancelled
-	Conclusion string     `json:"conclusion"` // success, failure, cancelled, skipped (GitHub-specific)
-	Branch     string     `json:"branch"`
-	SHA        string     `json:"sha"`
-	Event      string     `json:"event,omitempty"` // push, pull_request, etc.
-	Author     User       `json:"author"`
-	HTMLURL    string     `json:"html_url"`
-	Jobs       []CIJob    `json:"jobs,omitempty"`
-	CreatedAt  time.Time  `json:"created_at"`
-	UpdatedAt  time.Time  `json:"updated_at"`
-	FinishedAt *time.Time `json:"finished_at,omitempty"`
+	ID         int64        `json:"id"`
+	Title      string       `json:"title"`
+	Status     CIStatus     `json:"status"`
+	Conclusion CIConclusion `json:"conclusion"`
+	Branch     string       `json:"branch"`
+	SHA        string       `json:"sha"`
+	Event      string       `json:"event,omitempty"` // push, pull_request, etc.
+	Author     User         `json:"author"`
+	HTMLURL    string       `json:"html_url"`
+	Jobs       []CIJob      `json:"jobs,omitempty"`
+	CreatedAt  time.Time    `json:"created_at"`
+	UpdatedAt  time.Time    `json:"updated_at"`
+	FinishedAt *time.Time   `json:"finished_at,omitempty"`
 }
 
 // CIJob holds normalized metadata about a CI job.
 type CIJob struct {
-	ID         int64      `json:"id"`
-	Name       string     `json:"name"`
-	Status     string     `json:"status"`
-	Conclusion string     `json:"conclusion,omitempty"`
-	HTMLURL    string     `json:"html_url,omitempty"`
-	StartedAt  *time.Time `json:"started_at,omitempty"`
-	FinishedAt *time.Time `json:"finished_at,omitempty"`
+	ID         int64        `json:"id"`
+	Name       string       `json:"name"`
+	Status     CIStatus     `json:"status"`
+	Conclusion CIConclusion `json:"conclusion,omitempty"`
+	HTMLURL    string       `json:"html_url,omitempty"`
+	StartedAt  *time.Time   `json:"started_at,omitempty"`
+	FinishedAt *time.Time   `json:"finished_at,omitempty"`
 }
 
 // ListCIRunOpts holds options for listing CI runs.
@@ -623,13 +623,13 @@ type FileEntry struct {
 
 // Collaborator holds normalized metadata about a repository collaborator.
 type Collaborator struct {
-	Login      string `json:"login"`
-	Permission string `json:"permission"` // read, write, admin
+	Login      string      `json:"login"`
+	Permission AccessLevel `json:"permission"`
 }
 
 // AddCollaboratorOpts holds options for adding a collaborator.
 type AddCollaboratorOpts struct {
-	Permission string // pull, push, admin (GitHub/Gitea); guest, reporter, developer, maintainer, owner (GitLab)
+	Permission AccessLevel
 }
 
 // ListCollaboratorOpts holds options for listing collaborators.
@@ -649,17 +649,17 @@ type Contributor struct {
 
 // CommitStatus holds normalized metadata about a commit status.
 type CommitStatus struct {
-	State       string    `json:"state"`       // success, failure, pending, error
-	Context     string    `json:"context"`     // e.g. "my-check"
-	Description string    `json:"description"` // short summary
-	TargetURL   string    `json:"target_url"`  // link to details
-	Creator     string    `json:"creator"`     // login of who created it
-	CreatedAt   time.Time `json:"created_at"`
+	State       CommitStatusState `json:"state"`
+	Context     string            `json:"context"`     // e.g. "my-check"
+	Description string            `json:"description"` // short summary
+	TargetURL   string            `json:"target_url"`  // link to details
+	Creator     string            `json:"creator"`     // login of who created it
+	CreatedAt   time.Time         `json:"created_at"`
 }
 
 // SetCommitStatusOpts holds options for creating a commit status.
 type SetCommitStatusOpts struct {
-	State       string // success, failure, pending, error
+	State       string // forge-native on write
 	Context     string // e.g. "my-check"
 	Description string
 	TargetURL   string

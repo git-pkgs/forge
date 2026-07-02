@@ -23,7 +23,7 @@ func convertGitHubWorkflowRun(r *github.WorkflowRun) forge.CIRun {
 	result := forge.CIRun{
 		ID:      r.GetID(),
 		Title:   r.GetName(),
-		Status:  r.GetStatus(),
+		Status:  forge.NormalizeCIStatus(r.GetStatus()),
 		Branch:  r.GetHeadBranch(),
 		SHA:     r.GetHeadSHA(),
 		Event:   r.GetEvent(),
@@ -31,7 +31,7 @@ func convertGitHubWorkflowRun(r *github.WorkflowRun) forge.CIRun {
 	}
 
 	if c := r.GetConclusion(); c != "" {
-		result.Conclusion = c
+		result.Conclusion = forge.NormalizeCIConclusion(c)
 	}
 
 	if a := r.GetActor(); a != nil {
@@ -124,8 +124,8 @@ func (s *gitHubCIService) GetRun(ctx context.Context, owner, repo string, runID 
 			job := forge.CIJob{
 				ID:         j.GetID(),
 				Name:       j.GetName(),
-				Status:     j.GetStatus(),
-				Conclusion: j.GetConclusion(),
+				Status:     forge.NormalizeCIStatus(j.GetStatus()),
+				Conclusion: forge.NormalizeCIConclusion(j.GetConclusion()),
 				HTMLURL:    j.GetHTMLURL(),
 			}
 			if t := j.GetStartedAt(); !t.IsZero() {

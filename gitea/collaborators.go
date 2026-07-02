@@ -41,7 +41,7 @@ func (s *giteaCollaboratorService) List(ctx context.Context, owner, repo string,
 			}
 			all = append(all, forge.Collaborator{
 				Login:      u.UserName,
-				Permission: perm,
+				Permission: forge.NormalizeAccessLevel(perm),
 			})
 		}
 		if lastPage(resp, len(users), perPage) || (opts.Limit > 0 && len(all) >= opts.Limit) {
@@ -78,7 +78,7 @@ func (s *giteaCollaboratorService) getPermission(owner, repo, username string) (
 func (s *giteaCollaboratorService) Add(ctx context.Context, owner, repo, username string, opts forge.AddCollaboratorOpts) error {
 	var perm *gitea.AccessMode
 	if opts.Permission != "" {
-		mode := gitea.AccessMode(opts.Permission)
+		mode := gitea.AccessMode(giteaPermission(opts.Permission))
 		perm = &mode
 	}
 
@@ -92,6 +92,19 @@ func (s *giteaCollaboratorService) Add(ctx context.Context, owner, repo, usernam
 		return err
 	}
 	return nil
+}
+
+func giteaPermission(permission forge.AccessLevel) string {
+	switch forge.NormalizeAccessLevel(string(permission)) {
+	case forge.AccessLevelRead:
+		return "read"
+	case forge.AccessLevelWrite:
+		return "write"
+	case forge.AccessLevelAdmin:
+		return "admin"
+	default:
+		return string(permission)
+	}
 }
 
 func (s *giteaCollaboratorService) Remove(ctx context.Context, owner, repo, username string) error {

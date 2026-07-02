@@ -350,7 +350,7 @@ func TestSetDomain(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("XDG_CONFIG_HOME", dir)
 
-	err := SetDomain("gitea.example.com", "tok123", "gitea")
+	err := SetDomain("gitea.example.com", "tok123", "", "gitea")
 	if err != nil {
 		t.Fatalf("SetDomain: %v", err)
 	}
@@ -406,7 +406,7 @@ func TestSetDomainTightensExistingPermissions(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := SetDomain("github.com", "ghp_secret", ""); err != nil {
+	if err := SetDomain("github.com", "ghp_secret", "", ""); err != nil {
 		t.Fatalf("SetDomain: %v", err)
 	}
 
@@ -434,7 +434,7 @@ type = gitlab
 `), 0600)
 
 	// Add a new domain; existing entries should survive.
-	err := SetDomain("codeberg.org", "tok_new", "gitea")
+	err := SetDomain("codeberg.org", "tok_new", "", "gitea")
 	if err != nil {
 		t.Fatalf("SetDomain: %v", err)
 	}
@@ -468,7 +468,7 @@ token = old_token
 `), 0600)
 
 	// Update
-	err := SetDomain("github.com", "new_token", "")
+	err := SetDomain("github.com", "new_token", "", "")
 	if err != nil {
 		t.Fatalf("SetDomain: %v", err)
 	}
@@ -480,6 +480,161 @@ token = old_token
 	}
 	if strings.Contains(content, "old_token") {
 		t.Error("old token should be replaced")
+	}
+}
+
+func TestLoadFileTokenCommand(t *testing.T) {
+	if runtime.GOOS == goosWindows {
+		t.Skip("token-cmd execution is not supported on Windows")
+	}
+
+	dir := t.TempDir()
+	path := filepath.Join(dir, "config")
+	_ = os.WriteFile(path, []byte(`[github.com]
+token-cmd = echo mytoken
+`), 0600)
+
+	cfg := &Config{Domains: make(map[string]DomainSection)}
+	if err := loadFile(cfg, path, true); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	ds := cfg.Domains["github.com"]
+	if ds.Token != "" {
+		t.Errorf("loadFile should not resolve token command, got Token=%q", ds.Token)
+	}
+	if ds.TokenExec != "echo mytoken" {
+		t.Errorf("expected TokenExec=%q, got %q", "echo mytoken", ds.TokenExec)
+	}
+
+	resolved, err := ds.ResolveToken("github.com")
+	if err != nil {
+		t.Fatalf("ResolveToken: %v", err)
+	}
+	if resolved != "mytoken" {
+		t.Errorf("expected resolved token %q, got %q", "mytoken", resolved)
+	}
+}
+
+func TestLoadFileTokenAndTokenCmdMutuallyExclusive(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "config")
+	_ = os.WriteFile(path, []byte(`[github.com]
+token = ghp_abc
+token-cmd = rbw get github-token
+`), 0600)
+
+	cfg := &Config{Domains: make(map[string]DomainSection)}
+	err := loadFile(cfg, path, true)
+	if err == nil {
+		t.Fatal("expected error when both token and token-cmd are set, got nil")
+	}
+	if !strings.Contains(err.Error(), "token") || !strings.Contains(err.Error(), "token-cmd") {
+		t.Errorf("expected error to mention both keys, got: %v", err)
+	}
+}
+
+func TestLoadFileTokenCommandForgeDomain(t *testing.T) {
+	if runtime.GOOS == goosWindows {
+		t.Skip("token-cmd execution is not supported on Windows")
+	}
+
+	dir := t.TempDir()
+	path := filepath.Join(dir, "config")
+	_ = os.WriteFile(path, []byte(`[gitlab.example.com]
+token-cmd = echo $FORGE_DOMAIN
+`), 0600)
+
+	cfg := &Config{Domains: make(map[string]DomainSection)}
+	if err := loadFile(cfg, path, true); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	resolved, err := cfg.Domains["gitlab.example.com"].ResolveToken("gitlab.example.com")
+	if err != nil {
+		t.Fatalf("ResolveToken: %v", err)
+	}
+	if resolved != "gitlab.example.com" {
+		t.Errorf("expected FORGE_DOMAIN=gitlab.example.com, got %q", resolved)
+	}
+}
+
+func TestLoadFileTokenCommandFails(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "config")
+	_ = os.WriteFile(path, []byte(`[github.com]
+token-cmd = false
+`), 0600)
+
+	cfg := &Config{Domains: make(map[string]DomainSection)}
+	if err := loadFile(cfg, path, true); err != nil {
+		t.Fatalf("loadFile should not fail on bad command, got: %v", err)
+	}
+
+	_, err := cfg.Domains["github.com"].ResolveToken("github.com")
+	if err == nil {
+		t.Fatal("expected error from failing command, got nil")
+	}
+}
+
+func TestLoadFileTokenCommandMissingBinary(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "config")
+	_ = os.WriteFile(path, []byte(`[github.com]
+token-cmd = no-such-binary-xyz
+`), 0600)
+
+	cfg := &Config{Domains: make(map[string]DomainSection)}
+	if err := loadFile(cfg, path, true); err != nil {
+		t.Fatalf("loadFile should not fail on missing binary, got: %v", err)
+	}
+
+	_, err := cfg.Domains["github.com"].ResolveToken("github.com")
+	if err == nil {
+		t.Fatal("expected error for missing binary, got nil")
+	}
+}
+
+func TestLoadFileTokenCommandNotExecutedInProjectConfig(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, ".forge")
+	_ = os.WriteFile(path, []byte(`[github.com]
+token-cmd = echo secret
+`), 0644)
+
+	cfg := &Config{Domains: make(map[string]DomainSection)}
+	// allowTokens=false: command must not be executed, token must stay empty
+	if err := loadFile(cfg, path, false); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	ds := cfg.Domains["github.com"]
+	if ds.Token != "" {
+		t.Errorf("project config should not resolve token commands, got %q", ds.Token)
+	}
+	if ds.TokenExec != "" {
+		t.Errorf("project config should not set TokenExec, got %q", ds.TokenExec)
+	}
+}
+
+func TestLoadFileLiteralTokenUnchanged(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "config")
+	_ = os.WriteFile(path, []byte(`[github.com]
+token = ghp_literal
+`), 0600)
+
+	cfg := &Config{Domains: make(map[string]DomainSection)}
+	if err := loadFile(cfg, path, true); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	ds := cfg.Domains["github.com"]
+	if ds.Token != "ghp_literal" {
+		t.Errorf("expected literal token, got %q", ds.Token)
+	}
+	if ds.TokenExec != "" {
+		t.Errorf("expected empty TokenExec for literal token, got %q", ds.TokenExec)
 	}
 }
 

@@ -26,14 +26,7 @@ func convertGiteaIssue(i *gitea.Issue) forge.Issue {
 		HTMLURL: i.HTMLURL,
 	}
 
-	switch i.State {
-	case gitea.StateOpen:
-		result.State = stateOpen
-	case gitea.StateClosed:
-		result.State = stateClosed
-	default:
-		result.State = string(i.State)
-	}
+	result.State = forge.NormalizeIssueState(string(i.State))
 
 	if i.Poster != nil {
 		result.Author = forge.User{
