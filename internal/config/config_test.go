@@ -531,10 +531,14 @@ token-cmd = rbw get github-token
 }
 
 func TestLoadFileTokenCommandForgeDomain(t *testing.T) {
+	tokenCmd := "echo $FORGE_DOMAIN"
+	if runtime.GOOS == goosWindows {
+		tokenCmd = "echo %FORGE_DOMAIN%"
+	}
 	dir := t.TempDir()
 	path := filepath.Join(dir, "config")
 	_ = os.WriteFile(path, []byte(`[gitlab.example.com]
-token-cmd = echo $FORGE_DOMAIN
+token-cmd = `+tokenCmd+`
 `), 0600)
 
 	cfg := &Config{Domains: make(map[string]DomainSection)}
@@ -555,7 +559,7 @@ func TestLoadFileTokenCommandFails(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "config")
 	_ = os.WriteFile(path, []byte(`[github.com]
-token-cmd = false
+token-cmd = exit 1
 `), 0600)
 
 	cfg := &Config{Domains: make(map[string]DomainSection)}

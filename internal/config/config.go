@@ -105,21 +105,28 @@ func parseGitProtocol(v string) (string, error) {
 	}
 }
 
-// execValue runs cmd via sh -c and returns its trimmed stdout.
+// execValue runs cmd via the platform shell (sh -c on Unix, %COMSPEC% /c on
+// Windows) and returns its trimmed stdout.
 // Shell features (pipes, quotes, substitutions) are supported.
 // FORGE_DOMAIN is set to domain in the command environment.
 // Stdin and stderr are wired to the terminal so interactive prompts
 // (e.g. pinentry, rbw unlock) work and error output is visible directly.
 func execValue(cmd, domain string) (string, error) {
-	if runtime.GOOS == goosWindows {
-		return "", fmt.Errorf("token-cmd is not supported on Windows")
-	}
 	cmd = strings.TrimSpace(cmd)
 	if cmd == "" {
 		return "", fmt.Errorf("empty command")
 	}
 	var stdout strings.Builder
-	c := exec.Command("sh", "-c", cmd)
+	var c *exec.Cmd
+	if runtime.GOOS == goosWindows {
+		shell := os.Getenv("COMSPEC")
+		if shell == "" {
+			shell = "cmd"
+		}
+		c = exec.Command(shell, "/c", cmd)
+	} else {
+		c = exec.Command("sh", "-c", cmd)
+	}
 	c.Env = append(os.Environ(), "FORGE_DOMAIN="+domain)
 	c.Stdin = os.Stdin
 	c.Stdout = &stdout
