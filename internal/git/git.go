@@ -5,10 +5,19 @@ import (
 	"context"
 	"fmt"
 	"os/exec"
+	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/git-pkgs/forge"
 )
+
+const (
+	forgeMergeBaseKey = "forge-merge-base"
+	forgePRKey        = "forge-pr"
+)
+
+var prRefRE = regexp.MustCompile(`^refs/pull/(\d+)/head$`)
 
 // GetOrFetchBaseBranch returns the base branch of the given branch.
 // It first checks the local git configuration for a cached value.
@@ -17,9 +26,9 @@ import (
 // If branch is empty, it uses the current branch.
 func GetOrFetchBaseBranch(ctx context.Context, f forges.Forge, dir, owner, repo, branch string, forceRefresh bool) (string, error) {
 	if branch == "" {
-		curr, err := runGit(ctx, dir, "branch", "--show-current")
+		curr, err := CurrentBranch(ctx, dir)
 		if err != nil {
-			return "", fmt.Errorf("failed to get current branch: %w", err)
+			return "", err
 		}
 		branch = curr
 	}
@@ -28,7 +37,7 @@ func GetOrFetchBaseBranch(ctx context.Context, f forges.Forge, dir, owner, repo,
 	}
 
 	// 1. Check local git config
-	configKey := fmt.Sprintf("branch.%s.forge-merge-base", branch)
+	configKey := branchConfigKey(branch, forgeMergeBaseKey)
 	if !forceRefresh {
 		if cached, err := runGit(ctx, dir, "config", "--get", configKey); err == nil && cached != "" {
 			return cached, nil
@@ -73,9 +82,57 @@ func SetBaseBranch(ctx context.Context, dir, branch, base string) error {
 	if base == "" {
 		return fmt.Errorf("empty base branch name")
 	}
-	configKey := fmt.Sprintf("branch.%s.forge-merge-base", branch)
+	configKey := branchConfigKey(branch, forgeMergeBaseKey)
 	_, err := runGit(ctx, dir, "config", "--local", configKey, base)
 	return err
+}
+
+// SetPRNumber caches the pull request number for a branch in the local git configuration.
+func SetPRNumber(ctx context.Context, dir, branch string, number int) error {
+	if branch == "" {
+		return fmt.Errorf("empty branch name")
+	}
+	if number <= 0 {
+		return fmt.Errorf("invalid pull request number %d", number)
+	}
+	_, err := runGit(ctx, dir, "config", "--local", branchConfigKey(branch, forgePRKey), strconv.Itoa(number))
+	return err
+}
+
+// GetPRNumber returns the cached pull request number for a branch.
+func GetPRNumber(ctx context.Context, dir, branch string) (int, error) {
+	if branch == "" {
+		return 0, fmt.Errorf("empty branch name")
+	}
+	if out, err := runGit(ctx, dir, "config", "--get", branchConfigKey(branch, forgePRKey)); err == nil {
+		return strconv.Atoi(out)
+	}
+
+	// Fall back to gh CLI's format (refs/pull/<n>/head in branch.<name>.merge).
+	// The regex only matches refs/pull/<n>/head, so refs/heads/* values are
+	// safely rejected.
+	out, err := runGit(ctx, dir, "config", "--get", branchConfigKey(branch, "merge"))
+	if err != nil {
+		return 0, err
+	}
+	m := prRefRE.FindStringSubmatch(out)
+	if m == nil {
+		return 0, fmt.Errorf("not a PR ref")
+	}
+	return strconv.Atoi(m[1])
+}
+
+// CurrentBranch returns the current local branch name.
+func CurrentBranch(ctx context.Context, dir string) (string, error) {
+	branch, err := runGit(ctx, dir, "branch", "--show-current")
+	if err != nil {
+		return "", fmt.Errorf("failed to get current branch: %w", err)
+	}
+	return branch, nil
+}
+
+func branchConfigKey(branch, name string) string {
+	return fmt.Sprintf("branch.%s.%s", branch, name)
 }
 
 func runGit(ctx context.Context, dir string, args ...string) (string, error) {
