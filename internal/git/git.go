@@ -39,7 +39,7 @@ func GetOrFetchBaseBranch(ctx context.Context, f forges.Forge, dir, owner, repo,
 	// 1. Check local git config
 	configKey := branchConfigKey(branch, forgeMergeBaseKey)
 	if !forceRefresh {
-		if cached, err := runGit(ctx, dir, "config", "--get", configKey); err == nil && cached != "" {
+		if cached, err := getLocalConfig(ctx, dir, configKey); err == nil && cached != "" {
 			return cached, nil
 		}
 	}
@@ -104,14 +104,14 @@ func GetPRNumber(ctx context.Context, dir, branch string) (int, error) {
 	if branch == "" {
 		return 0, fmt.Errorf("empty branch name")
 	}
-	if out, err := runGit(ctx, dir, "config", "--get", branchConfigKey(branch, forgePRKey)); err == nil {
+	if out, err := getLocalConfig(ctx, dir, branchConfigKey(branch, forgePRKey)); err == nil {
 		return strconv.Atoi(out)
 	}
 
 	// Fall back to gh CLI's format (refs/pull/<n>/head in branch.<name>.merge).
 	// The regex only matches refs/pull/<n>/head, so refs/heads/* values are
 	// safely rejected.
-	out, err := runGit(ctx, dir, "config", "--get", branchConfigKey(branch, "merge"))
+	out, err := getLocalConfig(ctx, dir, branchConfigKey(branch, "merge"))
 	if err != nil {
 		return 0, err
 	}
@@ -133,6 +133,10 @@ func CurrentBranch(ctx context.Context, dir string) (string, error) {
 
 func branchConfigKey(branch, name string) string {
 	return fmt.Sprintf("branch.%s.%s", branch, name)
+}
+
+func getLocalConfig(ctx context.Context, dir, key string) (string, error) {
+	return runGit(ctx, dir, "config", "--local", "--get", key)
 }
 
 func runGit(ctx context.Context, dir string, args ...string) (string, error) {

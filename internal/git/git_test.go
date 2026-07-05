@@ -131,6 +131,35 @@ func TestGetOrFetchBaseBranch(t *testing.T) {
 	}
 }
 
+func TestGetOrFetchBaseBranchIgnoresGlobalConfig(t *testing.T) {
+	dir := initGitRepo(t)
+	isolateGlobalGitConfig(t)
+	mustGit(t, dir, "config", "--global", "branch.feature.forge-merge-base", "main")
+
+	mock := &mockForge{
+		prService: &mockPRService{
+			t:            t,
+			expectedHead: "feature",
+			prs: []forges.PullRequest{
+				{
+					Number: 1,
+					State:  "open",
+					Head:   forges.PRBranch{Ref: "feature"},
+					Base:   forges.PRBranch{Ref: "develop"},
+				},
+			},
+		},
+	}
+
+	got, err := GetOrFetchBaseBranch(context.Background(), mock, dir, "owner", "repo", "feature", false)
+	if err != nil {
+		t.Fatalf("GetOrFetchBaseBranch: %v", err)
+	}
+	if got != "develop" {
+		t.Fatalf("GetOrFetchBaseBranch = %q, want %q", got, "develop")
+	}
+}
+
 func TestCurrentBranch(t *testing.T) {
 	dir := initGitRepo(t)
 	mustGit(t, dir, "checkout", "-b", "feature")
@@ -176,6 +205,26 @@ func TestGetPRNumberGhFormat(t *testing.T) {
 	}
 }
 
+func TestGetPRNumberIgnoresGlobalPRNumber(t *testing.T) {
+	dir := initGitRepo(t)
+	isolateGlobalGitConfig(t)
+	mustGit(t, dir, "config", "--global", "branch.feature.forge-pr", "99")
+
+	if _, err := GetPRNumber(context.Background(), dir, "feature"); err == nil {
+		t.Fatal("expected global forge-pr config to be ignored")
+	}
+}
+
+func TestGetPRNumberIgnoresGlobalGhFormat(t *testing.T) {
+	dir := initGitRepo(t)
+	isolateGlobalGitConfig(t)
+	mustGit(t, dir, "config", "--global", "branch.pr-branch.merge", "refs/pull/123/head")
+
+	if _, err := GetPRNumber(context.Background(), dir, "pr-branch"); err == nil {
+		t.Fatal("expected global gh-format merge config to be ignored")
+	}
+}
+
 func TestGetPRNumberRejectsNonPRMergeRef(t *testing.T) {
 	dir := initGitRepo(t)
 	ctx := context.Background()
@@ -195,6 +244,12 @@ func initGitRepo(t *testing.T) string {
 	dir := t.TempDir()
 	mustGit(t, dir, "init", "-q")
 	return dir
+}
+
+func isolateGlobalGitConfig(t *testing.T) {
+	t.Helper()
+	t.Setenv("GIT_CONFIG_GLOBAL", t.TempDir()+"/global.gitconfig")
+	t.Setenv("GIT_CONFIG_NOSYSTEM", "1")
 }
 
 func mustGit(t *testing.T, dir string, args ...string) {
