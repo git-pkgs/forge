@@ -85,10 +85,10 @@ token = user:http_password
 
 ### Token commands
 
-Instead of a literal `token`, use `token-cmd` to specify a shell command (not supported on Windows).
-The command is executed via `sh -c` each time forge needs the token and its
-stdout is used as the value. This lets you fetch secrets from a password manager
-instead of storing them in plain text:
+Instead of a literal `token`, use `token-cmd` to specify a shell command.
+The command is executed via `sh -c` (Unix) or `%COMSPEC% /c` (Windows) each
+time forge needs the token and its stdout is used as the value. This lets you
+fetch secrets from a password manager instead of storing them in plain text:
 
 ```ini
 [github.com]
@@ -101,8 +101,9 @@ token-cmd = pass show forge/gitlab
 token-cmd = rbw get --raw myhostedgitlab | jq -r '.fields | map(select(.name == "token"))[0].value'
 ```
 
-The variable `FORGE_DOMAIN` is set to the domain name when the command runs,
-so a single command can serve multiple domains:
+The variable `FORGE_DOMAIN` is set to the domain name when the command runs
+(reference it as `$FORGE_DOMAIN` on Unix, `%FORGE_DOMAIN%` on Windows), so a
+single command can serve multiple domains:
 
 ```ini
 [github.com]
