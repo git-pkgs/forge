@@ -64,8 +64,9 @@ func SetForgeType(forgeType string) {
 	}
 }
 
-// SetTestForge configures a mock forge for testing. When set, Repo() returns
-// this forge directly without network or git resolution.
+// SetTestForge configures a mock forge for testing. When set, Repo() and
+// ForgeForDomain() return this forge directly without network or git
+// resolution.
 func SetTestForge(forge forges.Forge, owner, repo, domain string) {
 	testForge = forge
 	testOwner = owner
@@ -362,6 +363,9 @@ func TokenForDomainEnv(domain string) string {
 // ForgeForDomain returns a Forge instance for the given domain.
 // If the domain isn't a known forge, it checks config then probes the server.
 func ForgeForDomain(domain string) (forges.Forge, error) {
+	if testForge != nil && (testDomain == "" || testDomain == domain) {
+		return testForge, nil
+	}
 	client := newClient(domain)
 	return forgeForDomainMaybeConfig(context.Background(), client, domain)
 }

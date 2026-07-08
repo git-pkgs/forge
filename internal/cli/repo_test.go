@@ -2,9 +2,13 @@ package cli
 
 import (
 	"bytes"
+	"context"
 	"slices"
 	"strings"
 	"testing"
+
+	forges "github.com/git-pkgs/forge"
+	"github.com/git-pkgs/forge/internal/resolve"
 )
 
 func TestRepoCmd(t *testing.T) {
@@ -81,6 +85,60 @@ func TestRepoEditMutuallyExclusiveVisibility(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "mutually exclusive") {
 		t.Errorf("expected 'mutually exclusive' in error, got: %s", err)
+	}
+}
+
+func TestRepoListLimitCapsTotalResults(t *testing.T) {
+	repos := &capturingRepoService{}
+	setupRepoCommandTest(t, repos)
+
+	cmd := repoListCmd()
+	cmd.SetArgs([]string{"octocat", "--limit", "7"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("repo list: %v", err)
+	}
+
+	if !repos.listCalled {
+		t.Fatal("expected Repos().List to be called")
+	}
+	if repos.listOwner != "octocat" {
+		t.Fatalf("owner = %q, want octocat", repos.listOwner)
+	}
+	if repos.listOpts.Limit != 7 {
+		t.Fatalf("Limit = %d, want 7", repos.listOpts.Limit)
+	}
+	if repos.listOpts.PerPage != 0 {
+		t.Fatalf("PerPage = %d, want 0", repos.listOpts.PerPage)
+	}
+}
+
+func TestRepoSearchLimitCapsTotalResults(t *testing.T) {
+	repos := &capturingRepoService{}
+	setupRepoCommandTest(t, repos)
+
+	cmd := repoSearchCmd()
+	cmd.SetArgs([]string{"terminal", "--limit", "5", "--sort", "stars", "--order", "desc"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("repo search: %v", err)
+	}
+
+	if !repos.searchCalled {
+		t.Fatal("expected Repos().Search to be called")
+	}
+	if repos.searchOpts.Query != "terminal" {
+		t.Fatalf("Query = %q, want terminal", repos.searchOpts.Query)
+	}
+	if repos.searchOpts.Sort != "stars" {
+		t.Fatalf("Sort = %q, want stars", repos.searchOpts.Sort)
+	}
+	if repos.searchOpts.Order != "desc" {
+		t.Fatalf("Order = %q, want desc", repos.searchOpts.Order)
+	}
+	if repos.searchOpts.Limit != 5 {
+		t.Fatalf("Limit = %d, want 5", repos.searchOpts.Limit)
+	}
+	if repos.searchOpts.PerPage != 0 {
+		t.Fatalf("PerPage = %d, want 0", repos.searchOpts.PerPage)
 	}
 }
 
@@ -172,4 +230,93 @@ func TestGitCloneArgs(t *testing.T) {
 			}
 		})
 	}
+}
+
+func setupRepoCommandTest(t *testing.T, repos *capturingRepoService) {
+	t.Helper()
+	t.Chdir(t.TempDir())
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	t.Setenv("FORGE_HOST", "")
+
+	flagRepo = ""
+	flagForgeType = ""
+	flagHost = ""
+	flagOutput = "plain"
+	flagRemote = ""
+
+	resolve.SetTestForge(&mockForge{repoService: repos}, "", "", "github.com")
+	t.Cleanup(resolve.ResetTestForge)
+}
+
+type capturingRepoService struct {
+	listCalled   bool
+	listOwner    string
+	listOpts     forges.ListRepoOpts
+	searchCalled bool
+	searchOpts   forges.SearchRepoOpts
+}
+
+func (m *capturingRepoService) Get(_ context.Context, _, _ string) (*forges.Repository, error) {
+	return nil, nil
+}
+
+func (m *capturingRepoService) List(_ context.Context, owner string, opts forges.ListRepoOpts) ([]forges.Repository, error) {
+	m.listCalled = true
+	m.listOwner = owner
+	m.listOpts = opts
+	return []forges.Repository{}, nil
+}
+
+func (m *capturingRepoService) Create(_ context.Context, _ forges.CreateRepoOpts) (*forges.Repository, error) {
+	return nil, nil
+}
+
+func (m *capturingRepoService) Edit(_ context.Context, _, _ string, _ forges.EditRepoOpts) (*forges.Repository, error) {
+	return nil, nil
+}
+
+func (m *capturingRepoService) Delete(_ context.Context, _, _ string) error {
+	return nil
+}
+
+func (m *capturingRepoService) Fork(_ context.Context, _, _ string, _ forges.ForkRepoOpts) (*forges.Repository, error) {
+	return nil, nil
+}
+
+func (m *capturingRepoService) ListForks(_ context.Context, _, _ string, _ forges.ListForksOpts) ([]forges.Repository, error) {
+	return nil, nil
+}
+
+func (m *capturingRepoService) ListTags(_ context.Context, _, _ string) ([]forges.Tag, error) {
+	return nil, nil
+}
+
+func (m *capturingRepoService) ListContributors(_ context.Context, _, _ string) ([]forges.Contributor, error) {
+	return nil, nil
+}
+
+func (m *capturingRepoService) Search(_ context.Context, opts forges.SearchRepoOpts) ([]forges.Repository, error) {
+	m.searchCalled = true
+	m.searchOpts = opts
+	return []forges.Repository{}, nil
+}
+
+func (m *capturingRepoService) SettingsURL(repoHTMLURL string) string {
+	return repoHTMLURL + "/settings"
+}
+
+func (m *capturingRepoService) WikiURL(repoHTMLURL string) string {
+	return repoHTMLURL + "/wiki"
+}
+
+func (m *capturingRepoService) ActionsURL(repoHTMLURL string) string {
+	return repoHTMLURL + "/actions"
+}
+
+func (m *capturingRepoService) ReleasesURL(repoHTMLURL string) string {
+	return repoHTMLURL + "/releases"
+}
+
+func (m *capturingRepoService) BlobURL(repoHTMLURL, ref, path string) string {
+	return repoHTMLURL + "/blob/" + ref + "/" + path
 }
