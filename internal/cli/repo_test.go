@@ -3,6 +3,9 @@ package cli
 import (
 	"bytes"
 	"context"
+	"fmt"
+	"io"
+	"os"
 	"slices"
 	"strings"
 	"testing"
@@ -90,12 +93,13 @@ func TestRepoEditMutuallyExclusiveVisibility(t *testing.T) {
 }
 
 func TestRepoListLimitCapsTotalResults(t *testing.T) {
-	repos := &capturingRepoService{}
+	repos := &capturingRepoService{listRepos: testRepositories(10)}
 	setupRepoCommandTest(t, repos)
 
 	cmd := repoListCmd()
 	cmd.SetArgs([]string{"octocat", "--limit", "7"})
-	if err := cmd.Execute(); err != nil {
+	stdout, err := captureStdout(t, cmd.Execute)
+	if err != nil {
 		t.Fatalf("repo list: %v", err)
 	}
 
@@ -111,15 +115,17 @@ func TestRepoListLimitCapsTotalResults(t *testing.T) {
 	if repos.listOpts.PerPage != 0 {
 		t.Fatalf("PerPage = %d, want 0", repos.listOpts.PerPage)
 	}
+	assertOutputLineCount(t, stdout, 7)
 }
 
 func TestRepoSearchLimitCapsTotalResults(t *testing.T) {
-	repos := &capturingRepoService{}
+	repos := &capturingRepoService{searchRepos: testRepositories(10)}
 	setupRepoCommandTest(t, repos)
 
 	cmd := repoSearchCmd()
 	cmd.SetArgs([]string{"terminal", "--limit", "5", "--sort", "stars", "--order", "desc"})
-	if err := cmd.Execute(); err != nil {
+	stdout, err := captureStdout(t, cmd.Execute)
+	if err != nil {
 		t.Fatalf("repo search: %v", err)
 	}
 
@@ -138,9 +144,10 @@ func TestRepoSearchLimitCapsTotalResults(t *testing.T) {
 	if repos.searchOpts.Limit != 5 {
 		t.Fatalf("Limit = %d, want 5", repos.searchOpts.Limit)
 	}
-	if repos.searchOpts.PerPage != 0 {
-		t.Fatalf("PerPage = %d, want 0", repos.searchOpts.PerPage)
+	if repos.searchOpts.PerPage != 5 {
+		t.Fatalf("PerPage = %d, want 5", repos.searchOpts.PerPage)
 	}
+	assertOutputLineCount(t, stdout, 5)
 }
 
 func TestDomainFromFlags(t *testing.T) {
@@ -255,8 +262,10 @@ type capturingRepoService struct {
 	listCalled   bool
 	listOwner    string
 	listOpts     forges.ListRepoOpts
+	listRepos    []forges.Repository
 	searchCalled bool
 	searchOpts   forges.SearchRepoOpts
+	searchRepos  []forges.Repository
 }
 
 func (m *capturingRepoService) Get(_ context.Context, _, _ string) (*forges.Repository, error) {
@@ -267,7 +276,7 @@ func (m *capturingRepoService) List(_ context.Context, owner string, opts forges
 	m.listCalled = true
 	m.listOwner = owner
 	m.listOpts = opts
-	return []forges.Repository{}, nil
+	return m.listRepos, nil
 }
 
 func (m *capturingRepoService) Create(_ context.Context, _ forges.CreateRepoOpts) (*forges.Repository, error) {
@@ -301,7 +310,56 @@ func (m *capturingRepoService) ListContributors(_ context.Context, _, _ string) 
 func (m *capturingRepoService) Search(_ context.Context, opts forges.SearchRepoOpts) ([]forges.Repository, error) {
 	m.searchCalled = true
 	m.searchOpts = opts
-	return []forges.Repository{}, nil
+	return m.searchRepos, nil
+}
+
+func testRepositories(count int) []forges.Repository {
+	repos := make([]forges.Repository, count)
+	for i := range repos {
+		repos[i] = forges.Repository{FullName: fmt.Sprintf("octocat/repo-%02d", i+1)}
+	}
+	return repos
+}
+
+func captureStdout(t *testing.T, run func() error) (string, error) {
+	t.Helper()
+
+	oldStdout := os.Stdout
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("creating stdout pipe: %v", err)
+	}
+	os.Stdout = w
+
+	runErr := run()
+	closeErr := w.Close()
+	os.Stdout = oldStdout
+
+	out, readErr := io.ReadAll(r)
+	if err := r.Close(); err != nil {
+		t.Fatalf("closing stdout reader: %v", err)
+	}
+	if closeErr != nil {
+		t.Fatalf("closing stdout writer: %v", closeErr)
+	}
+	if readErr != nil {
+		t.Fatalf("reading stdout: %v", readErr)
+	}
+	return string(out), runErr
+}
+
+func assertOutputLineCount(t *testing.T, stdout string, want int) {
+	t.Helper()
+
+	got := 0
+	for _, line := range strings.Split(strings.TrimSpace(stdout), "\n") {
+		if line != "" {
+			got++
+		}
+	}
+	if got != want {
+		t.Fatalf("printed %d lines, want %d; stdout:\n%s", got, want, stdout)
+	}
 }
 
 func (m *capturingRepoService) SettingsURL(repoHTMLURL string) string {
