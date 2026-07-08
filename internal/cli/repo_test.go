@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	forges "github.com/git-pkgs/forge"
+	"github.com/git-pkgs/forge/internal/config"
 	"github.com/git-pkgs/forge/internal/resolve"
 )
 
@@ -237,6 +238,8 @@ func setupRepoCommandTest(t *testing.T, repos *capturingRepoService) {
 	t.Chdir(t.TempDir())
 	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
 	t.Setenv("FORGE_HOST", "")
+	config.ResetCache()
+	t.Cleanup(config.ResetCache)
 
 	flagRepo = ""
 	flagForgeType = ""

@@ -64,9 +64,8 @@ func SetForgeType(forgeType string) {
 	}
 }
 
-// SetTestForge configures a mock forge for testing. When set, Repo() and
-// ForgeForDomain() return this forge directly without network or git
-// resolution.
+// SetTestForge configures a mock forge for testing. Repo() returns it directly;
+// ForgeForDomain() returns it when the requested domain matches the test domain.
 func SetTestForge(forge forges.Forge, owner, repo, domain string) {
 	testForge = forge
 	testOwner = owner
