@@ -2,9 +2,17 @@ package cli
 
 import (
 	"bytes"
+	"context"
+	"fmt"
+	"io"
+	"os"
 	"slices"
 	"strings"
 	"testing"
+
+	forges "github.com/git-pkgs/forge"
+	"github.com/git-pkgs/forge/internal/config"
+	"github.com/git-pkgs/forge/internal/resolve"
 )
 
 func TestRepoCmd(t *testing.T) {
@@ -82,6 +90,64 @@ func TestRepoEditMutuallyExclusiveVisibility(t *testing.T) {
 	if !strings.Contains(err.Error(), "mutually exclusive") {
 		t.Errorf("expected 'mutually exclusive' in error, got: %s", err)
 	}
+}
+
+func TestRepoListLimitCapsTotalResults(t *testing.T) {
+	repos := &capturingRepoService{listRepos: testRepositories(10)}
+	setupRepoCommandTest(t, repos)
+
+	cmd := repoListCmd()
+	cmd.SetArgs([]string{"octocat", "--limit", "7"})
+	stdout, err := captureStdout(t, cmd.Execute)
+	if err != nil {
+		t.Fatalf("repo list: %v", err)
+	}
+
+	if !repos.listCalled {
+		t.Fatal("expected Repos().List to be called")
+	}
+	if repos.listOwner != "octocat" {
+		t.Fatalf("owner = %q, want octocat", repos.listOwner)
+	}
+	if repos.listOpts.Limit != 7 {
+		t.Fatalf("Limit = %d, want 7", repos.listOpts.Limit)
+	}
+	if repos.listOpts.PerPage != 0 {
+		t.Fatalf("PerPage = %d, want 0", repos.listOpts.PerPage)
+	}
+	assertOutputLineCount(t, stdout, 7)
+}
+
+func TestRepoSearchLimitCapsTotalResults(t *testing.T) {
+	repos := &capturingRepoService{searchRepos: testRepositories(10)}
+	setupRepoCommandTest(t, repos)
+
+	cmd := repoSearchCmd()
+	cmd.SetArgs([]string{"terminal", "--limit", "5", "--sort", "stars", "--order", "desc"})
+	stdout, err := captureStdout(t, cmd.Execute)
+	if err != nil {
+		t.Fatalf("repo search: %v", err)
+	}
+
+	if !repos.searchCalled {
+		t.Fatal("expected Repos().Search to be called")
+	}
+	if repos.searchOpts.Query != "terminal" {
+		t.Fatalf("Query = %q, want terminal", repos.searchOpts.Query)
+	}
+	if repos.searchOpts.Sort != "stars" {
+		t.Fatalf("Sort = %q, want stars", repos.searchOpts.Sort)
+	}
+	if repos.searchOpts.Order != "desc" {
+		t.Fatalf("Order = %q, want desc", repos.searchOpts.Order)
+	}
+	if repos.searchOpts.Limit != 5 {
+		t.Fatalf("Limit = %d, want 5", repos.searchOpts.Limit)
+	}
+	if repos.searchOpts.PerPage != 5 {
+		t.Fatalf("PerPage = %d, want 5", repos.searchOpts.PerPage)
+	}
+	assertOutputLineCount(t, stdout, 5)
 }
 
 func TestDomainFromFlags(t *testing.T) {
@@ -172,4 +238,146 @@ func TestGitCloneArgs(t *testing.T) {
 			}
 		})
 	}
+}
+
+func setupRepoCommandTest(t *testing.T, repos *capturingRepoService) {
+	t.Helper()
+	t.Chdir(t.TempDir())
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	t.Setenv("FORGE_HOST", "")
+	config.ResetCache()
+	t.Cleanup(config.ResetCache)
+
+	flagRepo = ""
+	flagForgeType = ""
+	flagHost = ""
+	flagOutput = "plain"
+	flagRemote = ""
+
+	resolve.SetTestForge(&mockForge{repoService: repos}, "", "", "github.com")
+	t.Cleanup(resolve.ResetTestForge)
+}
+
+type capturingRepoService struct {
+	listCalled   bool
+	listOwner    string
+	listOpts     forges.ListRepoOpts
+	listRepos    []forges.Repository
+	searchCalled bool
+	searchOpts   forges.SearchRepoOpts
+	searchRepos  []forges.Repository
+}
+
+func (m *capturingRepoService) Get(_ context.Context, _, _ string) (*forges.Repository, error) {
+	return nil, nil
+}
+
+func (m *capturingRepoService) List(_ context.Context, owner string, opts forges.ListRepoOpts) ([]forges.Repository, error) {
+	m.listCalled = true
+	m.listOwner = owner
+	m.listOpts = opts
+	return m.listRepos, nil
+}
+
+func (m *capturingRepoService) Create(_ context.Context, _ forges.CreateRepoOpts) (*forges.Repository, error) {
+	return nil, nil
+}
+
+func (m *capturingRepoService) Edit(_ context.Context, _, _ string, _ forges.EditRepoOpts) (*forges.Repository, error) {
+	return nil, nil
+}
+
+func (m *capturingRepoService) Delete(_ context.Context, _, _ string) error {
+	return nil
+}
+
+func (m *capturingRepoService) Fork(_ context.Context, _, _ string, _ forges.ForkRepoOpts) (*forges.Repository, error) {
+	return nil, nil
+}
+
+func (m *capturingRepoService) ListForks(_ context.Context, _, _ string, _ forges.ListForksOpts) ([]forges.Repository, error) {
+	return nil, nil
+}
+
+func (m *capturingRepoService) ListTags(_ context.Context, _, _ string) ([]forges.Tag, error) {
+	return nil, nil
+}
+
+func (m *capturingRepoService) ListContributors(_ context.Context, _, _ string) ([]forges.Contributor, error) {
+	return nil, nil
+}
+
+func (m *capturingRepoService) Search(_ context.Context, opts forges.SearchRepoOpts) ([]forges.Repository, error) {
+	m.searchCalled = true
+	m.searchOpts = opts
+	return m.searchRepos, nil
+}
+
+func testRepositories(count int) []forges.Repository {
+	repos := make([]forges.Repository, count)
+	for i := range repos {
+		repos[i] = forges.Repository{FullName: fmt.Sprintf("octocat/repo-%02d", i+1)}
+	}
+	return repos
+}
+
+func captureStdout(t *testing.T, run func() error) (string, error) {
+	t.Helper()
+
+	oldStdout := os.Stdout
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("creating stdout pipe: %v", err)
+	}
+	os.Stdout = w
+
+	runErr := run()
+	closeErr := w.Close()
+	os.Stdout = oldStdout
+
+	out, readErr := io.ReadAll(r)
+	if err := r.Close(); err != nil {
+		t.Fatalf("closing stdout reader: %v", err)
+	}
+	if closeErr != nil {
+		t.Fatalf("closing stdout writer: %v", closeErr)
+	}
+	if readErr != nil {
+		t.Fatalf("reading stdout: %v", readErr)
+	}
+	return string(out), runErr
+}
+
+func assertOutputLineCount(t *testing.T, stdout string, want int) {
+	t.Helper()
+
+	got := 0
+	for _, line := range strings.Split(strings.TrimSpace(stdout), "\n") {
+		if line != "" {
+			got++
+		}
+	}
+	if got != want {
+		t.Fatalf("printed %d lines, want %d; stdout:\n%s", got, want, stdout)
+	}
+}
+
+func (m *capturingRepoService) SettingsURL(repoHTMLURL string) string {
+	return repoHTMLURL + "/settings"
+}
+
+func (m *capturingRepoService) WikiURL(repoHTMLURL string) string {
+	return repoHTMLURL + "/wiki"
+}
+
+func (m *capturingRepoService) ActionsURL(repoHTMLURL string) string {
+	return repoHTMLURL + "/actions"
+}
+
+func (m *capturingRepoService) ReleasesURL(repoHTMLURL string) string {
+	return repoHTMLURL + "/releases"
+}
+
+func (m *capturingRepoService) BlobURL(repoHTMLURL, ref, path string) string {
+	return repoHTMLURL + "/blob/" + ref + "/" + path
 }
