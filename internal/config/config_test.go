@@ -484,10 +484,6 @@ token = old_token
 }
 
 func TestLoadFileTokenCommand(t *testing.T) {
-	if runtime.GOOS == goosWindows {
-		t.Skip("token-cmd execution is not supported on Windows")
-	}
-
 	dir := t.TempDir()
 	path := filepath.Join(dir, "config")
 	_ = os.WriteFile(path, []byte(`[github.com]
