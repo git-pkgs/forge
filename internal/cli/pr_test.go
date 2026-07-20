@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/git-pkgs/forge"
+	"github.com/git-pkgs/forge/internal/git"
 	"github.com/git-pkgs/forge/internal/resolve"
 )
 
@@ -138,74 +139,6 @@ func TestPRDiffRequiresArg(t *testing.T) {
 	}
 }
 
-func TestStorePRForBranch(t *testing.T) {
-	if _, err := exec.LookPath("git"); err != nil {
-		t.Skip("git not installed")
-	}
-
-	dir := t.TempDir()
-	t.Chdir(dir)
-
-	mustGit(t, dir, "init", "-q")
-	mustGit(t, dir, "config", "user.email", "test@test.com")
-	mustGit(t, dir, "config", "user.name", "Test")
-
-	if err := os.WriteFile(filepath.Join(dir, "README"), []byte("test"), 0644); err != nil {
-		t.Fatal(err)
-	}
-	mustGit(t, dir, "add", "README")
-	mustGit(t, dir, "commit", "-m", "init")
-	mustGit(t, dir, "checkout", "-b", "feature")
-
-	ctx := context.Background()
-
-	// Store PR number
-	if err := storePRForBranch(ctx, "feature", 42); err != nil {
-		t.Fatalf("storePRForBranch: %v", err)
-	}
-
-	// Load it back
-	n, err := loadPRForBranch(ctx, "feature")
-	if err != nil {
-		t.Fatalf("loadPRForBranch: %v", err)
-	}
-	if n != 42 {
-		t.Errorf("got %d, want 42", n)
-	}
-}
-
-func TestLoadPRForBranchGhFormat(t *testing.T) {
-	if _, err := exec.LookPath("git"); err != nil {
-		t.Skip("git not installed")
-	}
-
-	dir := t.TempDir()
-	t.Chdir(dir)
-
-	mustGit(t, dir, "init", "-q")
-	mustGit(t, dir, "config", "user.email", "test@test.com")
-	mustGit(t, dir, "config", "user.name", "Test")
-
-	if err := os.WriteFile(filepath.Join(dir, "README"), []byte("test"), 0644); err != nil {
-		t.Fatal(err)
-	}
-	mustGit(t, dir, "add", "README")
-	mustGit(t, dir, "commit", "-m", "init")
-	mustGit(t, dir, "checkout", "-b", "pr-branch")
-
-	// Set up gh CLI's format: branch.<name>.merge = refs/pull/<n>/head
-	mustGit(t, dir, "config", "branch.pr-branch.merge", "refs/pull/123/head")
-
-	ctx := context.Background()
-	n, err := loadPRForBranch(ctx, "pr-branch")
-	if err != nil {
-		t.Fatalf("loadPRForBranch: %v", err)
-	}
-	if n != 123 {
-		t.Errorf("got %d, want 123", n)
-	}
-}
-
 func TestFindPRForCurrentBranch(t *testing.T) {
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("git not installed")
@@ -260,9 +193,9 @@ func TestFindPRForCurrentBranch(t *testing.T) {
 	}
 
 	// The PR number should now be cached
-	cached, err := loadPRForBranch(ctx, "feature")
+	cached, err := git.GetPRNumber(ctx, "", "feature")
 	if err != nil {
-		t.Fatalf("loadPRForBranch after find: %v", err)
+		t.Fatalf("git.GetPRNumber after find: %v", err)
 	}
 	if cached != 99 {
 		t.Errorf("cached PR = %d, want 99", cached)
@@ -330,9 +263,9 @@ func TestFindPRForCurrentBranch_OpenWinsOverClosed(t *testing.T) {
 	}
 
 	// The open PR should be cached
-	cached, err := loadPRForBranch(ctx, "feature")
+	cached, err := git.GetPRNumber(ctx, "", "feature")
 	if err != nil {
-		t.Fatalf("loadPRForBranch after find: %v", err)
+		t.Fatalf("git.GetPRNumber after find: %v", err)
 	}
 	if cached != 99 {
 		t.Errorf("cached PR = %d, want 99", cached)
@@ -392,10 +325,10 @@ func TestFindPRForCurrentBranch_ClosedPRNotCached(t *testing.T) {
 		t.Errorf("got %d, want 42 (the closed PR should be returned)", n)
 	}
 
-	// Closed PRs should NOT be cached - loadPRForBranch should find nothing
-	_, err = loadPRForBranch(ctx, "feature")
+	// Closed PRs should NOT be cached - GetPRNumber should find nothing
+	_, err = git.GetPRNumber(ctx, "", "feature")
 	if err == nil {
-		t.Error("expected loadPRForBranch to return error for uncached closed PR, got nil")
+		t.Error("expected git.GetPRNumber to return error for uncached closed PR, got nil")
 	}
 }
 
