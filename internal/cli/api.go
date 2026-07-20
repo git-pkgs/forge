@@ -9,6 +9,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/git-pkgs/forge/internal/config"
 	"github.com/git-pkgs/forge/internal/resolve"
 	"github.com/spf13/cobra"
 )
@@ -118,7 +119,26 @@ var apiCmd = &cobra.Command{
 }
 
 func apiBaseURL(domain, forgeType string) string {
-	_ = forgeType
+	if forgeType == "" {
+		if cfg, err := config.Load(); err == nil && cfg != nil {
+			forgeType = cfg.Domains[domain].Type
+		}
+	}
+
+	if forgeType == "" {
+		forgeType = knownDomainForgeType(domain)
+	}
+
+	switch forgeType {
+	case "github":
+		return "https://api." + domain
+	case "gitlab":
+		return "https://" + domain + "/api/v4"
+	case "bitbucket":
+		return "https://api.bitbucket.org/2.0"
+	case "gitea", "forgejo":
+		return "https://" + domain + "/api/v1"
+	}
 
 	switch {
 	case strings.Contains(domain, "github"):
@@ -129,6 +149,21 @@ func apiBaseURL(domain, forgeType string) string {
 		return "https://api.bitbucket.org/2.0"
 	default:
 		return "https://" + domain + "/api/v1"
+	}
+}
+
+func knownDomainForgeType(domain string) string {
+	switch domain {
+	case "github.com":
+		return "github"
+	case "gitlab.com":
+		return "gitlab"
+	case "codeberg.org":
+		return "forgejo"
+	case "bitbucket.org":
+		return "bitbucket"
+	default:
+		return ""
 	}
 }
 
