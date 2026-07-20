@@ -13,19 +13,19 @@ type branchService struct {
 }
 
 func (s *branchService) List(ctx context.Context, owner, repo string, opts forges.ListBranchOpts) ([]forges.Branch, error) {
-	repoDID, err := s.f.repoDID(ctx, owner, repo)
+	repoURI, err := s.f.repoATURI(ctx, owner, repo)
 	if err != nil {
 		return nil, err
 	}
-	return s.list(ctx, repoDID, opts)
+	return s.list(ctx, repoURI, opts)
 }
 
-func (s *branchService) list(ctx context.Context, repoDID string, opts forges.ListBranchOpts) ([]forges.Branch, error) {
+func (s *branchService) list(ctx context.Context, repoURI string, opts forges.ListBranchOpts) ([]forges.Branch, error) {
 	var branches []forges.Branch
 	cursor := ""
 	for {
 		params := url.Values{}
-		params.Set("repo", repoDID)
+		params.Set("repo", repoURI)
 		addLimit(params, perPage(opts.Limit, opts.PerPage))
 		if cursor != "" {
 			params.Set("cursor", cursor)

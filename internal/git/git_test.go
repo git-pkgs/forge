@@ -130,3 +130,133 @@ func TestGetOrFetchBaseBranch(t *testing.T) {
 		t.Errorf("expected base branch 'develop', got %q", gotBase)
 	}
 }
+
+func TestGetOrFetchBaseBranchIgnoresGlobalConfig(t *testing.T) {
+	dir := initGitRepo(t)
+	isolateGlobalGitConfig(t)
+	mustGit(t, dir, "config", "--global", "branch.feature.forge-merge-base", "main")
+
+	mock := &mockForge{
+		prService: &mockPRService{
+			t:            t,
+			expectedHead: "feature",
+			prs: []forges.PullRequest{
+				{
+					Number: 1,
+					State:  "open",
+					Head:   forges.PRBranch{Ref: "feature"},
+					Base:   forges.PRBranch{Ref: "develop"},
+				},
+			},
+		},
+	}
+
+	got, err := GetOrFetchBaseBranch(context.Background(), mock, dir, "owner", "repo", "feature", false)
+	if err != nil {
+		t.Fatalf("GetOrFetchBaseBranch: %v", err)
+	}
+	if got != "develop" {
+		t.Fatalf("GetOrFetchBaseBranch = %q, want %q", got, "develop")
+	}
+}
+
+func TestCurrentBranch(t *testing.T) {
+	dir := initGitRepo(t)
+	mustGit(t, dir, "checkout", "-b", "feature")
+
+	got, err := CurrentBranch(context.Background(), dir)
+	if err != nil {
+		t.Fatalf("CurrentBranch: %v", err)
+	}
+	if got != "feature" {
+		t.Fatalf("CurrentBranch = %q, want %q", got, "feature")
+	}
+}
+
+func TestSetAndGetPRNumber(t *testing.T) {
+	dir := initGitRepo(t)
+	ctx := context.Background()
+
+	if err := SetPRNumber(ctx, dir, "feature", 42); err != nil {
+		t.Fatalf("SetPRNumber: %v", err)
+	}
+
+	got, err := GetPRNumber(ctx, dir, "feature")
+	if err != nil {
+		t.Fatalf("GetPRNumber: %v", err)
+	}
+	if got != 42 {
+		t.Fatalf("GetPRNumber = %d, want 42", got)
+	}
+}
+
+func TestGetPRNumberGhFormat(t *testing.T) {
+	dir := initGitRepo(t)
+	ctx := context.Background()
+
+	mustGit(t, dir, "config", "branch.pr-branch.merge", "refs/pull/123/head")
+
+	got, err := GetPRNumber(ctx, dir, "pr-branch")
+	if err != nil {
+		t.Fatalf("GetPRNumber: %v", err)
+	}
+	if got != 123 {
+		t.Fatalf("GetPRNumber = %d, want 123", got)
+	}
+}
+
+func TestGetPRNumberIgnoresGlobalPRNumber(t *testing.T) {
+	dir := initGitRepo(t)
+	isolateGlobalGitConfig(t)
+	mustGit(t, dir, "config", "--global", "branch.feature.forge-pr", "99")
+
+	if _, err := GetPRNumber(context.Background(), dir, "feature"); err == nil {
+		t.Fatal("expected global forge-pr config to be ignored")
+	}
+}
+
+func TestGetPRNumberIgnoresGlobalGhFormat(t *testing.T) {
+	dir := initGitRepo(t)
+	isolateGlobalGitConfig(t)
+	mustGit(t, dir, "config", "--global", "branch.pr-branch.merge", "refs/pull/123/head")
+
+	if _, err := GetPRNumber(context.Background(), dir, "pr-branch"); err == nil {
+		t.Fatal("expected global gh-format merge config to be ignored")
+	}
+}
+
+func TestGetPRNumberRejectsNonPRMergeRef(t *testing.T) {
+	dir := initGitRepo(t)
+	ctx := context.Background()
+
+	mustGit(t, dir, "config", "branch.feature.merge", "refs/heads/main")
+
+	if _, err := GetPRNumber(ctx, dir, "feature"); err == nil {
+		t.Fatal("expected non-PR merge ref to be rejected")
+	}
+}
+
+func initGitRepo(t *testing.T) string {
+	t.Helper()
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not available, skipping test")
+	}
+	dir := t.TempDir()
+	mustGit(t, dir, "init", "-q")
+	return dir
+}
+
+func isolateGlobalGitConfig(t *testing.T) {
+	t.Helper()
+	t.Setenv("GIT_CONFIG_GLOBAL", t.TempDir()+"/global.gitconfig")
+	t.Setenv("GIT_CONFIG_NOSYSTEM", "1")
+}
+
+func mustGit(t *testing.T, dir string, args ...string) {
+	t.Helper()
+	cmd := exec.Command("git", args...)
+	cmd.Dir = dir
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("git %v: %v\n%s", args, err, out)
+	}
+}

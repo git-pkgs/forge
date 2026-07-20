@@ -18,7 +18,7 @@ func (s *fileService) Get(context.Context, string, string, string, string) (*for
 }
 
 func (s *fileService) List(ctx context.Context, owner, repo, filePath, ref string) ([]forges.FileEntry, error) {
-	repoDID, err := s.f.repoDID(ctx, owner, repo)
+	repoURI, err := s.f.repoATURI(ctx, owner, repo)
 	if err != nil {
 		return nil, err
 	}
@@ -27,7 +27,7 @@ func (s *fileService) List(ctx context.Context, owner, repo, filePath, ref strin
 	}
 
 	params := url.Values{}
-	params.Set("repo", repoDID)
+	params.Set("repo", repoURI)
 	params.Set("ref", ref)
 	params.Set("path", strings.Trim(filePath, "/"))
 
@@ -36,7 +36,7 @@ func (s *fileService) List(ctx context.Context, owner, repo, filePath, ref strin
 		return nil, err
 	}
 
-	items, _ := collection(raw, "tree", "entries", "values")
+	items, _ := collection(raw, "files", "tree", "entries", "values")
 	entries := make([]forges.FileEntry, 0, len(items))
 	for _, item := range items {
 		v, ok := item.(map[string]any)

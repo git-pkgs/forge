@@ -129,6 +129,7 @@ func (f *tangledForge) repoURL(owner, repo string) string {
 
 type repoMeta struct {
 	DID         string
+	RKey        string
 	CloneURL    string
 	Description string
 }
@@ -173,9 +174,9 @@ func readLimited(r io.Reader, limit int64) ([]byte, error) {
 	return body, nil
 }
 
-func (f *tangledForge) repoDID(ctx context.Context, owner, repo string) (string, error) {
+func (f *tangledForge) repoATURI(ctx context.Context, owner, repo string) (string, error) {
 	if strings.HasPrefix(owner, "did:") {
-		return owner, nil
+		return repoATURI(owner, repo), nil
 	}
 	meta, err := f.repoMeta(ctx, owner, repo)
 	if err != nil {
@@ -184,13 +185,21 @@ func (f *tangledForge) repoDID(ctx context.Context, owner, repo string) (string,
 	if meta.DID == "" {
 		return "", fmt.Errorf("tangled repository DID not found for %s/%s", owner, repo)
 	}
-	return meta.DID, nil
+	rkey := meta.RKey
+	if rkey == "" {
+		rkey = repo
+	}
+	return repoATURI(meta.DID, rkey), nil
+}
+
+func repoATURI(did, rkey string) string {
+	return "at://" + did + "/sh.tangled.repo/" + rkey
 }
 
 var (
 	metaTagRE     = regexp.MustCompile(`(?is)<meta\s+[^>]*>`)
 	attrRE        = regexp.MustCompile(`(?is)\b([a-z0-9:_-]+)\s*=\s*(?:"([^"]*)"|'([^']*)')`)
-	tangledRepoRE = regexp.MustCompile(`at://([^/]+)/sh\.tangled\.repo/[^"'\s>]+`)
+	tangledRepoRE = regexp.MustCompile(`at://([^/]+)/sh\.tangled\.repo/([^"'\s>]+)`)
 )
 
 func parseRepoMeta(body string) *repoMeta {
@@ -207,8 +216,9 @@ func parseRepoMeta(body string) *repoMeta {
 			meta.Description = content
 		}
 	}
-	if match := tangledRepoRE.FindStringSubmatch(body); len(match) == 2 {
+	if match := tangledRepoRE.FindStringSubmatch(body); len(match) == 3 {
 		meta.DID = html.UnescapeString(match[1])
+		meta.RKey = html.UnescapeString(match[2])
 	}
 	return meta
 }

@@ -42,10 +42,10 @@ func TestRepoGetReusesMetadataDIDForDefaultBranch(t *testing.T) {
 <body data-star-subject-at="at://did:plc:owner/sh.tangled.repo/core"></body>`, "http://"+r.Host)
 	})
 	mux.HandleFunc("GET /xrpc/sh.tangled.git.temp.listBranches", func(w http.ResponseWriter, r *http.Request) {
-		if got := r.URL.Query().Get("repo"); got != "did:plc:owner" {
+		if got := r.URL.Query().Get("repo"); got != "at://did:plc:owner/sh.tangled.repo/core" {
 			t.Errorf("repo query = %q", got)
 		}
-		_, _ = fmt.Fprint(w, `{"branches":[{"name":"master"}]}`)
+		_, _ = fmt.Fprint(w, `{"branches":[{"name":"dev"},{"name":"master","default":true}]}`)
 	})
 	srv := httptest.NewServer(mux)
 	defer srv.Close()
@@ -153,18 +153,21 @@ func tangledTestServer(t *testing.T) *httptest.Server {
 </head><body data-star-subject-at="at://did:plc:owner/sh.tangled.repo/core"></body></html>`, "http://"+r.Host)
 	})
 	mux.HandleFunc("GET /xrpc/sh.tangled.git.temp.listBranches", func(w http.ResponseWriter, r *http.Request) {
-		if got := r.URL.Query().Get("repo"); got != "did:plc:owner" {
+		if got := r.URL.Query().Get("repo"); got != "at://did:plc:owner/sh.tangled.repo/core" {
 			t.Errorf("repo query = %q", got)
 		}
 		_, _ = fmt.Fprint(w, `{"branches":[{"name":"refs/heads/master","target":{"hash":"abc123"},"default":true},{"name":"next","sha":"999"}]}`)
 	})
 	mux.HandleFunc("GET /xrpc/sh.tangled.git.temp.listTags", func(w http.ResponseWriter, r *http.Request) {
-		if got := r.URL.Query().Get("repo"); got != "did:plc:owner" {
+		if got := r.URL.Query().Get("repo"); got != "at://did:plc:owner/sh.tangled.repo/core" {
 			t.Errorf("repo query = %q", got)
 		}
 		_, _ = fmt.Fprint(w, `{"tags":[{"name":"refs/tags/v0.1.0","target":{"hash":"def456"}}]}`)
 	})
 	mux.HandleFunc("GET /xrpc/sh.tangled.git.temp.getTree", func(w http.ResponseWriter, r *http.Request) {
+		if got := r.URL.Query().Get("repo"); got != "at://did:plc:owner/sh.tangled.repo/core" {
+			t.Errorf("repo query = %q", got)
+		}
 		if got := r.URL.Query().Get("path"); got != "api" {
 			t.Errorf("path query = %q", got)
 		}

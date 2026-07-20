@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"regexp"
 	"strconv"
 	"strings"
 
@@ -669,7 +668,7 @@ The argument can be a PR number or a full URL:
 			// Cache the PR number for the branch only after a successful
 			// checkout, so a failed checkout doesn't leave a stale entry.
 			if !flagDetach {
-				_ = storePRForBranch(ctx, localBranch, number)
+				_ = git.SetPRNumber(ctx, "", localBranch, number)
 				if pr.Base.Ref != "" {
 					_ = git.SetBaseBranch(ctx, "", localBranch, pr.Base.Ref)
 				}
@@ -829,17 +828,16 @@ func gitCheckout(ctx context.Context, remote, remoteRef, localBranch string, det
 }
 
 func findPRForCurrentBranch(ctx context.Context, f forges.Forge, owner, repo string) (int, error) {
-	out, err := exec.CommandContext(ctx, "git", "branch", "--show-current").Output()
+	localBranch, err := git.CurrentBranch(ctx, "")
 	if err != nil {
-		return 0, fmt.Errorf("getting current branch: %w (not in a git repository?)", err)
+		return 0, fmt.Errorf("%w (not in a git repository?)", err)
 	}
-	localBranch := strings.TrimSpace(string(out))
 	if localBranch == "" {
 		return 0, fmt.Errorf("not on a branch (detached HEAD state)")
 	}
 
 	// Check cache first (set by 'pr checkout')
-	if n, err := loadPRForBranch(ctx, localBranch); err == nil {
+	if n, err := git.GetPRNumber(ctx, "", localBranch); err == nil {
 		return n, nil
 	}
 
@@ -889,40 +887,11 @@ func findPRForCurrentBranch(ctx context.Context, f forges.Forge, owner, repo str
 		if pr.State == "open" {
 			// Store the PR number into local git config so that the next 'forge
 			// pr view' call is a lot faster.
-			_ = storePRForBranch(ctx, localBranch, pr.Number)
+			_ = git.SetPRNumber(ctx, "", localBranch, pr.Number)
 			return pr.Number, nil
 		}
 	}
 
 	// No open PR, return the first match (closed/merged) but don't cache it
 	return matching[0].Number, nil
-}
-
-func storePRForBranch(ctx context.Context, branch string, number int) error {
-	key := fmt.Sprintf("branch.%s.forge-pr", branch)
-	return exec.CommandContext(ctx, "git", "config", "--local", key, strconv.Itoa(number)).Run()
-}
-
-var prRefRE = regexp.MustCompile(`^refs/pull/(\d+)/head$`)
-
-func loadPRForBranch(ctx context.Context, branch string) (int, error) {
-	key := fmt.Sprintf("branch.%s.forge-pr", branch)
-	out, err := exec.CommandContext(ctx, "git", "config", "--get", key).Output()
-	if err == nil {
-		return strconv.Atoi(strings.TrimSpace(string(out)))
-	}
-
-	// Fall back to gh CLI's format (refs/pull/<n>/head in branch.<name>.merge).
-	// The regex only matches refs/pull/<n>/head, so refs/heads/* values are
-	// safely rejected.
-	mergeKey := fmt.Sprintf("branch.%s.merge", branch)
-	out, err = exec.CommandContext(ctx, "git", "config", "--get", mergeKey).Output()
-	if err != nil {
-		return 0, err
-	}
-	m := prRefRE.FindStringSubmatch(strings.TrimSpace(string(out)))
-	if m == nil {
-		return 0, fmt.Errorf("not a PR ref")
-	}
-	return strconv.Atoi(m[1])
 }

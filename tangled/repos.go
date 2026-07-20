@@ -31,15 +31,26 @@ func (s *repoService) Get(ctx context.Context, owner, repo string) (*forges.Repo
 		HasIssues:           true,
 		PullRequestsEnabled: true,
 	}
-	repoDID := meta.DID
-	if repoDID == "" && strings.HasPrefix(owner, "did:") {
-		repoDID = owner
+	repoURI := ""
+	if meta.DID != "" {
+		rkey := meta.RKey
+		if rkey == "" {
+			rkey = repo
+		}
+		repoURI = repoATURI(meta.DID, rkey)
+	} else if strings.HasPrefix(owner, "did:") {
+		repoURI = repoATURI(owner, repo)
 	}
-	if repoDID == "" {
+	if repoURI == "" {
 		return result, nil
 	}
-	if branches, err := (&branchService{f: s.f}).list(ctx, repoDID, forges.ListBranchOpts{Limit: 1}); err == nil && len(branches) > 0 {
-		result.DefaultBranch = branches[0].Name
+	if branches, err := (&branchService{f: s.f}).list(ctx, repoURI, forges.ListBranchOpts{}); err == nil {
+		for _, branch := range branches {
+			if branch.Default {
+				result.DefaultBranch = branch.Name
+				break
+			}
+		}
 	}
 	return result, nil
 }
@@ -69,7 +80,7 @@ func (s *repoService) ListForks(context.Context, string, string, forges.ListFork
 }
 
 func (s *repoService) ListTags(ctx context.Context, owner, repo string) ([]forges.Tag, error) {
-	repoDID, err := s.f.repoDID(ctx, owner, repo)
+	repoURI, err := s.f.repoATURI(ctx, owner, repo)
 	if err != nil {
 		return nil, err
 	}
@@ -78,7 +89,7 @@ func (s *repoService) ListTags(ctx context.Context, owner, repo string) ([]forge
 	cursor := ""
 	for {
 		params := url.Values{}
-		params.Set("repo", repoDID)
+		params.Set("repo", repoURI)
 		addLimit(params, 100)
 		if cursor != "" {
 			params.Set("cursor", cursor)
@@ -123,13 +134,13 @@ func (s *repoService) SettingsURL(repoHTMLURL string) string {
 	return strings.TrimRight(repoHTMLURL, "/") + "/settings"
 }
 func (s *repoService) WikiURL(repoHTMLURL string) string {
-	return strings.TrimRight(repoHTMLURL, "/") + "/wiki"
+	return repoHTMLURL
 }
 func (s *repoService) ActionsURL(repoHTMLURL string) string {
 	return strings.TrimRight(repoHTMLURL, "/") + "/pipelines"
 }
 func (s *repoService) ReleasesURL(repoHTMLURL string) string {
-	return strings.TrimRight(repoHTMLURL, "/") + "/releases"
+	return repoHTMLURL
 }
 func (s *repoService) BlobURL(repoHTMLURL, ref, filePath string) string {
 	return strings.TrimRight(repoHTMLURL, "/") + "/blob/" + url.PathEscape(ref) + "/" + strings.TrimLeft(filePath, "/")

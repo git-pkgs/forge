@@ -159,7 +159,7 @@ func repoListCmd() *cobra.Command {
 			}
 
 			opts := forges.ListRepoOpts{
-				PerPage: flagLimit,
+				Limit: flagLimit,
 			}
 			if flagNoArchived {
 				opts.Archived = forges.ArchivedExclude
@@ -177,6 +177,9 @@ func repoListCmd() *cobra.Command {
 			repos, err := forge.Repos().List(cmd.Context(), owner, opts)
 			if err != nil {
 				return err
+			}
+			if flagLimit > 0 && len(repos) > flagLimit {
+				repos = repos[:flagLimit]
 			}
 
 			p := printer()
@@ -623,12 +626,16 @@ func repoSearchCmd() *cobra.Command {
 				Query:   args[0],
 				Sort:    flagSort,
 				Order:   flagOrder,
+				Limit:   flagLimit,
 				PerPage: flagLimit,
 			}
 
 			repos, err := forge.Repos().Search(cmd.Context(), opts)
 			if err != nil {
 				return notSupported(err, "repository search")
+			}
+			if flagLimit > 0 && len(repos) > flagLimit {
+				repos = repos[:flagLimit]
 			}
 
 			p := printer()

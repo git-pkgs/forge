@@ -75,10 +75,11 @@ func (m *mockPRService) ListURL(_ string) string {
 
 // mockForge implements forges.Forge for testing.
 type mockForge struct {
-	prService *mockPRService
+	prService   *mockPRService
+	repoService forges.RepoService
 }
 
-func (m *mockForge) Repos() forges.RepoService                  { return nil }
+func (m *mockForge) Repos() forges.RepoService                  { return m.repoService }
 func (m *mockForge) Issues() forges.IssueService                { return nil }
 func (m *mockForge) PullRequests() forges.PullRequestService    { return m.prService }
 func (m *mockForge) Labels() forges.LabelService                { return nil }
