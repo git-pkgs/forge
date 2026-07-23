@@ -68,6 +68,10 @@ func (f *tangledForge) GetRateLimit(context.Context) (*forges.RateLimit, error) 
 	return nil, forges.ErrNotSupported
 }
 
+func (f *tangledForge) APIBaseURL() string {
+	return f.baseURL + "/xrpc"
+}
+
 func (f *tangledForge) xrpcURL(nsid string, params url.Values) string {
 	u := f.baseURL + "/xrpc/" + nsid
 	if len(params) > 0 {
