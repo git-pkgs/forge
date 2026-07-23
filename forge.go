@@ -147,6 +147,11 @@ func (c *Client) RegisterDomain(ctx context.Context, domain, token string, build
 		c.forges[domain] = builders.GitLab(baseURL, token, c.httpClient)
 	case Gitea, Forgejo:
 		c.forges[domain] = builders.Gitea(baseURL, token, c.httpClient)
+	case Tangled:
+		if builders.Tangled == nil {
+			return fmt.Errorf("no builder registered for forge type %q at %s", ft, domain)
+		}
+		c.forges[domain] = builders.Tangled(baseURL, token, c.httpClient)
 	default:
 		return fmt.Errorf("unsupported forge type %q for %s", ft, domain)
 	}
@@ -156,9 +161,10 @@ func (c *Client) RegisterDomain(ctx context.Context, domain, token string, build
 // ForgeBuilders holds constructor functions for each forge type.
 // Used by RegisterDomain to create the right forge after detection.
 type ForgeBuilders struct {
-	GitHub func(baseURL, token string, hc *http.Client) Forge
-	GitLab func(baseURL, token string, hc *http.Client) Forge
-	Gitea  func(baseURL, token string, hc *http.Client) Forge
+	GitHub  func(baseURL, token string, hc *http.Client) Forge
+	GitLab  func(baseURL, token string, hc *http.Client) Forge
+	Gitea   func(baseURL, token string, hc *http.Client) Forge
+	Tangled func(baseURL, token string, hc *http.Client) Forge
 }
 
 func (c *Client) forgeFor(domain string) (Forge, error) {

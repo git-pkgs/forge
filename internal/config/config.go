@@ -30,7 +30,7 @@ type DefaultSection struct {
 }
 
 type DomainSection struct {
-	Type        string // github, gitlab, gitea, forgejo, bitbucket
+	Type        string // github, gitlab, gitea, forgejo, bitbucket, tangled
 	Token       string // resolved token value; only from user config, never .forge
 	TokenExec   string // non-empty when token is retrieved via a shell command (from "token-cmd" config key)
 	SSHHost     string // alternate host for git-over-ssh; the section name remains the API host

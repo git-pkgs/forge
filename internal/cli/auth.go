@@ -85,7 +85,7 @@ func authLoginCmd() *cobra.Command {
 	cmd.Flags().StringVar(&domain, "domain", "", "Forge domain (e.g. github.com, gitea.example.com)")
 	cmd.Flags().StringVar(&token, "token", "", "API token")
 	cmd.Flags().StringVar(&tokenCmd, "token-cmd", "", "Shell command whose stdout is used as the token")
-	cmd.Flags().StringVar(&forgeType, "type", "", "Forge type: github, gitlab, gitea, forgejo, bitbucket")
+	cmd.Flags().StringVar(&forgeType, "type", "", "Forge type: github, gitlab, gitea, forgejo, bitbucket, tangled")
 	cmd.MarkFlagsMutuallyExclusive("token", "token-cmd")
 	return cmd
 }
@@ -207,7 +207,7 @@ func authStatusCmd() *cobra.Command {
 			}
 
 			// Known domains to check for env var tokens
-			knownDomains := []string{"github.com", "gitlab.com", "codeberg.org", "bitbucket.org"}
+			knownDomains := []string{"github.com", "gitlab.com", "codeberg.org", "bitbucket.org", "tangled.org"}
 
 			// Collect all unique domains
 			domains := make(map[string]bool)
