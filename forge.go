@@ -50,6 +50,12 @@ func (e *HTTPError) Error() string {
 	return fmt.Sprintf("forge: HTTP %d from %s", e.StatusCode, e.URL)
 }
 
+// APIBaseURLProvider is implemented by forge backends that can expose their
+// raw API root URL for arbitrary endpoint requests.
+type APIBaseURLProvider interface {
+	APIBaseURL() string
+}
+
 // Forge is the interface each forge backend implements.
 type Forge interface {
 	Repos() RepoService

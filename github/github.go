@@ -4,6 +4,7 @@ import (
 	"context"
 	forge "github.com/git-pkgs/forge"
 	"net/http"
+	"strings"
 
 	"github.com/google/go-github/v82/github"
 )
@@ -11,7 +12,8 @@ import (
 const defaultPageSize = 100
 
 type gitHubForge struct {
-	client *github.Client
+	client     *github.Client
+	apiBaseURL string
 }
 
 // New creates a GitHub forge backend for github.com.
@@ -20,14 +22,18 @@ func New(token string, hc *http.Client) forge.Forge {
 	if token != "" {
 		c = c.WithAuthToken(token)
 	}
-	return &gitHubForge{client: c}
+	return &gitHubForge{client: c, apiBaseURL: "https://api.github.com"}
 }
 
 // NewWithBase creates a GitHub forge backend for a GitHub Enterprise instance.
 func NewWithBase(baseURL, token string, hc *http.Client) forge.Forge {
 	c := github.NewClient(hc).WithAuthToken(token)
 	c, _ = c.WithEnterpriseURLs(baseURL, baseURL)
-	return &gitHubForge{client: c}
+	return &gitHubForge{client: c, apiBaseURL: strings.TrimRight(baseURL, "/") + "/api/v3"}
+}
+
+func (f *gitHubForge) APIBaseURL() string {
+	return f.apiBaseURL
 }
 
 type gitHubRepoService struct {
