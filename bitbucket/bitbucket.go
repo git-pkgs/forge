@@ -47,6 +47,10 @@ func New(token string, hc *http.Client) forge.Forge {
 	return &bitbucketForge{token: token, httpClient: hc}
 }
 
+func (f *bitbucketForge) APIBaseURL() string {
+	return bitbucketAPI
+}
+
 type bitbucketRepoService struct {
 	token      string
 	httpClient *http.Client

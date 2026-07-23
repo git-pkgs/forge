@@ -9,7 +9,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/git-pkgs/forge/internal/config"
+	forges "github.com/git-pkgs/forge"
 	"github.com/git-pkgs/forge/internal/resolve"
 	"github.com/spf13/cobra"
 )
@@ -24,7 +24,7 @@ var apiCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		endpoint := args[0]
 
-		_, owner, repoName, domain, err := resolve.Repo(flagRepo, flagForgeType)
+		forge, owner, repoName, domain, err := resolve.Repo(flagRepo, flagForgeType)
 		if err != nil {
 			return err
 		}
@@ -33,8 +33,8 @@ var apiCmd = &cobra.Command{
 		endpoint = strings.ReplaceAll(endpoint, "{owner}", owner)
 		endpoint = strings.ReplaceAll(endpoint, "{repo}", repoName)
 
-		baseURL := apiBaseURL(domain, flagForgeType)
-		url := baseURL + "/" + strings.TrimLeft(endpoint, "/")
+		baseURL := apiBaseURL(forge, domain)
+		url := strings.TrimRight(baseURL, "/") + "/" + strings.TrimLeft(endpoint, "/")
 
 		var body io.Reader
 		if len(flagAPIFields) > 0 {
@@ -118,28 +118,16 @@ var apiCmd = &cobra.Command{
 	},
 }
 
-func apiBaseURL(domain, forgeType string) string {
-	if forgeType == "" {
-		if cfg, err := config.Load(); err == nil && cfg != nil {
-			forgeType = cfg.Domains[domain].Type
-		}
+func apiBaseURL(forge forges.Forge, domain string) string {
+	provider, ok := forge.(forges.APIBaseURLProvider)
+	if ok {
+		return provider.APIBaseURL()
 	}
 
-	if forgeType == "" {
-		forgeType = knownDomainForgeType(domain)
-	}
+	return legacyAPIBaseURL(domain)
+}
 
-	switch forgeType {
-	case "github":
-		return "https://api." + domain
-	case "gitlab":
-		return "https://" + domain + "/api/v4"
-	case "bitbucket":
-		return "https://api.bitbucket.org/2.0"
-	case "gitea", "forgejo":
-		return "https://" + domain + "/api/v1"
-	}
-
+func legacyAPIBaseURL(domain string) string {
 	switch {
 	case strings.Contains(domain, "github"):
 		return "https://api." + domain
@@ -149,21 +137,6 @@ func apiBaseURL(domain, forgeType string) string {
 		return "https://api.bitbucket.org/2.0"
 	default:
 		return "https://" + domain + "/api/v1"
-	}
-}
-
-func knownDomainForgeType(domain string) string {
-	switch domain {
-	case "github.com":
-		return "github"
-	case "gitlab.com":
-		return "gitlab"
-	case "codeberg.org":
-		return "forgejo"
-	case "bitbucket.org":
-		return "bitbucket"
-	default:
-		return ""
 	}
 }
 

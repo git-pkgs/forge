@@ -4,24 +4,31 @@ import (
 	"context"
 	forge "github.com/git-pkgs/forge"
 	"net/http"
+	"strings"
 
 	gitlab "gitlab.com/gitlab-org/api/client-go"
 )
 
 type gitLabForge struct {
-	client *gitlab.Client
+	client     *gitlab.Client
+	apiBaseURL string
 }
 
 // New creates a GitLab forge backend.
 func New(baseURL, token string, hc *http.Client) forge.Forge {
+	apiBaseURL := strings.TrimRight(baseURL, "/") + "/api/v4"
 	opts := []gitlab.ClientOptionFunc{
-		gitlab.WithBaseURL(baseURL + "/api/v4"),
+		gitlab.WithBaseURL(apiBaseURL),
 	}
 	if hc != nil {
 		opts = append(opts, gitlab.WithHTTPClient(hc))
 	}
 	c, _ := gitlab.NewClient(token, opts...)
-	return &gitLabForge{client: c}
+	return &gitLabForge{client: c, apiBaseURL: apiBaseURL}
+}
+
+func (f *gitLabForge) APIBaseURL() string {
+	return f.apiBaseURL
 }
 
 type gitLabRepoService struct {

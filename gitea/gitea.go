@@ -4,6 +4,7 @@ import (
 	"context"
 	forge "github.com/git-pkgs/forge"
 	"net/http"
+	"strings"
 
 	"code.gitea.io/sdk/gitea"
 )
@@ -32,6 +33,10 @@ func New(baseURL, token string, hc *http.Client) forge.Forge {
 	}
 	c, _ := gitea.NewClient(baseURL, opts...)
 	return &giteaForge{client: c, baseURL: baseURL, token: token, httpClient: hc}
+}
+
+func (f *giteaForge) APIBaseURL() string {
+	return strings.TrimRight(f.baseURL, "/") + "/api/v1"
 }
 
 type giteaRepoService struct {
