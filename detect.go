@@ -1,9 +1,11 @@
 package forges
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"strings"
 )
@@ -68,6 +70,11 @@ func detectFromAPI(ctx context.Context, client *http.Client, baseURL string) (Fo
 		return GitLab, nil
 	}
 
+	// Try Gerrit /config/server/version
+	if ok, err := probeGerritAPI(ctx, client, baseURL); err == nil && ok {
+		return Gerrit, nil
+	}
+
 	// Try GitHub Enterprise /api/v3/meta
 	if ok, err := probeURL(ctx, client, baseURL+"/api/v3/meta"); err == nil && ok {
 		return GitHub, nil
@@ -103,6 +110,32 @@ func probeGiteaAPI(ctx context.Context, client *http.Client, baseURL string) (Fo
 		return Forgejo, nil
 	}
 	return Gitea, nil
+}
+
+func probeGerritAPI(ctx context.Context, client *http.Client, baseURL string) (bool, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, baseURL+"/config/server/version", nil)
+	if err != nil {
+		return false, err
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return false, err
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	if resp.StatusCode != http.StatusOK {
+		return false, fmt.Errorf("status %d", resp.StatusCode)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return false, err
+	}
+	body = bytes.TrimPrefix(body, []byte(")]}'\n"))
+
+	var version string
+	return json.Unmarshal(body, &version) == nil && version != "", nil
 }
 
 func probeURL(ctx context.Context, client *http.Client, url string) (bool, error) {

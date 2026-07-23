@@ -7,6 +7,7 @@ import (
 
 	forges "github.com/git-pkgs/forge"
 	"github.com/git-pkgs/forge/bitbucket"
+	"github.com/git-pkgs/forge/gerrit"
 	"github.com/git-pkgs/forge/gitea"
 	ghforge "github.com/git-pkgs/forge/github"
 	glforge "github.com/git-pkgs/forge/gitlab"
@@ -49,6 +50,16 @@ func TestAPIBaseURLFromForge(t *testing.T) {
 			name: "bitbucket",
 			f:    bitbucket.New("", nil),
 			want: "https://api.bitbucket.org/2.0",
+		},
+		{
+			name: "gerrit anonymous",
+			f:    gerrit.New("https://gerrit.example.org", "", nil),
+			want: "https://gerrit.example.org",
+		},
+		{
+			name: "gerrit authenticated",
+			f:    gerrit.New("https://gerrit.example.org", "user:secret", nil),
+			want: "https://gerrit.example.org/a",
 		},
 	}
 

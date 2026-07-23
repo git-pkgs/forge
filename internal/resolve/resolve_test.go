@@ -219,6 +219,7 @@ func TestDomain(t *testing.T) {
 		{"gitea", "codeberg.org"},
 		{"forgejo", "codeberg.org"},
 		{"bitbucket", "bitbucket.org"},
+		{"gerrit", ""},
 		{"unknown", "github.com"},
 	}
 
@@ -310,6 +311,19 @@ func TestForgeTypeOverrideSkipsDetection(t *testing.T) {
 	}
 	if f == nil {
 		t.Fatal("expected a forge instance")
+	}
+}
+
+func TestForgeForDomainRequiresDomain(t *testing.T) {
+	_, err := ForgeForDomain("")
+	if err == nil {
+		t.Fatal("expected error for empty domain")
+	}
+	if !strings.Contains(err.Error(), "domain is required") {
+		t.Fatalf("error = %v, want domain-focused message", err)
+	}
+	if strings.Contains(err.Error(), "forge type") {
+		t.Fatalf("error should not mention forge type: %v", err)
 	}
 }
 

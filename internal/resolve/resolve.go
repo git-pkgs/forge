@@ -11,6 +11,7 @@ import (
 
 	"github.com/git-pkgs/forge"
 	"github.com/git-pkgs/forge/bitbucket"
+	"github.com/git-pkgs/forge/gerrit"
 	"github.com/git-pkgs/forge/gitea"
 	ghforge "github.com/git-pkgs/forge/github"
 	glforge "github.com/git-pkgs/forge/gitlab"
@@ -85,6 +86,7 @@ var builders = forges.ForgeBuilders{
 	GitHub: ghforge.NewWithBase,
 	GitLab: glforge.New,
 	Gitea:  gitea.New,
+	Gerrit: gerrit.New,
 }
 
 // Repo figures out the forge, owner, and repo name from flags or the current
@@ -109,6 +111,9 @@ func repoFromFlag(flagRepo, flagForgeType string) (forges.Forge, string, string,
 		// owner/repo
 		owner, repo = parts[0], parts[1]
 		domain = Domain(flagForgeType)
+		if domain == "" {
+			return nil, "", "", "", fmt.Errorf("domain is required for this forge type")
+		}
 	case 3:
 		// host/owner/repo
 		domain, owner, repo = parts[0], parts[1], parts[2]
@@ -277,6 +282,8 @@ func forgeForType(forgeType, baseURL, token string, hc *http.Client) forges.Forg
 		return glforge.New(baseURL, token, hc)
 	case "github":
 		return ghforge.NewWithBase(baseURL, token, hc)
+	case "gerrit":
+		return gerrit.New(baseURL, token, hc)
 	}
 	return nil
 }
@@ -365,6 +372,9 @@ func ForgeForDomain(domain string) (forges.Forge, error) {
 	if testForge != nil && (testDomain == "" || testDomain == domain) {
 		return testForge, nil
 	}
+	if domain == "" {
+		return nil, fmt.Errorf("domain is required")
+	}
 	client := newClient(domain)
 	return forgeForDomainMaybeConfig(context.Background(), client, domain)
 }
@@ -400,6 +410,8 @@ func defaultDomainForType(forgeType string) string {
 		return "codeberg.org"
 	case "bitbucket":
 		return "bitbucket.org"
+	case "gerrit":
+		return ""
 	default:
 		return "github.com"
 	}
