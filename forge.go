@@ -219,34 +219,53 @@ func (c *Client) ListRepositories(ctx context.Context, domain, owner string, opt
 	return f.Repos().List(ctx, owner, opts)
 }
 
+// RepoMatchesFilters reports whether a repository satisfies the archived and
+// fork filters requested in opts. Backends can use this to decide, while
+// paginating, whether a repository counts toward opts.Limit.
+func RepoMatchesFilters(r Repository, opts ListRepoOpts) bool {
+	switch opts.Archived {
+	case ArchivedExclude:
+		if r.Archived {
+			return false
+		}
+	case ArchivedOnly:
+		if !r.Archived {
+			return false
+		}
+	}
+	switch opts.Forks {
+	case ForkExclude:
+		if r.Fork {
+			return false
+		}
+	case ForkOnly:
+		if !r.Fork {
+			return false
+		}
+	}
+	return true
+}
+
 // FilterRepos applies archived and fork filters to a slice of repositories.
 func FilterRepos(repos []Repository, opts ListRepoOpts) []Repository {
 	n := 0
 	for _, r := range repos {
-		switch opts.Archived {
-		case ArchivedExclude:
-			if r.Archived {
-				continue
-			}
-		case ArchivedOnly:
-			if !r.Archived {
-				continue
-			}
-		}
-		switch opts.Forks {
-		case ForkExclude:
-			if r.Fork {
-				continue
-			}
-		case ForkOnly:
-			if !r.Fork {
-				continue
-			}
+		if !RepoMatchesFilters(r, opts) {
+			continue
 		}
 		repos[n] = r
 		n++
 	}
 	return repos[:n]
+}
+
+// CapRepos truncates repos to at most opts.Limit entries. A Limit of 0 or
+// less means unlimited and the slice is returned unchanged.
+func CapRepos(repos []Repository, opts ListRepoOpts) []Repository {
+	if opts.Limit > 0 && len(repos) > opts.Limit {
+		return repos[:opts.Limit]
+	}
+	return repos
 }
 
 // FetchTagsFromPURL fetches git tags using a PURL's repository_url qualifier.

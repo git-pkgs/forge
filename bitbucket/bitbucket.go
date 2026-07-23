@@ -216,8 +216,12 @@ func (s *bitbucketRepoService) List(ctx context.Context, owner string, opts forg
 	if perPage <= 0 {
 		perPage = 100
 	}
+	if opts.Limit > 0 && perPage > opts.Limit {
+		perPage = opts.Limit
+	}
 
 	var all []forge.Repository
+	matched := 0
 	url := fmt.Sprintf("%s/repositories/%s?pagelen=%d", bitbucketAPI, owner, perPage)
 
 	for url != "" {
@@ -229,12 +233,19 @@ func (s *bitbucketRepoService) List(ctx context.Context, owner string, opts forg
 			return nil, err
 		}
 		for _, bb := range page.Values {
-			all = append(all, convertBitbucketRepo(bb))
+			repo := convertBitbucketRepo(bb)
+			all = append(all, repo)
+			if forge.RepoMatchesFilters(repo, opts) {
+				matched++
+			}
+		}
+		if opts.Limit > 0 && matched >= opts.Limit {
+			break
 		}
 		url = page.Next
 	}
 
-	return forge.FilterRepos(all, opts), nil
+	return forge.CapRepos(forge.FilterRepos(all, opts), opts), nil
 }
 
 func (s *bitbucketRepoService) Create(ctx context.Context, opts forge.CreateRepoOpts) (*forge.Repository, error) {
