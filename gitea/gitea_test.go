@@ -319,3 +319,38 @@ func TestGiteaListTags(t *testing.T) {
 	assertEqual(t, "Tag[1].Name", "v2.0.0", tags[1].Name)
 	assertEqual(t, "Tag[1].Commit", "ddd444", tags[1].Commit)
 }
+
+func TestGiteaListReposStopsPaginatingAtLimit(t *testing.T) {
+	var requests int
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /api/v1/version", giteaVersionHandler)
+	mux.HandleFunc("GET /api/v1/orgs/testorg/repos", func(w http.ResponseWriter, r *http.Request) {
+		requests++
+		page := 1
+		_, _ = fmt.Sscan(r.URL.Query().Get("page"), &page)
+
+		w.Header().Set("Link", fmt.Sprintf(`<?page=1>; rel="first", <?page=%d>; rel="next"`, page+1))
+		_ = json.NewEncoder(w).Encode([]map[string]any{
+			{
+				"full_name": fmt.Sprintf("testorg/repo-%d", page),
+				"name":      fmt.Sprintf("repo-%d", page),
+				"owner":     map[string]any{"login": "testorg"},
+			},
+		})
+	})
+
+	srv := httptest.NewServer(mux)
+	defer srv.Close()
+
+	f := New(srv.URL, "", nil)
+	repos, err := f.Repos().List(context.Background(), "testorg", forge.ListRepoOpts{Limit: 1})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(repos) != 1 {
+		t.Fatalf("expected 1 repo, got %d", len(repos))
+	}
+	if requests != 1 {
+		t.Fatalf("expected List to stop after 1 request once Limit was reached, got %d requests", requests)
+	}
+}

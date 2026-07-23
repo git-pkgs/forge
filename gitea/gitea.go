@@ -106,21 +106,25 @@ func (s *giteaRepoService) Get(ctx context.Context, owner, repo string) (*forge.
 
 func (s *giteaRepoService) List(ctx context.Context, owner string, opts forge.ListRepoOpts) ([]forge.Repository, error) {
 	perPage := pageSize(opts.PerPage)
+	if opts.Limit > 0 && opts.Limit < perPage {
+		perPage = pageSize(opts.Limit)
+	}
 
 	// Try org endpoint first, fall back to user on 404.
-	repos, err := s.listOrgRepos(ctx, owner, perPage)
+	repos, err := s.listOrgRepos(ctx, owner, perPage, opts)
 	if err != nil {
-		repos, err = s.listUserRepos(ctx, owner, perPage)
+		repos, err = s.listUserRepos(ctx, owner, perPage, opts)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	return forge.FilterRepos(repos, opts), nil
+	return forge.CapRepos(forge.FilterRepos(repos, opts), opts), nil
 }
 
-func (s *giteaRepoService) listOrgRepos(_ context.Context, owner string, perPage int) ([]forge.Repository, error) {
+func (s *giteaRepoService) listOrgRepos(_ context.Context, owner string, perPage int, opts forge.ListRepoOpts) ([]forge.Repository, error) {
 	var all []forge.Repository
+	matched := 0
 	page := 1
 	for {
 		gRepos, resp, err := s.client.ListOrgRepos(owner, gitea.ListOrgReposOptions{
@@ -133,7 +137,14 @@ func (s *giteaRepoService) listOrgRepos(_ context.Context, owner string, perPage
 			return nil, err
 		}
 		for _, r := range gRepos {
-			all = append(all, convertGiteaRepo(r))
+			repo := convertGiteaRepo(r)
+			all = append(all, repo)
+			if forge.RepoMatchesFilters(repo, opts) {
+				matched++
+			}
+		}
+		if opts.Limit > 0 && matched >= opts.Limit {
+			break
 		}
 		if lastPage(resp, len(gRepos), perPage) {
 			break
@@ -143,8 +154,9 @@ func (s *giteaRepoService) listOrgRepos(_ context.Context, owner string, perPage
 	return all, nil
 }
 
-func (s *giteaRepoService) listUserRepos(_ context.Context, owner string, perPage int) ([]forge.Repository, error) {
+func (s *giteaRepoService) listUserRepos(_ context.Context, owner string, perPage int, opts forge.ListRepoOpts) ([]forge.Repository, error) {
 	var all []forge.Repository
+	matched := 0
 	page := 1
 	for {
 		gRepos, resp, err := s.client.ListUserRepos(owner, gitea.ListReposOptions{
@@ -157,7 +169,14 @@ func (s *giteaRepoService) listUserRepos(_ context.Context, owner string, perPag
 			return nil, err
 		}
 		for _, r := range gRepos {
-			all = append(all, convertGiteaRepo(r))
+			repo := convertGiteaRepo(r)
+			all = append(all, repo)
+			if forge.RepoMatchesFilters(repo, opts) {
+				matched++
+			}
+		}
+		if opts.Limit > 0 && matched >= opts.Limit {
+			break
 		}
 		if lastPage(resp, len(gRepos), perPage) {
 			break
