@@ -54,6 +54,13 @@ func (f *gerritForge) endpoint(apiPath string, values url.Values) string {
 	return u
 }
 
+func (f *gerritForge) APIBaseURL() string {
+	if f.token != "" {
+		return f.baseURL + "/a"
+	}
+	return f.baseURL
+}
+
 func (f *gerritForge) doJSON(ctx context.Context, method, apiPath string, query url.Values, body any, v any) error {
 	var bodyReader io.Reader
 	if body != nil {

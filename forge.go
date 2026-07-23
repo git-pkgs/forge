@@ -50,6 +50,12 @@ func (e *HTTPError) Error() string {
 	return fmt.Sprintf("forge: HTTP %d from %s", e.StatusCode, e.URL)
 }
 
+// APIBaseURLProvider is implemented by forge backends that can expose their
+// raw API root URL for arbitrary endpoint requests.
+type APIBaseURLProvider interface {
+	APIBaseURL() string
+}
+
 // Forge is the interface each forge backend implements.
 type Forge interface {
 	Repos() RepoService
@@ -142,6 +148,9 @@ func (c *Client) RegisterDomain(ctx context.Context, domain, token string, build
 	case Gitea, Forgejo:
 		c.forges[domain] = builders.Gitea(baseURL, token, c.httpClient)
 	case Gerrit:
+		if builders.Gerrit == nil {
+			return fmt.Errorf("no builder registered for forge type %q at %s", ft, domain)
+		}
 		c.forges[domain] = builders.Gerrit(baseURL, token, c.httpClient)
 	default:
 		return fmt.Errorf("unsupported forge type %q for %s", ft, domain)

@@ -9,6 +9,7 @@ import (
 	"os"
 	"strings"
 
+	forges "github.com/git-pkgs/forge"
 	"github.com/git-pkgs/forge/internal/resolve"
 	"github.com/spf13/cobra"
 )
@@ -23,7 +24,7 @@ var apiCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		endpoint := args[0]
 
-		_, owner, repoName, domain, err := resolve.Repo(flagRepo, flagForgeType)
+		forge, owner, repoName, domain, err := resolve.Repo(flagRepo, flagForgeType)
 		if err != nil {
 			return err
 		}
@@ -32,20 +33,8 @@ var apiCmd = &cobra.Command{
 		endpoint = strings.ReplaceAll(endpoint, "{owner}", owner)
 		endpoint = strings.ReplaceAll(endpoint, "{repo}", repoName)
 
-		// Build full URL
-		var baseURL string
-		switch {
-		case strings.Contains(domain, "github"):
-			baseURL = "https://api." + domain
-		case strings.Contains(domain, "gitlab"):
-			baseURL = "https://" + domain + "/api/v4"
-		case strings.Contains(domain, "bitbucket"):
-			baseURL = "https://api.bitbucket.org/2.0"
-		default:
-			baseURL = "https://" + domain + "/api/v1"
-		}
-
-		url := baseURL + "/" + strings.TrimLeft(endpoint, "/")
+		baseURL := apiBaseURL(forge, domain)
+		url := strings.TrimRight(baseURL, "/") + "/" + strings.TrimLeft(endpoint, "/")
 
 		var body io.Reader
 		if len(flagAPIFields) > 0 {
@@ -127,6 +116,28 @@ var apiCmd = &cobra.Command{
 
 		return nil
 	},
+}
+
+func apiBaseURL(forge forges.Forge, domain string) string {
+	provider, ok := forge.(forges.APIBaseURLProvider)
+	if ok {
+		return provider.APIBaseURL()
+	}
+
+	return legacyAPIBaseURL(domain)
+}
+
+func legacyAPIBaseURL(domain string) string {
+	switch {
+	case strings.Contains(domain, "github"):
+		return "https://api." + domain
+	case strings.Contains(domain, "gitlab"):
+		return "https://" + domain + "/api/v4"
+	case strings.Contains(domain, "bitbucket"):
+		return "https://api.bitbucket.org/2.0"
+	default:
+		return "https://" + domain + "/api/v1"
+	}
 }
 
 var (
