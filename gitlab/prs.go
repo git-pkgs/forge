@@ -277,6 +277,22 @@ func (s *gitLabPRService) Create(ctx context.Context, owner, repo string, opts f
 		glOpts.Title = gitlab.Ptr("Draft: " + opts.Title)
 	}
 
+	if len(opts.Assignees) > 0 {
+		assigneeIDs, err := resolveUserIDs(s.client, opts.Assignees)
+		if err != nil {
+			return nil, fmt.Errorf("resolving assignees: %w", err)
+		}
+		glOpts.AssigneeIDs = &assigneeIDs
+	}
+
+	if len(opts.Reviewers) > 0 {
+		reviewerIDs, err := resolveUserIDs(s.client, opts.Reviewers)
+		if err != nil {
+			return nil, fmt.Errorf("resolving reviewers: %w", err)
+		}
+		glOpts.ReviewerIDs = &reviewerIDs
+	}
+
 	if len(opts.Labels) > 0 {
 		lbls := gitlab.LabelOptions(opts.Labels)
 		glOpts.Labels = &lbls
@@ -308,6 +324,32 @@ func (s *gitLabPRService) Update(ctx context.Context, owner, repo string, number
 	}
 	if opts.Base != nil {
 		glOpts.TargetBranch = opts.Base
+		changed = true
+	}
+	if opts.Assignees != nil {
+		if len(opts.Assignees) == 0 {
+			empty := []int64{}
+			glOpts.AssigneeIDs = &empty
+		} else {
+			assigneeIDs, err := resolveUserIDs(s.client, opts.Assignees)
+			if err != nil {
+				return nil, fmt.Errorf("resolving assignees: %w", err)
+			}
+			glOpts.AssigneeIDs = &assigneeIDs
+		}
+		changed = true
+	}
+	if opts.Reviewers != nil {
+		if len(opts.Reviewers) == 0 {
+			empty := []int64{}
+			glOpts.ReviewerIDs = &empty
+		} else {
+			reviewerIDs, err := resolveUserIDs(s.client, opts.Reviewers)
+			if err != nil {
+				return nil, fmt.Errorf("resolving reviewers: %w", err)
+			}
+			glOpts.ReviewerIDs = &reviewerIDs
+		}
 		changed = true
 	}
 	if opts.Labels != nil {

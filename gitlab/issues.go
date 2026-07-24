@@ -187,7 +187,11 @@ func (s *gitLabIssueService) Create(ctx context.Context, owner, repo string, opt
 		Description: gitlab.Ptr(opts.Body),
 	}
 	if len(opts.Assignees) > 0 {
-		return nil, fmt.Errorf("GitLab requires assignee IDs, not usernames; assignees cannot be set by username on create")
+		assigneeIDs, err := resolveUserIDs(s.client, opts.Assignees)
+		if err != nil {
+			return nil, fmt.Errorf("resolving assignees: %w", err)
+		}
+		glOpts.AssigneeIDs = &assigneeIDs
 	}
 	if len(opts.Labels) > 0 {
 		lbls := gitlab.LabelOptions(opts.Labels)
@@ -216,6 +220,19 @@ func (s *gitLabIssueService) Update(ctx context.Context, owner, repo string, num
 	}
 	if opts.Body != nil {
 		glOpts.Description = opts.Body
+		changed = true
+	}
+	if opts.Assignees != nil {
+		if len(opts.Assignees) == 0 {
+			empty := []int64{}
+			glOpts.AssigneeIDs = &empty
+		} else {
+			assigneeIDs, err := resolveUserIDs(s.client, opts.Assignees)
+			if err != nil {
+				return nil, fmt.Errorf("resolving assignees: %w", err)
+			}
+			glOpts.AssigneeIDs = &assigneeIDs
+		}
 		changed = true
 	}
 	if opts.Labels != nil {
