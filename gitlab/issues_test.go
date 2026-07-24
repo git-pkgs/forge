@@ -5,28 +5,57 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
-	"strings"
 	"testing"
 
 	forge "github.com/git-pkgs/forge"
 )
 
-func TestGitLabCreateIssueRejectsAssignees(t *testing.T) {
-	srv := httptest.NewServer(nil)
+func TestGitLabCreateIssueWithAssignees(t *testing.T) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /api/v4/users", func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Query().Get("username") == "alice" {
+			_ = json.NewEncoder(w).Encode([]map[string]any{{"id": 42, "username": "alice"}})
+		} else {
+			_ = json.NewEncoder(w).Encode([]map[string]any{})
+		}
+	})
+	var gotAssigneeIDs []int64
+	mux.HandleFunc("POST /api/v4/projects/mygroup%2Fmyrepo/issues", func(w http.ResponseWriter, r *http.Request) {
+		var req struct {
+			Title       string  `json:"title"`
+			AssigneeIDs []int64 `json:"assignee_ids"`
+		}
+		_ = json.NewDecoder(r.Body).Decode(&req)
+		gotAssigneeIDs = req.AssigneeIDs
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"id":    1,
+			"iid":   1,
+			"title": req.Title,
+			"state": "opened",
+			"assignees": []map[string]any{
+				{"id": 42, "username": "alice"},
+			},
+		})
+	})
+
+	srv := httptest.NewServer(mux)
 	defer srv.Close()
 
 	f := New(srv.URL, "test-token", nil)
 
-	_, err := f.Issues().Create(context.Background(), "mygroup", "myrepo", forge.CreateIssueOpts{
+	iss, err := f.Issues().Create(context.Background(), "mygroup", "myrepo", forge.CreateIssueOpts{
 		Title:     "Test issue",
 		Body:      "Body text",
-		Assignees: []string{"someuser"},
+		Assignees: []string{"alice"},
 	})
-	if err == nil {
-		t.Fatal("expected error when assignees are set, got nil")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
 	}
-	if !strings.Contains(err.Error(), "assignee IDs") {
-		t.Fatalf("expected error to mention 'assignee IDs', got: %v", err)
+	if len(gotAssigneeIDs) != 1 || gotAssigneeIDs[0] != 42 {
+		t.Fatalf("expected assignee_ids [42], got %v", gotAssigneeIDs)
+	}
+	if len(iss.Assignees) != 1 || iss.Assignees[0].Login != "alice" {
+		t.Fatalf("expected 1 assignee alice, got %v", iss.Assignees)
 	}
 }
 
