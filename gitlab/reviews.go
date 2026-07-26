@@ -98,7 +98,7 @@ func (s *gitLabReviewService) RequestReviewers(ctx context.Context, owner, repo 
 	pid := owner + "/" + repo
 
 	// GitLab requires user IDs, not usernames. Resolve them.
-	ids, err := s.resolveUserIDs(users)
+	ids, err := resolveUserIDs(s.client, users)
 	if err != nil {
 		return err
 	}
@@ -149,21 +149,4 @@ func (s *gitLabReviewService) RemoveReviewers(ctx context.Context, owner, repo s
 		return err
 	}
 	return nil
-}
-
-func (s *gitLabReviewService) resolveUserIDs(usernames []string) ([]int64, error) {
-	ids := make([]int64, 0, len(usernames))
-	for _, username := range usernames {
-		users, _, err := s.client.Users.ListUsers(&gitlab.ListUsersOptions{
-			Username: gitlab.Ptr(username),
-		})
-		if err != nil {
-			return nil, fmt.Errorf("looking up user %q: %w", username, err)
-		}
-		if len(users) == 0 {
-			return nil, fmt.Errorf("user %q not found", username)
-		}
-		ids = append(ids, int64(users[0].ID))
-	}
-	return ids, nil
 }

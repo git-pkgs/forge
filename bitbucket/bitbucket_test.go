@@ -3,6 +3,7 @@ package bitbucket
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	forge "github.com/git-pkgs/forge"
 	"net/http"
 	"net/http/httptest"
@@ -210,4 +211,48 @@ func TestBitbucketListTags(t *testing.T) {
 	assertEqual(t, "Tag[0].Commit", "eee555", tags[0].Commit)
 	assertEqual(t, "Tag[1].Name", "v0.1.0", tags[1].Name)
 	assertEqual(t, "Tag[1].Commit", "fff666", tags[1].Commit)
+}
+
+func TestBitbucketListReposStopsPaginatingAtLimit(t *testing.T) {
+	var requests int
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /2.0/repositories/atlassian", func(w http.ResponseWriter, r *http.Request) {
+		requests++
+		n := requests
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"values": []bbRepository{
+				{
+					Slug:     "repo",
+					FullName: "atlassian/repo",
+					Owner: &struct {
+						Username    string `json:"username"`
+						DisplayName string `json:"display_name"`
+					}{Username: "atlassian"},
+				},
+			},
+			// Always advertise a next page so the test fails loudly if the
+			// implementation keeps following it past the requested limit.
+			"next": fmt.Sprintf("%s?page=%d", r.URL.Path, n+1),
+		})
+	})
+
+	srv := httptest.NewServer(mux)
+	defer srv.Close()
+
+	origAPI := bitbucketAPI
+	defer func() { setBitbucketAPI(origAPI) }()
+	setBitbucketAPI(srv.URL + "/2.0")
+
+	f := New("test-token", nil)
+
+	repos, err := f.Repos().List(context.Background(), "atlassian", forge.ListRepoOpts{Limit: 1})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(repos) != 1 {
+		t.Fatalf("expected 1 repo, got %d", len(repos))
+	}
+	if requests != 1 {
+		t.Fatalf("expected List to stop after 1 request once Limit was reached, got %d requests", requests)
+	}
 }

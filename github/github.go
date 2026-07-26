@@ -113,21 +113,25 @@ func (s *gitHubRepoService) List(ctx context.Context, owner string, opts forge.L
 	if perPage <= 0 {
 		perPage = defaultPageSize
 	}
+	if opts.Limit > 0 && perPage > opts.Limit {
+		perPage = opts.Limit
+	}
 
 	// Try org endpoint first, fall back to user on 404.
-	repos, err := s.listOrgRepos(ctx, owner, perPage)
+	repos, err := s.listOrgRepos(ctx, owner, perPage, opts)
 	if err != nil {
-		repos, err = s.listUserRepos(ctx, owner, perPage)
+		repos, err = s.listUserRepos(ctx, owner, perPage, opts)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	return forge.FilterRepos(repos, opts), nil
+	return forge.CapRepos(forge.FilterRepos(repos, opts), opts), nil
 }
 
-func (s *gitHubRepoService) listOrgRepos(ctx context.Context, owner string, perPage int) ([]forge.Repository, error) {
+func (s *gitHubRepoService) listOrgRepos(ctx context.Context, owner string, perPage int, opts forge.ListRepoOpts) ([]forge.Repository, error) {
 	var all []forge.Repository
+	matched := 0
 	ghOpts := &github.RepositoryListByOrgOptions{
 		ListOptions: github.ListOptions{PerPage: perPage},
 	}
@@ -140,7 +144,14 @@ func (s *gitHubRepoService) listOrgRepos(ctx context.Context, owner string, perP
 			return nil, err
 		}
 		for _, r := range ghRepos {
-			all = append(all, convertGitHubRepo(r))
+			repo := convertGitHubRepo(r)
+			all = append(all, repo)
+			if forge.RepoMatchesFilters(repo, opts) {
+				matched++
+			}
+		}
+		if opts.Limit > 0 && matched >= opts.Limit {
+			break
 		}
 		if resp.NextPage == 0 {
 			break
@@ -150,8 +161,9 @@ func (s *gitHubRepoService) listOrgRepos(ctx context.Context, owner string, perP
 	return all, nil
 }
 
-func (s *gitHubRepoService) listUserRepos(ctx context.Context, owner string, perPage int) ([]forge.Repository, error) {
+func (s *gitHubRepoService) listUserRepos(ctx context.Context, owner string, perPage int, opts forge.ListRepoOpts) ([]forge.Repository, error) {
 	var all []forge.Repository
+	matched := 0
 	ghOpts := &github.RepositoryListByUserOptions{
 		ListOptions: github.ListOptions{PerPage: perPage},
 	}
@@ -164,7 +176,14 @@ func (s *gitHubRepoService) listUserRepos(ctx context.Context, owner string, per
 			return nil, err
 		}
 		for _, r := range ghRepos {
-			all = append(all, convertGitHubRepo(r))
+			repo := convertGitHubRepo(r)
+			all = append(all, repo)
+			if forge.RepoMatchesFilters(repo, opts) {
+				matched++
+			}
+		}
+		if opts.Limit > 0 && matched >= opts.Limit {
+			break
 		}
 		if resp.NextPage == 0 {
 			break

@@ -16,6 +16,7 @@ import (
 	ghforge "github.com/git-pkgs/forge/github"
 	glforge "github.com/git-pkgs/forge/gitlab"
 	"github.com/git-pkgs/forge/internal/config"
+	"github.com/git-pkgs/forge/tangled"
 )
 
 var (
@@ -83,10 +84,11 @@ func ResetTestForge() {
 }
 
 var builders = forges.ForgeBuilders{
-	GitHub: ghforge.NewWithBase,
-	GitLab: glforge.New,
-	Gitea:  gitea.New,
-	Gerrit: gerrit.New,
+	GitHub:  ghforge.NewWithBase,
+	GitLab:  glforge.New,
+	Gitea:   gitea.New,
+	Gerrit:  gerrit.New,
+	Tangled: tangled.New,
 }
 
 // Repo figures out the forge, owner, and repo name from flags or the current
@@ -256,6 +258,7 @@ func newClient(domain string) *forges.Client {
 		"gitlab.com":    glforge.New("https://gitlab.com", TokenForDomain("gitlab.com"), hc),
 		"codeberg.org":  gitea.New("https://codeberg.org", TokenForDomain("codeberg.org"), hc),
 		"bitbucket.org": bitbucket.New(TokenForDomain("bitbucket.org"), hc),
+		"tangled.org":   tangled.New("https://tangled.org", TokenForDomain("tangled.org"), hc),
 	}
 	for d, f := range defaults {
 		opts = append(opts, forges.WithForge(d, f))
@@ -284,6 +287,8 @@ func forgeForType(forgeType, baseURL, token string, hc *http.Client) forges.Forg
 		return ghforge.NewWithBase(baseURL, token, hc)
 	case "gerrit":
 		return gerrit.New(baseURL, token, hc)
+	case "tangled":
+		return tangled.New(baseURL, token, hc)
 	}
 	return nil
 }
@@ -360,6 +365,10 @@ func TokenForDomainEnv(domain string) string {
 		if t := os.Getenv("BITBUCKET_TOKEN"); t != "" {
 			return t
 		}
+	case "tangled.org":
+		if t := os.Getenv("TANGLED_TOKEN"); t != "" {
+			return t
+		}
 	}
 
 	// FORGE_TOKEN is a fallback for any domain without a specific token.
@@ -412,6 +421,8 @@ func defaultDomainForType(forgeType string) string {
 		return "bitbucket.org"
 	case "gerrit":
 		return ""
+	case "tangled":
+		return "tangled.org"
 	default:
 		return "github.com"
 	}

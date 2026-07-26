@@ -344,3 +344,40 @@ func TestGitHubDeleteRepoNotFound(t *testing.T) {
 		t.Fatalf("expected forge.ErrNotFound, got %v", err)
 	}
 }
+
+func TestGitHubListReposStopsPaginatingAtLimit(t *testing.T) {
+	var requests int
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /api/v3/orgs/myorg/repos", func(w http.ResponseWriter, r *http.Request) {
+		requests++
+		page := r.URL.Query().Get("page")
+		if page == "" {
+			page = "1"
+		}
+		w.Header().Set("Link", `<http://example.com?page=`+page+`>; rel="next"`)
+		_ = json.NewEncoder(w).Encode([]*github.Repository{
+			{
+				FullName: ptr("myorg/repo-" + page),
+				Name:     ptr("repo-" + page),
+				Owner:    &github.User{Login: ptr("myorg")},
+				Archived: ptrBool(false),
+				Fork:     ptrBool(false),
+			},
+		})
+	})
+
+	srv := httptest.NewServer(mux)
+	defer srv.Close()
+
+	s := newTestGitHubRepoService(srv)
+	repos, err := s.List(context.Background(), "myorg", forge.ListRepoOpts{Limit: 1})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(repos) != 1 {
+		t.Fatalf("expected 1 repo, got %d", len(repos))
+	}
+	if requests != 1 {
+		t.Fatalf("expected List to stop after 1 request once Limit was reached, got %d requests", requests)
+	}
+}

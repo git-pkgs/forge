@@ -13,6 +13,7 @@ import (
 	glforge "github.com/git-pkgs/forge/gitlab"
 	"github.com/git-pkgs/forge/internal/config"
 	"github.com/git-pkgs/forge/internal/resolve"
+	"github.com/git-pkgs/forge/tangled"
 )
 
 func TestAPIBaseURLFromForge(t *testing.T) {
@@ -60,6 +61,11 @@ func TestAPIBaseURLFromForge(t *testing.T) {
 			name: "gerrit authenticated",
 			f:    gerrit.New("https://gerrit.example.org", "user:secret", nil),
 			want: "https://gerrit.example.org/a",
+		},
+		{
+			name: "tangled",
+			f:    tangled.New("https://tangled.example.org", "", nil),
+			want: "https://tangled.example.org/xrpc",
 		},
 	}
 

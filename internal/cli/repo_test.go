@@ -164,6 +164,7 @@ func TestDomainFromFlags(t *testing.T) {
 		{"forgejo", "codeberg.org"},
 		{"bitbucket", "bitbucket.org"},
 		{"gerrit", ""},
+		{"tangled", "tangled.org"},
 	}
 
 	for _, tt := range tests {

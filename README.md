@@ -1,6 +1,6 @@
 # forge
 
-Go library and CLI for working with git forges. Supports GitHub, GitLab, Gitea/Forgejo, Bitbucket Cloud, and Gerrit through a single interface.
+Go library and CLI for working with git forges. Supports GitHub, GitLab, Gitea/Forgejo, Bitbucket Cloud, Gerrit, and Tangled through a single interface.
 
 ## CLI
 
@@ -59,7 +59,7 @@ Command for token (e.g. rbw get github.com): rbw get github-token
 
 Check what's configured with `forge auth status`.
 
-Tokens are resolved in this order: CLI flags, environment variables (`FORGE_TOKEN`, `GITHUB_TOKEN`/`GH_TOKEN`, `GITLAB_TOKEN`, `FORGEJO_TOKEN`/`GITEA_TOKEN`, `BITBUCKET_TOKEN`), then the config file at `~/.config/forge/config`. The target host is inferred from the current directory's git remote; use `--host` or `FORGE_HOST` to override it (for example `forge --host gitea.com repo list someone`).
+Tokens are resolved in this order: CLI flags, environment variables (`FORGE_TOKEN`, `GITHUB_TOKEN`/`GH_TOKEN`, `GITLAB_TOKEN`, `FORGEJO_TOKEN`/`GITEA_TOKEN`, `BITBUCKET_TOKEN`, `TANGLED_TOKEN`), then the config file at `~/.config/forge/config`. The target host is inferred from the current directory's git remote; use `--host` or `FORGE_HOST` to override it (for example `forge --host gitea.com repo list someone`).
 
 ### Configuration
 
@@ -159,6 +159,7 @@ Self-hosted instances can be registered explicitly or detected automatically:
 import (
     "github.com/git-pkgs/forge/gitea"
     "github.com/git-pkgs/forge/gitlab"
+    "github.com/git-pkgs/forge/tangled"
 )
 
 client := forges.NewClient(
@@ -171,6 +172,7 @@ err := client.RegisterDomain(ctx, "git.example.com", token, forges.ForgeBuilders
     GitHub: github.NewWithBase,
     GitLab: gitlab.New,
     Gitea:  gitea.New,
+    Tangled: tangled.New,
 })
 ```
 

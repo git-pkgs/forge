@@ -203,3 +203,43 @@ func TestGitLabListTags(t *testing.T) {
 	assertEqual(t, "Tag[1].Name", "v1.0.0", tags[1].Name)
 	assertEqual(t, "Tag[1].Commit", "bbb222", tags[1].Commit)
 }
+
+func TestGitLabListReposStopsPaginatingAtLimit(t *testing.T) {
+	var requests int
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /api/v4/groups/mygroup/projects", func(w http.ResponseWriter, r *http.Request) {
+		requests++
+		page := r.URL.Query().Get("page")
+		if page == "" {
+			page = "1"
+		}
+		w.Header().Set("X-Next-Page", "2")
+		w.Header().Set("X-Page", page)
+		_ = json.NewEncoder(w).Encode([]map[string]any{
+			{
+				"path_with_namespace": "mygroup/project-" + page,
+				"name":                "project-" + page,
+				"default_branch":      "main",
+				"archived":            false,
+				"visibility":          "public",
+				"namespace":           map[string]any{"path": "mygroup"},
+			},
+		})
+	})
+
+	srv := httptest.NewServer(mux)
+	defer srv.Close()
+
+	f := New(srv.URL, "test-token", nil)
+
+	repos, err := f.Repos().List(context.Background(), "mygroup", forge.ListRepoOpts{Limit: 1})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(repos) != 1 {
+		t.Fatalf("expected 1 repo, got %d", len(repos))
+	}
+	if requests != 1 {
+		t.Fatalf("expected List to stop after 1 request once Limit was reached, got %d requests", requests)
+	}
+}

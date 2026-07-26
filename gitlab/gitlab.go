@@ -104,21 +104,25 @@ func (s *gitLabRepoService) List(ctx context.Context, owner string, opts forge.L
 	if perPage <= 0 {
 		perPage = 100
 	}
+	if opts.Limit > 0 && perPage > opts.Limit {
+		perPage = opts.Limit
+	}
 
 	// Try group endpoint first, fall back to user projects on 404.
-	repos, err := s.listGroupProjects(ctx, owner, perPage)
+	repos, err := s.listGroupProjects(ctx, owner, perPage, opts)
 	if err != nil {
-		repos, err = s.listUserProjects(ctx, owner, perPage)
+		repos, err = s.listUserProjects(ctx, owner, perPage, opts)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	return forge.FilterRepos(repos, opts), nil
+	return forge.CapRepos(forge.FilterRepos(repos, opts), opts), nil
 }
 
-func (s *gitLabRepoService) listGroupProjects(_ context.Context, group string, perPage int) ([]forge.Repository, error) {
+func (s *gitLabRepoService) listGroupProjects(_ context.Context, group string, perPage int, opts forge.ListRepoOpts) ([]forge.Repository, error) {
 	var all []forge.Repository
+	matched := 0
 	glOpts := &gitlab.ListGroupProjectsOptions{
 		ListOptions: gitlab.ListOptions{PerPage: int64(perPage)},
 	}
@@ -131,7 +135,14 @@ func (s *gitLabRepoService) listGroupProjects(_ context.Context, group string, p
 			return nil, err
 		}
 		for _, p := range projects {
-			all = append(all, convertGitLabProject(p))
+			repo := convertGitLabProject(p)
+			all = append(all, repo)
+			if forge.RepoMatchesFilters(repo, opts) {
+				matched++
+			}
+		}
+		if opts.Limit > 0 && matched >= opts.Limit {
+			break
 		}
 		if resp.NextPage == 0 {
 			break
@@ -141,8 +152,9 @@ func (s *gitLabRepoService) listGroupProjects(_ context.Context, group string, p
 	return all, nil
 }
 
-func (s *gitLabRepoService) listUserProjects(_ context.Context, user string, perPage int) ([]forge.Repository, error) {
+func (s *gitLabRepoService) listUserProjects(_ context.Context, user string, perPage int, opts forge.ListRepoOpts) ([]forge.Repository, error) {
 	var all []forge.Repository
+	matched := 0
 	glOpts := &gitlab.ListProjectsOptions{
 		ListOptions: gitlab.ListOptions{PerPage: int64(perPage)},
 	}
@@ -155,7 +167,14 @@ func (s *gitLabRepoService) listUserProjects(_ context.Context, user string, per
 			return nil, err
 		}
 		for _, p := range projects {
-			all = append(all, convertGitLabProject(p))
+			repo := convertGitLabProject(p)
+			all = append(all, repo)
+			if forge.RepoMatchesFilters(repo, opts) {
+				matched++
+			}
+		}
+		if opts.Limit > 0 && matched >= opts.Limit {
+			break
 		}
 		if resp.NextPage == 0 {
 			break
