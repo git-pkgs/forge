@@ -12,13 +12,17 @@ import (
 
 // DetectForgeType probes a domain to identify which forge software it runs.
 // It checks HTTP response headers first, then falls back to API endpoints.
-// If hc is nil, http.DefaultClient is used.
+// The domain may include an http:// or https:// prefix; without one, https is
+// assumed. If hc is nil, http.DefaultClient is used.
 func DetectForgeType(ctx context.Context, domain string, hc ...*http.Client) (ForgeType, error) {
 	client := http.DefaultClient
 	if len(hc) > 0 && hc[0] != nil {
 		client = hc[0]
 	}
-	baseURL := "https://" + domain
+	baseURL, _, err := normalizeBaseURL(domain)
+	if err != nil {
+		return Unknown, err
+	}
 
 	ft, err := detectFromHeaders(ctx, client, baseURL)
 	if err != nil {

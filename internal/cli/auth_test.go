@@ -113,6 +113,33 @@ func TestAuthLoginNonInteractive(t *testing.T) {
 	}
 }
 
+func TestAuthLoginNormalizesScheme(t *testing.T) {
+	resetCmd(rootCmd)
+	dir := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", dir)
+	config.ResetCache()
+	defer config.ResetCache()
+
+	rootCmd.SetArgs([]string{
+		"auth", "login",
+		"--domain", "forgejo.example.com",
+		"--token", "test_token_123",
+		"--scheme", "HTTP",
+	})
+
+	if err := rootCmd.Execute(); err != nil {
+		t.Fatalf("auth login: %v", err)
+	}
+
+	data, err := os.ReadFile(filepath.Join(dir, "forge", "config"))
+	if err != nil {
+		t.Fatalf("reading config: %v", err)
+	}
+	if !strings.Contains(string(data), "scheme = http") {
+		t.Errorf("expected normalized scheme, got:\n%s", data)
+	}
+}
+
 func TestAuthLoginTokenCmd(t *testing.T) {
 	resetCmd(rootCmd)
 	dir := t.TempDir()

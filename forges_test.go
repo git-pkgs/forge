@@ -81,6 +81,14 @@ func TestParseRepoURL(t *testing.T) {
 			domain: "bitbucket.org", owner: "atlassian", repo: "stash-example-plugin",
 		},
 		{
+			input:  "http://172.30.0.10:3000/owner/repo.git",
+			domain: "172.30.0.10:3000", owner: "owner", repo: "repo",
+		},
+		{
+			input:  "ssh://git@forge.example.com:2222/owner/repo.git",
+			domain: "forge.example.com", owner: "owner", repo: "repo",
+		},
+		{
 			input:   "",
 			wantErr: true,
 		},
@@ -197,6 +205,66 @@ func TestDetectForgeTypeUsesProvidedClient(t *testing.T) {
 	}
 	if ft != GitHub {
 		t.Errorf("expected GitHub, got %s", ft)
+	}
+}
+
+func TestDetectForgeTypeAcceptsHTTPURL(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("X-Forgejo-Version", "7.0.0")
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
+
+	// srv.URL is http://127.0.0.1:PORT — passing it directly must not be
+	// rewritten to https.
+	ft, err := DetectForgeType(context.Background(), srv.URL)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if ft != Forgejo {
+		t.Errorf("want Forgejo, got %s", ft)
+	}
+}
+
+func TestRegisterDomainAcceptsHTTPURL(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("X-Forgejo-Version", "7.0.0")
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
+
+	var gotBase string
+	c := NewClient()
+	inputURL := srv.URL + "/forge/"
+	err := c.RegisterDomain(context.Background(), inputURL, "tok", ForgeBuilders{
+		Gitea: func(baseURL, token string, hc *http.Client) Forge {
+			gotBase = baseURL
+			return nil
+		},
+	})
+	if err != nil {
+		t.Fatalf("RegisterDomain: %v", err)
+	}
+	if want := srv.URL + "/forge"; gotBase != want {
+		t.Errorf("builder got base %q, want %q", gotBase, want)
+	}
+	// Registry key must be the bare host, not the full URL.
+	host := strings.TrimPrefix(srv.URL, "http://")
+	if _, err := c.ForgeFor(host); err != nil {
+		t.Errorf("ForgeFor(%q) after RegisterDomain(%q): %v", host, inputURL, err)
+	}
+}
+
+func TestNormalizeBaseURLRejectsUnsupportedURLParts(t *testing.T) {
+	for _, input := range []string{
+		"ftp://forge.example.com",
+		"https://user@forge.example.com",
+		"https://forge.example.com?query=value",
+		"https://forge.example.com#fragment",
+	} {
+		if _, _, err := normalizeBaseURL(input); err == nil {
+			t.Errorf("normalizeBaseURL(%q) should return an error", input)
+		}
 	}
 }
 

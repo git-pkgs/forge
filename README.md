@@ -128,6 +128,16 @@ type = gitlab
 
 This tells forge that the project uses GitLab and that `gitlab.internal.dev` is a GitLab instance, so contributors don't each need `--forge-type` or `FORGE_HOST`.
 
+For a self-hosted instance served over plain HTTP (a local Forgejo in Docker, say), add `scheme = http` to its section in `~/.config/forge/config`, use `forge auth login --scheme http`, or pass a full URL to `--host`/`FORGE_HOST`:
+
+```ini
+[172.30.0.10:3000]
+type = forgejo
+scheme = http
+```
+
+Committed `.forge` files cannot set the API scheme.
+
 Precedence from highest to lowest: CLI flags, environment variables, `.forge`, `~/.config/forge/config`, built-in defaults.
 
 ## Library

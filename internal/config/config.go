@@ -31,6 +31,7 @@ type DefaultSection struct {
 
 type DomainSection struct {
 	Type        string // github, gitlab, gitea, forgejo, bitbucket, gerrit, tangled
+	Scheme      string // http or https; only from user config (empty = https)
 	Token       string // resolved token value; only from user config, never .forge
 	TokenExec   string // non-empty when token is retrieved via a shell command (from "token-cmd" config key)
 	SSHHost     string // alternate host for git-over-ssh; the section name remains the API host
@@ -92,6 +93,17 @@ func GitProtocolFor(domain string) string {
 		return cfg.Default.GitProtocol
 	}
 	return "https"
+}
+
+func parseScheme(v string) (string, error) {
+	switch strings.ToLower(v) {
+	case "http":
+		return "http", nil
+	case "https":
+		return "https", nil
+	default:
+		return "", fmt.Errorf("invalid scheme %q: must be \"http\" or \"https\"", v)
+	}
 }
 
 func parseGitProtocol(v string) (string, error) {
@@ -166,7 +178,7 @@ func load() (*Config, error) {
 	return cfg, nil
 }
 
-func loadFile(cfg *Config, path string, allowTokens bool) error {
+func loadFile(cfg *Config, path string, userConfig bool) error {
 	f, err := os.Open(path)
 	if os.IsNotExist(err) {
 		return nil
@@ -205,6 +217,15 @@ func loadFile(cfg *Config, path string, allowTokens bool) error {
 		if v, ok := kv["type"]; ok {
 			ds.Type = v
 		}
+		if userConfig {
+			if v, ok := kv["scheme"]; ok {
+				s, err := parseScheme(v)
+				if err != nil {
+					return fmt.Errorf("%s: [%s] %w", path, name, err)
+				}
+				ds.Scheme = s
+			}
+		}
 		if v, ok := kv["git_protocol"]; ok {
 			p, err := parseGitProtocol(v)
 			if err != nil {
@@ -212,12 +233,12 @@ func loadFile(cfg *Config, path string, allowTokens bool) error {
 			}
 			ds.GitProtocol = p
 		}
-		if allowTokens {
+		if userConfig {
 			if v, ok := kv["ssh_host"]; ok {
 				ds.SSHHost = v
 			}
 		}
-		if allowTokens {
+		if userConfig {
 			_, hasToken := kv["token"]
 			_, hasTokenCmd := kv["token-cmd"]
 			if hasToken && hasTokenCmd {
@@ -317,7 +338,15 @@ func findProjectConfig(dir string) string {
 // SetDomain updates or adds a domain section in the user config file.
 // Creates the config directory if needed. Sets file permissions to 0600
 // since the file may contain tokens.
-func SetDomain(domain, token, tokenCmd, forgeType string) error {
+func SetDomain(domain, token, tokenCmd, forgeType, scheme string) error {
+	if scheme != "" {
+		normalizedScheme, err := parseScheme(scheme)
+		if err != nil {
+			return err
+		}
+		scheme = normalizedScheme
+	}
+
 	path := UserConfigPath()
 	if path == "" {
 		return fmt.Errorf("cannot determine config path")
@@ -350,6 +379,9 @@ func SetDomain(domain, token, tokenCmd, forgeType string) error {
 	}
 	if forgeType != "" {
 		sections[domain]["type"] = forgeType
+	}
+	if scheme != "" {
+		sections[domain]["scheme"] = scheme
 	}
 
 	return writeINI(path, sections)

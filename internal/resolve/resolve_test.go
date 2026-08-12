@@ -3,14 +3,47 @@ package resolve
 import (
 	"context"
 	"io"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
 
+	"github.com/git-pkgs/forge"
 	"github.com/git-pkgs/forge/internal/config"
 )
+
+func TestResourceFromURLUsesSchemeAndPort(t *testing.T) {
+	config.ResetCache()
+	defer config.ResetCache()
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("X-Forgejo-Version", "7.0.0")
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
+
+	f, domain, ref, err := ResourceFromURL(srv.URL + "/owner/repo/pulls/42")
+	if err != nil {
+		t.Fatalf("ResourceFromURL: %v", err)
+	}
+	if want := strings.TrimPrefix(srv.URL, "http://"); domain != want {
+		t.Errorf("domain = %q, want %q", domain, want)
+	}
+	if ref.Owner != "owner" || ref.Repo != "repo" || ref.Type != forges.ResourceTypePR || ref.Number != 42 {
+		t.Errorf("unexpected resource ref: %+v", ref)
+	}
+	provider, ok := f.(forges.APIBaseURLProvider)
+	if !ok {
+		t.Fatal("forge does not implement APIBaseURLProvider")
+	}
+	if got, want := provider.APIBaseURL(), srv.URL+"/api/v1"; got != want {
+		t.Errorf("APIBaseURL = %q, want %q", got, want)
+	}
+}
 
 func TestMapSSHHost(t *testing.T) {
 	config.ResetCache()
@@ -366,6 +399,135 @@ func TestSetHost(t *testing.T) {
 	}
 }
 
+func TestSetHostWithScheme(t *testing.T) {
+	oldH, oldS := hostOverride, schemeOverride
+	defer func() { hostOverride, schemeOverride = oldH, oldS }()
+
+	SetHost("HTTP://172.30.0.10:3000/forge/")
+	if hostOverride != "172.30.0.10:3000" {
+		t.Errorf("SetHost with URL should store bare host, got %q", hostOverride)
+	}
+	if schemeOverride != "http" {
+		t.Errorf("SetHost with URL should record scheme, got %q", schemeOverride)
+	}
+
+	// Bare host clears any prior scheme override so a later --host without a
+	// scheme does not inherit the previous one.
+	SetHost("gitea.example.com")
+	if schemeOverride != "" {
+		t.Errorf("SetHost with bare host should clear scheme, got %q", schemeOverride)
+	}
+}
+
+func TestBaseURLForDefaultsToHTTPS(t *testing.T) {
+	config.ResetCache()
+	defer config.ResetCache()
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	t.Setenv("FORGE_HOST", "")
+
+	oldH, oldS := hostOverride, schemeOverride
+	defer func() { hostOverride, schemeOverride = oldH, oldS }()
+	hostOverride, schemeOverride = "", ""
+
+	if got := baseURLFor("gitea.example.com"); got != "https://gitea.example.com" {
+		t.Errorf("baseURLFor default = %q, want https://gitea.example.com", got)
+	}
+}
+
+func TestBaseURLForFromHostFlag(t *testing.T) {
+	config.ResetCache()
+	defer config.ResetCache()
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	t.Setenv("FORGE_HOST", "")
+
+	oldH, oldS := hostOverride, schemeOverride
+	defer func() { hostOverride, schemeOverride = oldH, oldS }()
+	SetHost("http://172.30.0.10:3000")
+
+	if got := baseURLFor("172.30.0.10:3000"); got != "http://172.30.0.10:3000" {
+		t.Errorf("baseURLFor from --host = %q, want http://172.30.0.10:3000", got)
+	}
+	// Scheme override only applies to the host it was given for.
+	if got := baseURLFor("codeberg.org"); got != "https://codeberg.org" {
+		t.Errorf("baseURLFor other domain = %q, want https://codeberg.org", got)
+	}
+}
+
+func TestBaseURLForFromEnv(t *testing.T) {
+	config.ResetCache()
+	defer config.ResetCache()
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	t.Setenv("FORGE_HOST", "http://forgejo.local:3000")
+
+	oldH, oldS := hostOverride, schemeOverride
+	defer func() { hostOverride, schemeOverride = oldH, oldS }()
+	hostOverride, schemeOverride = "", ""
+
+	if got := Domain(""); got != "forgejo.local:3000" {
+		t.Errorf("Domain with URL FORGE_HOST = %q, want forgejo.local:3000", got)
+	}
+	if got := baseURLFor("forgejo.local:3000"); got != "http://forgejo.local:3000" {
+		t.Errorf("baseURLFor from FORGE_HOST = %q, want http://forgejo.local:3000", got)
+	}
+	if got := baseURLFor("codeberg.org"); got != "https://codeberg.org" {
+		t.Errorf("baseURLFor other domain = %q, want https://codeberg.org", got)
+	}
+}
+
+func TestBaseURLForFromConfig(t *testing.T) {
+	config.ResetCache()
+	defer config.ResetCache()
+
+	dir := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", dir)
+	t.Setenv("FORGE_HOST", "")
+	cfgDir := filepath.Join(dir, "forge")
+	_ = os.MkdirAll(cfgDir, 0700)
+	_ = os.WriteFile(filepath.Join(cfgDir, "config"), []byte(`[172.30.0.10:3000]
+type = forgejo
+scheme = http
+`), 0600)
+
+	oldH, oldS := hostOverride, schemeOverride
+	defer func() { hostOverride, schemeOverride = oldH, oldS }()
+	hostOverride, schemeOverride = "", ""
+
+	if got := baseURLFor("172.30.0.10:3000"); got != "http://172.30.0.10:3000" {
+		t.Errorf("baseURLFor from config = %q, want http://172.30.0.10:3000", got)
+	}
+}
+
+func TestForgeForDomainHTTPScheme(t *testing.T) {
+	config.ResetCache()
+	defer config.ResetCache()
+
+	dir := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", dir)
+	t.Setenv("FORGE_HOST", "")
+	cfgDir := filepath.Join(dir, "forge")
+	_ = os.MkdirAll(cfgDir, 0700)
+	_ = os.WriteFile(filepath.Join(cfgDir, "config"), []byte(`[forgejo.local:3000]
+type = forgejo
+scheme = http
+`), 0600)
+
+	oldH, oldS := hostOverride, schemeOverride
+	defer func() { hostOverride, schemeOverride = oldH, oldS }()
+	hostOverride, schemeOverride = "", ""
+
+	f, err := ForgeForDomain("forgejo.local:3000")
+	if err != nil {
+		t.Fatalf("ForgeForDomain: %v", err)
+	}
+	p, ok := f.(forges.APIBaseURLProvider)
+	if !ok {
+		t.Fatalf("forge does not implement APIBaseURLProvider")
+	}
+	if got := p.APIBaseURL(); got != "http://forgejo.local:3000/api/v1" {
+		t.Errorf("APIBaseURL = %q, want http://forgejo.local:3000/api/v1", got)
+	}
+}
+
 func TestRemoteDefaultsToOrigin(t *testing.T) {
 	if remoteName != "origin" {
 		t.Errorf("default remote should be origin, got %q", remoteName)
@@ -400,6 +562,7 @@ func TestRemoteSelectsCorrectGitURL(t *testing.T) {
 	mustGit(t, "init", "-q")
 	mustGit(t, "remote", "add", "origin", "https://gitea.example.com/owner/origin-repo.git")
 	mustGit(t, "remote", "add", "mirror", "https://github.com/owner/mirror-repo.git")
+	mustGit(t, "remote", "add", "local", "http://172.30.0.10:3000/owner/local-repo.git")
 
 	old := remoteName
 	defer func() { remoteName = old }()
@@ -411,6 +574,7 @@ func TestRemoteSelectsCorrectGitURL(t *testing.T) {
 	}{
 		{"origin", "gitea.example.com", "origin-repo"},
 		{"mirror", "github.com", "mirror-repo"},
+		{"local", "172.30.0.10:3000", "local-repo"},
 	}
 
 	for _, tt := range tests {

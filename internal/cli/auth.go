@@ -31,6 +31,7 @@ func authLoginCmd() *cobra.Command {
 		token     string
 		tokenCmd  string
 		forgeType string
+		scheme    string
 	)
 
 	cmd := &cobra.Command{
@@ -69,7 +70,12 @@ func authLoginCmd() *cobra.Command {
 				}
 			}
 
-			if err := config.SetDomain(domain, token, tokenCmd, forgeType); err != nil {
+			scheme = strings.ToLower(scheme)
+			if scheme != "" && scheme != "http" && scheme != "https" {
+				return fmt.Errorf("invalid --scheme %q: must be http or https", scheme)
+			}
+
+			if err := config.SetDomain(domain, token, tokenCmd, forgeType, scheme); err != nil {
 				return fmt.Errorf("saving config: %w", err)
 			}
 
@@ -86,6 +92,7 @@ func authLoginCmd() *cobra.Command {
 	cmd.Flags().StringVar(&token, "token", "", "API token")
 	cmd.Flags().StringVar(&tokenCmd, "token-cmd", "", "Shell command whose stdout is used as the token")
 	cmd.Flags().StringVar(&forgeType, "type", "", "Forge type: github, gitlab, gitea, forgejo, bitbucket, gerrit, tangled")
+	cmd.Flags().StringVar(&scheme, "scheme", "", "API scheme: http or https (default https). Use http for plain-HTTP self-hosted instances.")
 	cmd.MarkFlagsMutuallyExclusive("token", "token-cmd")
 	return cmd
 }

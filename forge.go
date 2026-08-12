@@ -131,15 +131,50 @@ func (c *Client) HTTPClient() *http.Client {
 	return c.httpClient
 }
 
+// normalizeBaseURL accepts either a bare host[:port] or a full http(s) URL and
+// returns (baseURL, host). A bare host is assumed https.
+func normalizeBaseURL(s string) (baseURL, host string, err error) {
+	if !strings.Contains(s, "://") {
+		s = "https://" + s
+	}
+
+	u, err := url.Parse(s)
+	if err != nil {
+		return "", "", fmt.Errorf("invalid forge URL %q: %w", s, err)
+	}
+	u.Scheme = strings.ToLower(u.Scheme)
+	if u.Scheme != "http" && u.Scheme != "https" {
+		return "", "", fmt.Errorf("invalid forge URL scheme %q: must be http or https", u.Scheme)
+	}
+	if u.Host == "" {
+		return "", "", fmt.Errorf("invalid forge URL %q: host is required", s)
+	}
+	if u.User != nil {
+		return "", "", fmt.Errorf("invalid forge URL %q: user information is not supported", s)
+	}
+	if u.ForceQuery || u.RawQuery != "" || u.Fragment != "" {
+		return "", "", fmt.Errorf("invalid forge URL %q: query and fragment are not supported", s)
+	}
+
+	u.Path = strings.TrimRight(u.Path, "/")
+	u.RawPath = strings.TrimRight(u.RawPath, "/")
+	return u.String(), u.Host, nil
+}
+
 // RegisterDomain detects the forge type for a domain and registers the
-// appropriate Forge using the provided builder functions.
+// appropriate Forge using the provided builder functions. The domain may
+// include an http:// or https:// prefix; without one, https is assumed.
+// The bare host[:port] is used as the registry key.
 func (c *Client) RegisterDomain(ctx context.Context, domain, token string, builders ForgeBuilders) error {
-	ft, err := DetectForgeType(ctx, domain, c.httpClient)
+	baseURL, domain, err := normalizeBaseURL(domain)
+	if err != nil {
+		return err
+	}
+	ft, err := DetectForgeType(ctx, baseURL, c.httpClient)
 	if err != nil {
 		return fmt.Errorf("detecting forge type for %s: %w", domain, err)
 	}
 	c.tokens[domain] = token
-	baseURL := "https://" + domain
 	switch ft {
 	case GitHub:
 		c.forges[domain] = builders.GitHub(baseURL, token, c.httpClient)
@@ -320,6 +355,9 @@ func ParseRepoURL(rawURL string) (domain, owner, repo string, err error) {
 		return "", "", "", fmt.Errorf("invalid URL: %w", err)
 	}
 	domain = u.Hostname()
+	if scheme := strings.ToLower(u.Scheme); scheme == "http" || scheme == "https" {
+		domain = u.Host
+	}
 	return splitOwnerRepo(domain, u.Path)
 }
 

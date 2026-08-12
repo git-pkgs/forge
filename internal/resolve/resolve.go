@@ -22,6 +22,7 @@ import (
 var (
 	remoteName        = "origin"
 	hostOverride      string
+	schemeOverride    string
 	forgeTypeOverride string
 
 	// testForge allows tests to inject a mock forge. When set, Repo() returns
@@ -50,11 +51,30 @@ func RemoteName() string {
 
 // SetHost forces a specific forge domain, taking precedence over FORGE_HOST,
 // --forge-type, and git remote detection. The CLI calls this from the --host
-// persistent flag. An empty string is ignored.
+// persistent flag. An empty string is ignored. A leading http:// or https://
+// is stripped from the stored host and remembered as the API scheme for that
+// host so plain-HTTP self-hosted instances can be addressed.
 func SetHost(host string) {
-	if host != "" {
-		hostOverride = host
+	if host == "" {
+		return
 	}
+	schemeOverride, hostOverride = splitScheme(host)
+}
+
+// splitScheme splits a leading http:// or https:// off s and returns
+// (scheme, host). If s has no scheme, scheme is "".
+func splitScheme(s string) (scheme, host string) {
+	s = strings.TrimRight(s, "/")
+	u, err := url.Parse(s)
+	if err == nil && u.Host != "" {
+		switch strings.ToLower(u.Scheme) {
+		case "http":
+			return "http", u.Host
+		case "https":
+			return "https", u.Host
+		}
+	}
+	return "", s
 }
 
 // SetForgeType forces the API client implementation for the resolved domain,
@@ -157,16 +177,24 @@ func ResourceFromURL(rawURL string) (forge forges.Forge, domain string, ref *for
 			return nil, "", nil, fmt.Errorf("invalid URL: %w", err)
 		}
 	}
+	scheme := strings.ToLower(u.Scheme)
+	if scheme != "http" && scheme != "https" {
+		return nil, "", nil, fmt.Errorf("invalid URL scheme %q: must be http or https", u.Scheme)
+	}
+	if u.Host == "" {
+		return nil, "", nil, fmt.Errorf("invalid URL: host is required")
+	}
 
-	domain = u.Hostname()
+	domain = u.Host
 	path := strings.Trim(u.Path, "/")
+	baseURL := scheme + "://" + domain
 
 	var f forges.Forge
 	if testForge != nil {
 		f = testForge
 	} else {
-		client := newClient(domain)
-		f, err = forgeForDomainMaybeConfig(context.Background(), client, domain)
+		client := newClientForBaseURL(domain, baseURL)
+		f, err = forgeForDomainAtBaseURL(context.Background(), client, domain, baseURL)
 		if err != nil {
 			return nil, "", nil, err
 		}
@@ -245,6 +273,10 @@ func OwnerForBranch(ctx context.Context, branch string) (string, error) {
 }
 
 func newClient(domain string) *forges.Client {
+	return newClientForBaseURL(domain, baseURLFor(domain))
+}
+
+func newClientForBaseURL(domain, baseURL string) *forges.Client {
 	token := TokenForDomain(domain)
 	var opts []forges.Option
 	if token != "" {
@@ -270,11 +302,27 @@ func newClient(domain string) *forges.Client {
 	if ft == "" {
 		ft = configForgeType(domain)
 	}
-	if f := forgeForType(ft, "https://"+domain, token, hc); f != nil {
+	if f := forgeForType(ft, baseURL, token, hc); f != nil {
 		opts = append(opts, forges.WithForge(domain, f))
 	}
 
 	return forges.NewClient(opts...)
+}
+
+// baseURLFor returns the API base URL for a domain. The scheme is chosen from,
+// in order: a scheme given via --host, a scheme in FORGE_HOST (when it names
+// this domain), the config [domain] scheme key, then https.
+func baseURLFor(domain string) string {
+	if schemeOverride != "" && hostOverride == domain {
+		return schemeOverride + "://" + domain
+	}
+	if s, h := splitScheme(os.Getenv("FORGE_HOST")); s != "" && h == domain {
+		return s + "://" + domain
+	}
+	if s := configScheme(domain); s != "" {
+		return s + "://" + domain
+	}
+	return "https://" + domain
 }
 
 func forgeForType(forgeType, baseURL, token string, hc *http.Client) forges.Forge {
@@ -297,12 +345,16 @@ func forgeForType(forgeType, baseURL, token string, hc *http.Client) forges.Forg
 // fails and the config declares a type for the domain, it registers the domain
 // using that type (skipping network detection). Otherwise falls back to probing.
 func forgeForDomainMaybeConfig(ctx context.Context, client *forges.Client, domain string) (forges.Forge, error) {
+	return forgeForDomainAtBaseURL(ctx, client, domain, baseURLFor(domain))
+}
+
+func forgeForDomainAtBaseURL(ctx context.Context, client *forges.Client, domain, baseURL string) (forges.Forge, error) {
 	f, err := client.ForgeFor(domain)
 	if err == nil {
 		return f, nil
 	}
 	token := TokenForDomain(domain)
-	if regErr := client.RegisterDomain(ctx, domain, token, builders); regErr != nil {
+	if regErr := client.RegisterDomain(ctx, baseURL, token, builders); regErr != nil {
 		return nil, fmt.Errorf("unknown forge at %s: %w (use --forge-type, or set type under [%s] in config, to skip detection)", domain, regErr, domain)
 	}
 	return client.ForgeFor(domain)
@@ -316,6 +368,16 @@ func configForgeType(domain string) string {
 		return ""
 	}
 	return cfg.Domains[domain].Type
+}
+
+// configScheme returns the API scheme for a domain from config files,
+// or empty string if not configured.
+func configScheme(domain string) string {
+	cfg, err := config.Load()
+	if err != nil || cfg == nil {
+		return ""
+	}
+	return cfg.Domains[domain].Scheme
 }
 
 // TokenForDomain looks up an auth token. Checks environment variables first
@@ -396,7 +458,7 @@ func Domain(forgeType string) string {
 	if hostOverride != "" {
 		return hostOverride
 	}
-	if d := os.Getenv("FORGE_HOST"); d != "" {
+	if _, d := splitScheme(os.Getenv("FORGE_HOST")); d != "" {
 		return d
 	}
 	if forgeType != "" {

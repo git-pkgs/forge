@@ -168,15 +168,18 @@ ssh_host = ssh.gitlab.test
 	}
 }
 
-func TestLoadFileIgnoresSSHHostWithoutAllowTokens(t *testing.T) {
+func TestLoadFileIgnoresUserOnlySettingsForProjectConfig(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "config")
 	_ = os.WriteFile(path, []byte(`[attacker.com]
 type = gitea
+scheme = http
 ssh_host = ssh.legit.test
 `), 0600)
 
-	cfg := &Config{Domains: make(map[string]DomainSection)}
+	cfg := &Config{Domains: map[string]DomainSection{
+		"attacker.com": {Scheme: "https"},
+	}}
 	if err := loadFile(cfg, path, false); err != nil {
 		t.Fatal(err)
 	}
@@ -184,6 +187,9 @@ ssh_host = ssh.legit.test
 	got := cfg.Domains["attacker.com"].SSHHost
 	if got != "" {
 		t.Errorf("project config should not set SSHHost, got %q", got)
+	}
+	if got := cfg.Domains["attacker.com"].Scheme; got != "https" {
+		t.Errorf("project config should not override Scheme, got %q", got)
 	}
 
 	if cfg.Domains["attacker.com"].Type != "gitea" {
@@ -209,6 +215,7 @@ token = ghp_user
 
 [gitea.example.com]
 type = gitea
+scheme = https
 token = gitea_tok
 `), 0600)
 
@@ -221,6 +228,7 @@ forge-type = gitlab
 
 [gitea.example.com]
 type = forgejo
+scheme = http
 token = should_be_ignored
 `), 0644)
 
@@ -255,6 +263,9 @@ token = should_be_ignored
 	}
 	if ds.Token != "gitea_tok" {
 		t.Errorf("expected token from user config only (not overwritten by project), got %q", ds.Token)
+	}
+	if ds.Scheme != "https" {
+		t.Errorf("expected scheme from user config only, got %q", ds.Scheme)
 	}
 }
 
@@ -350,7 +361,7 @@ func TestSetDomain(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("XDG_CONFIG_HOME", dir)
 
-	err := SetDomain("gitea.example.com", "tok123", "", "gitea")
+	err := SetDomain("gitea.example.com", "tok123", "", "gitea", "")
 	if err != nil {
 		t.Fatalf("SetDomain: %v", err)
 	}
@@ -406,7 +417,7 @@ func TestSetDomainTightensExistingPermissions(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := SetDomain("github.com", "ghp_secret", "", ""); err != nil {
+	if err := SetDomain("github.com", "ghp_secret", "", "", ""); err != nil {
 		t.Fatalf("SetDomain: %v", err)
 	}
 
@@ -434,7 +445,7 @@ type = gitlab
 `), 0600)
 
 	// Add a new domain; existing entries should survive.
-	err := SetDomain("codeberg.org", "tok_new", "", "gitea")
+	err := SetDomain("codeberg.org", "tok_new", "", "gitea", "")
 	if err != nil {
 		t.Fatalf("SetDomain: %v", err)
 	}
@@ -468,7 +479,7 @@ token = old_token
 `), 0600)
 
 	// Update
-	err := SetDomain("github.com", "new_token", "", "")
+	err := SetDomain("github.com", "new_token", "", "", "")
 	if err != nil {
 		t.Fatalf("SetDomain: %v", err)
 	}
@@ -480,6 +491,63 @@ token = old_token
 	}
 	if strings.Contains(content, "old_token") {
 		t.Error("old token should be replaced")
+	}
+}
+
+func TestSetDomainScheme(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", dir)
+
+	if err := SetDomain("forgejo.local:3000", "tok", "", "forgejo", "HTTP"); err != nil {
+		t.Fatalf("SetDomain: %v", err)
+	}
+
+	data, _ := os.ReadFile(filepath.Join(dir, "forge", "config"))
+	content := string(data)
+	if !strings.Contains(content, "scheme = http") {
+		t.Errorf("expected scheme = http in config, got:\n%s", content)
+	}
+
+	ResetCache()
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if got := cfg.Domains["forgejo.local:3000"].Scheme; got != "http" {
+		t.Errorf("Scheme = %q, want http", got)
+	}
+}
+
+func TestSetDomainRejectsInvalidScheme(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", dir)
+
+	err := SetDomain("forgejo.local", "tok", "", "forgejo", "ftp")
+	if err == nil {
+		t.Fatal("expected invalid scheme error")
+	}
+	if !strings.Contains(err.Error(), "invalid scheme") {
+		t.Errorf("expected scheme error, got %v", err)
+	}
+	if _, statErr := os.Stat(filepath.Join(dir, "forge", "config")); !os.IsNotExist(statErr) {
+		t.Errorf("config should not be written for an invalid scheme, stat error: %v", statErr)
+	}
+}
+
+func TestLoadFileInvalidScheme(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "config")
+	_ = os.WriteFile(path, []byte(`[forgejo.local]
+scheme = ftp
+`), 0600)
+
+	cfg := &Config{Domains: make(map[string]DomainSection)}
+	err := loadFile(cfg, path, true)
+	if err == nil {
+		t.Fatal("expected error for invalid scheme")
+	}
+	if !strings.Contains(err.Error(), "invalid scheme") {
+		t.Errorf("expected error about invalid scheme, got: %v", err)
 	}
 }
 
