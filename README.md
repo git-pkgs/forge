@@ -193,6 +193,15 @@ p, _ := purl.Parse("pkg:npm/lodash?repository_url=https://github.com/lodash/loda
 repo, err := client.FetchRepositoryFromPURL(ctx, p)
 ```
 
+GitHub refs can be resolved to full commit SHAs without listing every tag:
+
+```go
+import githubforge "github.com/git-pkgs/forge/github"
+
+resolver := githubforge.NewCommitResolver(os.Getenv("GITHUB_TOKEN"), nil)
+sha, err := resolver.ResolveCommit(ctx, "actions", "checkout", "v4.2.1")
+```
+
 ## License
 
 MIT. See [LICENSE](LICENSE).
