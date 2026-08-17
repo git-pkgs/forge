@@ -18,6 +18,7 @@ type unsupportedSecretService struct{}
 type unsupportedNotificationService struct{}
 type unsupportedCollaboratorService struct{}
 type unsupportedCommitStatusService struct{}
+type unsupportedCommitService struct{}
 
 func (f *gerritForge) Issues() forge.IssueService         { return &unsupportedIssueService{} }
 func (f *gerritForge) Labels() forge.LabelService         { return &unsupportedLabelService{} }
@@ -35,6 +36,7 @@ func (f *gerritForge) Collaborators() forge.CollaboratorService {
 func (f *gerritForge) CommitStatuses() forge.CommitStatusService {
 	return &unsupportedCommitStatusService{}
 }
+func (f *gerritForge) Commits() forge.CommitService { return &unsupportedCommitService{} }
 func (f *gerritForge) GetRateLimit(context.Context) (*forge.RateLimit, error) {
 	return nil, forge.ErrNotSupported
 }
@@ -205,4 +207,8 @@ func (s *unsupportedCommitStatusService) List(context.Context, string, string, s
 }
 func (s *unsupportedCommitStatusService) Set(context.Context, string, string, string, forge.SetCommitStatusOpts) (*forge.CommitStatus, error) {
 	return nil, forge.ErrNotSupported
+}
+
+func (s *unsupportedCommitService) ResolveCommit(context.Context, string, string, string) (string, error) {
+	return "", forge.ErrNotSupported
 }

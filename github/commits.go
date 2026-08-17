@@ -2,6 +2,7 @@ package github
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -14,9 +15,7 @@ import (
 // DefaultAPIBaseURL is the public GitHub REST API base URL.
 const DefaultAPIBaseURL = "https://api.github.com/"
 
-const fullCommitSHALength = 40
-
-// CommitResolver resolves GitHub branch, tag, and abbreviated commit refs to
+// CommitResolver resolves GitHub branch, tag and abbreviated commit refs to
 // full commit SHAs. Full 40-character hexadecimal SHAs are returned without a
 // network request.
 type CommitResolver struct {
@@ -48,7 +47,7 @@ func NewCommitResolverWithBase(baseURL, token string, client *http.Client) (*Com
 		return nil, fmt.Errorf("parse GitHub API base URL: unsupported scheme %q", base.Scheme)
 	}
 	if base.Host == "" {
-		return nil, fmt.Errorf("parse GitHub API base URL: host is required")
+		return nil, errors.New("parse GitHub API base URL: host is required")
 	}
 	api.BaseURL = base
 
@@ -58,42 +57,47 @@ func NewCommitResolverWithBase(baseURL, token string, client *http.Client) (*Com
 // ResolveCommit returns the full commit SHA for ref in owner/repo. GitHub's
 // commit endpoint dereferences both lightweight and annotated tags.
 func (r *CommitResolver) ResolveCommit(ctx context.Context, owner, repo, ref string) (string, error) {
-	if owner == "" || repo == "" || ref == "" {
-		return "", fmt.Errorf("resolve GitHub commit: owner, repo, and ref are required")
+	if err := forge.ValidateCommitRef(owner, repo, ref); err != nil {
+		return "", err
 	}
-	if isFullCommitSHA(ref) {
+	if forge.IsFullCommitSHA(ref) {
 		return strings.ToLower(ref), nil
 	}
 	if r == nil || r.client == nil {
-		return "", fmt.Errorf("resolve GitHub commit: resolver is nil")
+		return "", errors.New("resolve GitHub commit: resolver is nil")
 	}
-
-	sha, response, err := r.client.Repositories.GetCommitSHA1(ctx, owner, repo, ref, "")
-	if err != nil {
-		if response != nil && response.StatusCode == http.StatusNotFound {
-			return "", fmt.Errorf("resolve %s/%s ref %q: %w", owner, repo, ref, forge.ErrNotFound)
-		}
-		return "", fmt.Errorf("resolve %s/%s ref %q: %w", owner, repo, ref, err)
-	}
-	sha = strings.TrimSpace(sha)
-	if sha == "" {
-		return "", fmt.Errorf("resolve %s/%s ref %q: empty SHA in response", owner, repo, ref)
-	}
-	if !isFullCommitSHA(sha) {
-		return "", fmt.Errorf("resolve %s/%s ref %q: invalid full SHA in response", owner, repo, ref)
-	}
-	return strings.ToLower(sha), nil
+	return resolveCommit(ctx, r.client, owner, repo, ref)
 }
 
-// isFullCommitSHA reports whether ref is a full-length hexadecimal SHA-1.
-func isFullCommitSHA(ref string) bool {
-	if len(ref) != fullCommitSHALength {
-		return false
+type gitHubCommitService struct {
+	client *gh.Client
+}
+
+func (f *gitHubForge) Commits() forge.CommitService {
+	return &gitHubCommitService{client: f.client}
+}
+
+// ResolveCommit returns the full commit SHA for ref in owner/repo.
+func (s *gitHubCommitService) ResolveCommit(ctx context.Context, owner, repo, ref string) (string, error) {
+	if err := forge.ValidateCommitRef(owner, repo, ref); err != nil {
+		return "", err
 	}
-	for _, char := range ref {
-		if (char < '0' || char > '9') && (char < 'a' || char > 'f') && (char < 'A' || char > 'F') {
-			return false
+	if forge.IsFullCommitSHA(ref) {
+		return strings.ToLower(ref), nil
+	}
+	return resolveCommit(ctx, s.client, owner, repo, ref)
+}
+
+// resolveCommit asks the GitHub commit endpoint for the full SHA behind ref.
+// Callers have already rejected empty arguments and short-circuited refs that
+// are full SHAs already.
+func resolveCommit(ctx context.Context, client *gh.Client, owner, repo, ref string) (string, error) {
+	sha, response, err := client.Repositories.GetCommitSHA1(ctx, owner, repo, ref, "")
+	if err != nil {
+		if response != nil && response.StatusCode == http.StatusNotFound {
+			return "", forge.CommitRefError(owner, repo, ref, forge.ErrNotFound)
 		}
+		return "", forge.CommitRefError(owner, repo, ref, err)
 	}
-	return true
+	return forge.ResolvedCommitSHA(owner, repo, ref, sha)
 }

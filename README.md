@@ -155,7 +155,7 @@ client := forges.NewClient(
 repo, err := client.FetchRepository(ctx, "https://github.com/octocat/hello-world")
 ```
 
-The `Forge` interface exposes services for repos, issues, pull requests, reviews, releases, CI, branches, labels, milestones, deploy keys, secrets, notifications, files, collaborators, and commit statuses. Each backend implements these using its native SDK.
+The `Forge` interface exposes services for repos, issues, pull requests, reviews, releases, CI, branches, labels, milestones, deploy keys, secrets, notifications, files, collaborators, commit statuses and commits. Each backend implements these using its native SDK.
 
 ```go
 f, _ := client.ForgeFor("github.com")
@@ -193,7 +193,19 @@ p, _ := purl.Parse("pkg:npm/lodash?repository_url=https://github.com/lodash/loda
 repo, err := client.FetchRepositoryFromPURL(ctx, p)
 ```
 
-GitHub refs can be resolved to full commit SHAs without listing every tag:
+Branches, tags and abbreviated commit refs can be resolved to full commit SHAs without listing every tag. GitHub, GitLab and Gitea/Forgejo implement this; the remaining backends return `forges.ErrNotSupported`.
+
+```go
+f, _ := client.ForgeFor("gitlab.com")
+sha, err := f.Commits().ResolveCommit(ctx, "gitlab-org", "gitlab", "v17.0.0")
+
+// or route by repository URL
+sha, err = client.ResolveCommit(ctx, "https://github.com/actions/checkout", "v4.2.1")
+```
+
+A ref that does not exist returns `forges.ErrNotFound`. A ref that is already a full 40-character SHA is normalized and returned without a network request.
+
+The GitHub backend also exposes a standalone resolver for callers that do not need the full `Forge` interface:
 
 ```go
 import githubforge "github.com/git-pkgs/forge/github"

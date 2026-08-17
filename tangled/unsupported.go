@@ -250,3 +250,9 @@ func (unsupportedCommitStatusService) List(context.Context, string, string, stri
 func (unsupportedCommitStatusService) Set(context.Context, string, string, string, forges.SetCommitStatusOpts) (*forges.CommitStatus, error) {
 	return nil, forges.ErrNotSupported
 }
+
+type unsupportedCommitService struct{}
+
+func (unsupportedCommitService) ResolveCommit(context.Context, string, string, string) (string, error) {
+	return "", forges.ErrNotSupported
+}

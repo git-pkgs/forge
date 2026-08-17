@@ -620,6 +620,7 @@ type mockForge struct {
 	deployKeyService *mockDeployKeyService
 	secretService    *mockSecretService
 	reviewService    *mockReviewService
+	commitService    *mockCommitService
 }
 
 func (m *mockForge) Repos() RepoService {
@@ -724,6 +725,13 @@ func (m *mockForge) CommitStatuses() CommitStatusService {
 	return &mockCommitStatusService{}
 }
 
+func (m *mockForge) Commits() CommitService {
+	if m.commitService != nil {
+		return m.commitService
+	}
+	return &mockCommitService{}
+}
+
 func (m *mockForge) GetRateLimit(_ context.Context) (*RateLimit, error) {
 	return nil, ErrNotSupported
 }
@@ -764,6 +772,21 @@ func (m *mockCommitStatusService) List(_ context.Context, _, _, _ string) ([]Com
 
 func (m *mockCommitStatusService) Set(_ context.Context, _, _, _ string, _ SetCommitStatusOpts) (*CommitStatus, error) {
 	return nil, nil
+}
+
+type mockCommitService struct {
+	sha       string
+	err       error
+	lastOwner string
+	lastRepo  string
+	lastRef   string
+}
+
+func (m *mockCommitService) ResolveCommit(_ context.Context, owner, repo, ref string) (string, error) {
+	m.lastOwner = owner
+	m.lastRepo = repo
+	m.lastRef = ref
+	return m.sha, m.err
 }
 
 type mockRepoService struct {
