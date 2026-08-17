@@ -79,7 +79,10 @@ func (r *CommitResolver) ResolveCommit(ctx context.Context, owner, repo, ref str
 	if sha == "" {
 		return "", fmt.Errorf("resolve %s/%s ref %q: empty SHA in response", owner, repo, ref)
 	}
-	return sha, nil
+	if !isFullCommitSHA(sha) {
+		return "", fmt.Errorf("resolve %s/%s ref %q: invalid full SHA in response", owner, repo, ref)
+	}
+	return strings.ToLower(sha), nil
 }
 
 // isFullCommitSHA reports whether ref is a full-length hexadecimal SHA-1.

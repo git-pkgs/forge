@@ -12,6 +12,7 @@ import (
 )
 
 func TestCommitResolverResolveCommit(t *testing.T) {
+	const responseSHA = "8E8C483DB84B4BEE98B60C0593521ED34D9990E8"
 	const wantSHA = "8e8c483db84b4bee98b60c0593521ed34d9990e8"
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/repos/actions/checkout/commits/v4.2.1" {
@@ -23,7 +24,7 @@ func TestCommitResolverResolveCommit(t *testing.T) {
 		if r.Header.Get("Accept") != "application/vnd.github.v3.sha" {
 			t.Errorf("Accept = %q, want SHA media type", r.Header.Get("Accept"))
 		}
-		_, _ = w.Write([]byte(wantSHA))
+		_, _ = w.Write([]byte(responseSHA))
 	}))
 	defer srv.Close()
 
@@ -85,6 +86,20 @@ func TestCommitResolverErrors(t *testing.T) {
 		}
 		if _, err := resolver.ResolveCommit(context.Background(), "actions", "checkout", "v4"); err == nil {
 			t.Fatal("ResolveCommit() error = nil, want empty SHA error")
+		}
+	})
+
+	t.Run("invalid SHA", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			_, _ = w.Write([]byte("deadbeef"))
+		}))
+		defer srv.Close()
+		resolver, err := NewCommitResolverWithBase(srv.URL, "", srv.Client())
+		if err != nil {
+			t.Fatalf("NewCommitResolverWithBase: %v", err)
+		}
+		if _, err := resolver.ResolveCommit(context.Background(), "actions", "checkout", "v4"); err == nil {
+			t.Fatal("ResolveCommit() error = nil, want invalid SHA error")
 		}
 	})
 
