@@ -2,6 +2,8 @@ module github.com/git-pkgs/forge
 
 go 1.26
 
+toolchain go1.26.6
+
 require (
 	code.gitea.io/sdk/gitea v0.25.1
 	github.com/git-pkgs/purl v0.1.16
