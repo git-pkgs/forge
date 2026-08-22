@@ -131,6 +131,23 @@ func CurrentBranch(ctx context.Context, dir string) (string, error) {
 	return branch, nil
 }
 
+// PushBranch pushes a local branch to the same branch name on a remote and
+// configures the local branch to track it.
+func PushBranch(ctx context.Context, dir, remote, branch string) error {
+	if remote == "" {
+		return fmt.Errorf("empty remote name")
+	}
+	if branch == "" {
+		return fmt.Errorf("empty branch name")
+	}
+
+	ref := "refs/heads/" + branch
+	if _, err := runGit(ctx, dir, "push", "--set-upstream", remote, ref+":"+ref); err != nil {
+		return fmt.Errorf("failed to push branch %q to remote %q: %w", branch, remote, err)
+	}
+	return nil
+}
+
 func branchConfigKey(branch, name string) string {
 	return fmt.Sprintf("branch.%s.%s", branch, name)
 }

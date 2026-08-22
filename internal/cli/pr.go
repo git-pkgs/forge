@@ -277,6 +277,7 @@ func prCreateCmd() *cobra.Command {
 		flagHead      string
 		flagBase      string
 		flagDraft     bool
+		flagPush      bool
 		flagReviewers []string
 		flagAssignees []string
 		flagLabels    []string
@@ -298,6 +299,12 @@ func prCreateCmd() *cobra.Command {
 			forge, owner, repoName, _, err := resolve.Repo(flagRepo, flagForgeType)
 			if err != nil {
 				return err
+			}
+
+			if flagPush {
+				if err := git.PushBranch(cmd.Context(), "", resolve.RemoteName(), flagHead); err != nil {
+					return fmt.Errorf("pushing head branch: %w", err)
+				}
 			}
 
 			opts := forges.CreatePROpts{
@@ -336,6 +343,7 @@ func prCreateCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&flagHead, "head", "H", "", "Head branch")
 	cmd.Flags().StringVarP(&flagBase, "base", "B", "", "Base branch")
 	cmd.Flags().BoolVarP(&flagDraft, "draft", "d", false, "Create as draft")
+	cmd.Flags().BoolVar(&flagPush, "push", false, "Push the head branch before creating the PR")
 	cmd.Flags().StringSliceVarP(&flagReviewers, "reviewer", "r", nil, "Request a reviewer")
 	cmd.Flags().StringSliceVarP(&flagAssignees, "assignee", "a", nil, "Assign to a user")
 	cmd.Flags().StringSliceVarP(&flagLabels, "label", "l", nil, "Add a label")
