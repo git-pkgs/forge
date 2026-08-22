@@ -15,10 +15,14 @@ import (
 
 // mockPRService implements forges.PullRequestService for testing.
 type mockPRService struct {
-	pr         *forges.PullRequest
-	err        error
-	listResult []forges.PullRequest
-	listErr    error
+	pr           *forges.PullRequest
+	err          error
+	listResult   []forges.PullRequest
+	listErr      error
+	createResult *forges.PullRequest
+	createErr    error
+	createOpts   forges.CreatePROpts
+	createCalls  int
 }
 
 func (m *mockPRService) Get(_ context.Context, _, _ string, _ int) (*forges.PullRequest, error) {
@@ -29,8 +33,10 @@ func (m *mockPRService) List(_ context.Context, _, _ string, _ forges.ListPROpts
 	return m.listResult, m.listErr
 }
 
-func (m *mockPRService) Create(_ context.Context, _, _ string, _ forges.CreatePROpts) (*forges.PullRequest, error) {
-	return nil, nil
+func (m *mockPRService) Create(_ context.Context, _, _ string, opts forges.CreatePROpts) (*forges.PullRequest, error) {
+	m.createCalls++
+	m.createOpts = opts
+	return m.createResult, m.createErr
 }
 
 func (m *mockPRService) Update(_ context.Context, _, _ string, _ int, _ forges.UpdatePROpts) (*forges.PullRequest, error) {

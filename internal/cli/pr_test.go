@@ -112,6 +112,173 @@ func TestPRCreateRequiresHead(t *testing.T) {
 	}
 }
 
+func TestPRCreatePushesHeadBranch(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not installed")
+	}
+
+	dir := t.TempDir()
+	remoteDir := filepath.Join(t.TempDir(), "remote.git")
+	t.Chdir(dir)
+	mustGit(t, "", "init", "--bare", "-q", remoteDir)
+	mustGit(t, dir, "init", "-q")
+	mustGit(t, dir, "config", "user.email", "test@test.com")
+	mustGit(t, dir, "config", "user.name", "Test")
+	if err := os.WriteFile(filepath.Join(dir, "README"), []byte("test\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	mustGit(t, dir, "add", "README")
+	mustGit(t, dir, "commit", "-q", "-m", "initial commit")
+	mustGit(t, dir, "checkout", "-q", "-b", "feature")
+	mustGit(t, dir, "remote", "add", "origin", remoteDir)
+
+	prs := &mockPRService{
+		createResult: &forges.PullRequest{
+			Number:  1,
+			HTMLURL: "https://example.com/pulls/1",
+			Base:    forges.PRBranch{Ref: "main"},
+		},
+	}
+	resolve.SetTestForge(&mockForge{prService: prs}, "owner", "repo", "example.com")
+	t.Cleanup(resolve.ResetTestForge)
+	resolve.SetRemote("origin")
+
+	cmd := prCreateCmd()
+	cmd.SetArgs([]string{"--title", "Test PR", "--head", "forkowner:feature", "--push"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("pr create: %v", err)
+	}
+
+	if prs.createCalls != 1 {
+		t.Fatalf("Create calls = %d, want 1", prs.createCalls)
+	}
+	if prs.createOpts.Head != "forkowner:feature" {
+		t.Fatalf("Create head = %q, want %q", prs.createOpts.Head, "forkowner:feature")
+	}
+	localSHA := gitOutput(t, dir, "rev-parse", "refs/heads/feature")
+	remoteSHA := gitOutput(t, "", "--git-dir", remoteDir, "rev-parse", "refs/heads/feature")
+	if remoteSHA != localSHA {
+		t.Fatalf("remote branch SHA = %q, want %q", remoteSHA, localSHA)
+	}
+	base := gitOutput(t, dir, "config", "--local", "--get", "branch.feature.forge-merge-base")
+	if base != "main" {
+		t.Fatalf("cached base branch = %q, want %q", base, "main")
+	}
+}
+
+func TestPRCreatePushRejectsUnqualifiedForkHead(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not installed")
+	}
+
+	dir := t.TempDir()
+	t.Chdir(dir)
+	mustGit(t, dir, "init", "-q")
+	mustGit(t, dir, "remote", "add", "fork", "https://github.com/upstream/repo.git")
+	mustGit(t, dir, "remote", "set-url", "--push", "fork", "https://github.com/forkowner/repo.git")
+
+	prs := &mockPRService{}
+	resolve.SetTestForge(&mockForge{prService: prs}, "upstream", "repo", "github.com")
+	t.Cleanup(resolve.ResetTestForge)
+	resolve.SetRemote("fork")
+	t.Cleanup(func() { resolve.SetRemote("origin") })
+
+	cmd := prCreateCmd()
+	cmd.SetArgs([]string{"--title", "Test PR", "--head", "feature", "--push"})
+	err := cmd.Execute()
+	if err == nil || !strings.Contains(err.Error(), "use --head forkowner:feature") {
+		t.Fatalf("pr create error = %v, want qualified-head guidance", err)
+	}
+	if prs.createCalls != 0 {
+		t.Fatalf("Create calls = %d, want 0", prs.createCalls)
+	}
+}
+
+func TestPRCreatePushRejectsMismatchedQualifiedOwner(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not installed")
+	}
+
+	dir := t.TempDir()
+	t.Chdir(dir)
+	mustGit(t, dir, "init", "-q")
+	mustGit(t, dir, "remote", "add", "fork", "https://github.com/forkowner/repo.git")
+
+	prs := &mockPRService{}
+	resolve.SetTestForge(&mockForge{prService: prs}, "upstream", "repo", "github.com")
+	t.Cleanup(resolve.ResetTestForge)
+	resolve.SetRemote("fork")
+	t.Cleanup(func() { resolve.SetRemote("origin") })
+
+	cmd := prCreateCmd()
+	cmd.SetArgs([]string{"--title", "Test PR", "--head", "otherowner:feature", "--push"})
+	err := cmd.Execute()
+	if err == nil || !strings.Contains(err.Error(), "head owner \"otherowner\" does not match") {
+		t.Fatalf("pr create error = %v, want owner-mismatch error", err)
+	}
+	if prs.createCalls != 0 {
+		t.Fatalf("Create calls = %d, want 0", prs.createCalls)
+	}
+}
+
+func TestSplitPRHead(t *testing.T) {
+	tests := []struct {
+		head       string
+		wantOwner  string
+		wantBranch string
+		wantErr    bool
+	}{
+		{head: "feature", wantBranch: "feature"},
+		{head: "forkowner:feature", wantOwner: "forkowner", wantBranch: "feature"},
+		{head: ":feature", wantErr: true},
+		{head: "forkowner:", wantErr: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.head, func(t *testing.T) {
+			owner, branch, err := splitPRHead(tt.head)
+			if tt.wantErr {
+				if err == nil {
+					t.Fatal("expected error")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("splitPRHead: %v", err)
+			}
+			if owner != tt.wantOwner || branch != tt.wantBranch {
+				t.Fatalf("splitPRHead = %q, %q, want %q, %q", owner, branch, tt.wantOwner, tt.wantBranch)
+			}
+		})
+	}
+}
+
+func TestPRCreatePushFailurePreventsCreate(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not installed")
+	}
+
+	dir := t.TempDir()
+	t.Chdir(dir)
+	mustGit(t, dir, "init", "-q")
+
+	prs := &mockPRService{}
+	resolve.SetTestForge(&mockForge{prService: prs}, "owner", "repo", "example.com")
+	t.Cleanup(resolve.ResetTestForge)
+	resolve.SetRemote("missing")
+	t.Cleanup(func() { resolve.SetRemote("origin") })
+
+	cmd := prCreateCmd()
+	cmd.SetArgs([]string{"--title", "Test PR", "--head", "feature", "--push"})
+	err := cmd.Execute()
+	if err == nil || !strings.Contains(err.Error(), "pushing head branch") {
+		t.Fatalf("pr create error = %v, want push error", err)
+	}
+	if prs.createCalls != 0 {
+		t.Fatalf("Create calls = %d, want 0", prs.createCalls)
+	}
+}
+
 func TestPRMergeInvalidNumber(t *testing.T) {
 	var buf bytes.Buffer
 	rootCmd.SetOut(&buf)
@@ -345,6 +512,21 @@ func mustGit(t *testing.T, dir string, args ...string) {
 	if out, err := cmd.CombinedOutput(); err != nil {
 		t.Fatalf("git %v: %v\n%s", args, err, out)
 	}
+}
+
+func gitOutput(t *testing.T, dir string, args ...string) string {
+	t.Helper()
+	cmd := exec.Command("git", args...)
+	cmd.Dir = dir
+	cmd.Env = append(os.Environ(),
+		"GIT_CONFIG_GLOBAL=/dev/null",
+		"GIT_CONFIG_SYSTEM=/dev/null",
+	)
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("git %v: %v\n%s", args, err, out)
+	}
+	return strings.TrimSpace(string(out))
 }
 
 func TestPRViewJSONFlagNotSupported(t *testing.T) {

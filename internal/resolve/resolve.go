@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 
 	"github.com/git-pkgs/forge"
@@ -244,6 +245,27 @@ func gitRemoteURL(name string) (string, error) {
 		return "", err
 	}
 	return strings.TrimSpace(string(out)), nil
+}
+
+// PushRemoteRepo returns the forge domain, owner, and repository addressed by
+// a remote's push URL. Git falls back to the fetch URL when no push URL is set.
+func PushRemoteRepo(ctx context.Context, name string) (domain, owner, repo string, err error) {
+	out, err := exec.CommandContext(ctx, "git", "remote", "get-url", "--push", name).Output()
+	if err != nil {
+		return "", "", "", err
+	}
+
+	rawURL := strings.TrimSpace(string(out))
+	parsed, parseErr := url.Parse(rawURL)
+	if filepath.IsAbs(rawURL) || (parseErr == nil && parsed.Scheme == "file") {
+		return "", "", "", fmt.Errorf("push remote %q uses a local path", name)
+	}
+
+	domain, owner, repo, err = forges.ParseRepoURL(rawURL)
+	if err != nil {
+		return "", "", "", err
+	}
+	return mapSSHHost(domain), owner, repo, nil
 }
 
 // OwnerForBranch returns the repository owner for the remote that the given
