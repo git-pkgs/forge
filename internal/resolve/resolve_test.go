@@ -679,6 +679,41 @@ func TestOwnerForBranch(t *testing.T) {
 	}
 }
 
+func TestPushRemoteRepo(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not installed")
+	}
+
+	dir := t.TempDir()
+	t.Chdir(dir)
+	mustGit(t, "init", "-q")
+	mustGit(t, "remote", "add", "origin", "https://github.com/mainowner/project.git")
+	mustGit(t, "remote", "set-url", "--push", "origin", "git@github.com:forkowner/project.git")
+
+	domain, owner, repo, err := PushRemoteRepo(context.Background(), "origin")
+	if err != nil {
+		t.Fatalf("PushRemoteRepo: %v", err)
+	}
+	if domain != "github.com" || owner != "forkowner" || repo != "project" {
+		t.Fatalf("PushRemoteRepo = %q, %q, %q, want %q, %q, %q", domain, owner, repo, "github.com", "forkowner", "project")
+	}
+}
+
+func TestPushRemoteRepoRejectsLocalPath(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not installed")
+	}
+
+	dir := t.TempDir()
+	t.Chdir(dir)
+	mustGit(t, "init", "-q")
+	mustGit(t, "remote", "add", "origin", filepath.Join(t.TempDir(), "remote.git"))
+
+	if _, _, _, err := PushRemoteRepo(context.Background(), "origin"); err == nil {
+		t.Fatal("expected local-path remote to be rejected")
+	}
+}
+
 func mustGit(t *testing.T, args ...string) {
 	t.Helper()
 	cmd := exec.Command("git", args...)
