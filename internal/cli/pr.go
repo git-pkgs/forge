@@ -300,6 +300,9 @@ func prCreateCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			prService := forge.PullRequests()
+			qualifiedHeadProvider, ok := prService.(forges.QualifiedPRHeadProvider)
+			supportsQualifiedHeads := ok && qualifiedHeadProvider.SupportsQualifiedPRHeads()
 
 			localHead := flagHead
 			if flagPush {
@@ -307,7 +310,10 @@ func prCreateCmd() *cobra.Command {
 				if err != nil {
 					return err
 				}
-				if err := validatePushRemote(cmd.Context(), domain, owner, repoName, headOwner, localBranch); err != nil {
+				if headOwner != "" && !supportsQualifiedHeads {
+					return fmt.Errorf("qualified head %q is not supported by this forge; fork pushes require GitHub or Gitea", flagHead)
+				}
+				if err := validatePushRemote(cmd.Context(), domain, owner, repoName, headOwner, localBranch, supportsQualifiedHeads); err != nil {
 					return err
 				}
 				if err := git.PushBranch(cmd.Context(), "", resolve.RemoteName(), localBranch); err != nil {
@@ -328,7 +334,7 @@ func prCreateCmd() *cobra.Command {
 				Milestone: flagMilestone,
 			}
 
-			pr, err := forge.PullRequests().Create(cmd.Context(), owner, repoName, opts)
+			pr, err := prService.Create(cmd.Context(), owner, repoName, opts)
 			if err != nil {
 				return fmt.Errorf("creating pull request: %w", err)
 			}
@@ -373,7 +379,7 @@ func splitPRHead(head string) (owner, branch string, err error) {
 	return owner, branch, nil
 }
 
-func validatePushRemote(ctx context.Context, domain, owner, repo, headOwner, branch string) error {
+func validatePushRemote(ctx context.Context, domain, owner, repo, headOwner, branch string, supportsQualifiedHeads bool) error {
 	remote := resolve.RemoteName()
 	pushDomain, pushOwner, pushRepo, err := resolve.PushRemoteRepo(ctx, remote)
 	if err != nil {
@@ -382,14 +388,23 @@ func validatePushRemote(ctx context.Context, domain, owner, repo, headOwner, bra
 		return nil
 	}
 
-	if !strings.EqualFold(pushDomain, domain) || !strings.EqualFold(pushRepo, repo) {
+	if !strings.EqualFold(pushDomain, domain) {
 		return fmt.Errorf("push remote %q points to %s/%s/%s, not %s/%s/%s", remote, pushDomain, pushOwner, pushRepo, domain, owner, repo)
 	}
-	if headOwner == "" && !strings.EqualFold(pushOwner, owner) {
+	if headOwner != "" {
+		if !strings.EqualFold(headOwner, pushOwner) {
+			return fmt.Errorf("head owner %q does not match push remote %q owner %q", headOwner, remote, pushOwner)
+		}
+		return nil
+	}
+	if !strings.EqualFold(pushOwner, owner) {
+		if !supportsQualifiedHeads {
+			return fmt.Errorf("push remote %q belongs to %q; fork pushes are not supported by this forge", remote, pushOwner)
+		}
 		return fmt.Errorf("push remote %q belongs to %q; use --head %s:%s for a fork pull request", remote, pushOwner, pushOwner, branch)
 	}
-	if headOwner != "" && !strings.EqualFold(headOwner, pushOwner) {
-		return fmt.Errorf("head owner %q does not match push remote %q owner %q", headOwner, remote, pushOwner)
+	if !strings.EqualFold(pushRepo, repo) {
+		return fmt.Errorf("push remote %q repository %q does not match target repository %q", remote, pushRepo, repo)
 	}
 	return nil
 }

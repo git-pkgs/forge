@@ -133,6 +133,7 @@ func TestPRCreatePushesHeadBranch(t *testing.T) {
 	mustGit(t, dir, "remote", "add", "origin", remoteDir)
 
 	prs := &mockPRService{
+		qualifiedHeads: true,
 		createResult: &forges.PullRequest{
 			Number:  1,
 			HTMLURL: "https://example.com/pulls/1",
@@ -166,6 +167,57 @@ func TestPRCreatePushesHeadBranch(t *testing.T) {
 	}
 }
 
+func TestPRCreatePushRejectsQualifiedHeadForUnsupportedForge(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not installed")
+	}
+
+	dir := t.TempDir()
+	t.Chdir(dir)
+	mustGit(t, dir, "init", "-q")
+
+	prs := &mockPRService{}
+	resolve.SetTestForge(&mockForge{prService: prs}, "upstream", "repo", "gitlab.com")
+	t.Cleanup(resolve.ResetTestForge)
+
+	cmd := prCreateCmd()
+	cmd.SetArgs([]string{"--title", "Test PR", "--head", "forkowner:feature", "--push"})
+	err := cmd.Execute()
+	if err == nil || !strings.Contains(err.Error(), "qualified head") {
+		t.Fatalf("pr create error = %v, want unsupported qualified-head error", err)
+	}
+	if prs.createCalls != 0 {
+		t.Fatalf("Create calls = %d, want 0", prs.createCalls)
+	}
+}
+
+func TestPRCreatePushRejectsForkForUnsupportedForge(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not installed")
+	}
+
+	dir := t.TempDir()
+	t.Chdir(dir)
+	mustGit(t, dir, "init", "-q")
+	mustGit(t, dir, "remote", "add", "fork", "https://gitlab.com/forkowner/repo.git")
+
+	prs := &mockPRService{}
+	resolve.SetTestForge(&mockForge{prService: prs}, "upstream", "repo", "gitlab.com")
+	t.Cleanup(resolve.ResetTestForge)
+	resolve.SetRemote("fork")
+	t.Cleanup(func() { resolve.SetRemote("origin") })
+
+	cmd := prCreateCmd()
+	cmd.SetArgs([]string{"--title", "Test PR", "--head", "feature", "--push"})
+	err := cmd.Execute()
+	if err == nil || !strings.Contains(err.Error(), "fork pushes are not supported") {
+		t.Fatalf("pr create error = %v, want unsupported fork-push error", err)
+	}
+	if prs.createCalls != 0 {
+		t.Fatalf("Create calls = %d, want 0", prs.createCalls)
+	}
+}
+
 func TestPRCreatePushRejectsUnqualifiedForkHead(t *testing.T) {
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("git not installed")
@@ -177,7 +229,7 @@ func TestPRCreatePushRejectsUnqualifiedForkHead(t *testing.T) {
 	mustGit(t, dir, "remote", "add", "fork", "https://github.com/upstream/repo.git")
 	mustGit(t, dir, "remote", "set-url", "--push", "fork", "https://github.com/forkowner/repo.git")
 
-	prs := &mockPRService{}
+	prs := &mockPRService{qualifiedHeads: true}
 	resolve.SetTestForge(&mockForge{prService: prs}, "upstream", "repo", "github.com")
 	t.Cleanup(resolve.ResetTestForge)
 	resolve.SetRemote("fork")
@@ -194,6 +246,24 @@ func TestPRCreatePushRejectsUnqualifiedForkHead(t *testing.T) {
 	}
 }
 
+func TestValidatePushRemoteAllowsRenamedQualifiedFork(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not installed")
+	}
+
+	dir := t.TempDir()
+	t.Chdir(dir)
+	mustGit(t, dir, "init", "-q")
+	mustGit(t, dir, "remote", "add", "fork", "https://github.com/forkowner/renamed-fork.git")
+	resolve.SetRemote("fork")
+	t.Cleanup(func() { resolve.SetRemote("origin") })
+
+	err := validatePushRemote(context.Background(), "github.com", "upstream", "repo", "forkowner", "feature", true)
+	if err != nil {
+		t.Fatalf("validatePushRemote: %v", err)
+	}
+}
+
 func TestPRCreatePushRejectsMismatchedQualifiedOwner(t *testing.T) {
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("git not installed")
@@ -204,7 +274,7 @@ func TestPRCreatePushRejectsMismatchedQualifiedOwner(t *testing.T) {
 	mustGit(t, dir, "init", "-q")
 	mustGit(t, dir, "remote", "add", "fork", "https://github.com/forkowner/repo.git")
 
-	prs := &mockPRService{}
+	prs := &mockPRService{qualifiedHeads: true}
 	resolve.SetTestForge(&mockForge{prService: prs}, "upstream", "repo", "github.com")
 	t.Cleanup(resolve.ResetTestForge)
 	resolve.SetRemote("fork")

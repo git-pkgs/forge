@@ -15,6 +15,8 @@ type gitHubPRService struct {
 	client *github.Client
 }
 
+func (*gitHubPRService) SupportsQualifiedPRHeads() bool { return true }
+
 func (f *gitHubForge) PullRequests() forge.PullRequestService {
 	return &gitHubPRService{client: f.client}
 }

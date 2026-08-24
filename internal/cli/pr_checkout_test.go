@@ -15,15 +15,18 @@ import (
 
 // mockPRService implements forges.PullRequestService for testing.
 type mockPRService struct {
-	pr           *forges.PullRequest
-	err          error
-	listResult   []forges.PullRequest
-	listErr      error
-	createResult *forges.PullRequest
-	createErr    error
-	createOpts   forges.CreatePROpts
-	createCalls  int
+	pr             *forges.PullRequest
+	err            error
+	listResult     []forges.PullRequest
+	listErr        error
+	createResult   *forges.PullRequest
+	createErr      error
+	createOpts     forges.CreatePROpts
+	createCalls    int
+	qualifiedHeads bool
 }
+
+func (m *mockPRService) SupportsQualifiedPRHeads() bool { return m.qualifiedHeads }
 
 func (m *mockPRService) Get(_ context.Context, _, _ string, _ int) (*forges.PullRequest, error) {
 	return m.pr, m.err
