@@ -264,6 +264,24 @@ func TestValidatePushRemoteAllowsRenamedQualifiedFork(t *testing.T) {
 	}
 }
 
+func TestValidatePushRemoteRejectsQualifiedSameOwnerDifferentRepo(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not installed")
+	}
+
+	dir := t.TempDir()
+	t.Chdir(dir)
+	mustGit(t, dir, "init", "-q")
+	mustGit(t, dir, "remote", "add", "other", "https://github.com/acme/other.git")
+	resolve.SetRemote("other")
+	t.Cleanup(func() { resolve.SetRemote("origin") })
+
+	err := validatePushRemote(context.Background(), "github.com", "acme", "base", "acme", "feature", true)
+	if err == nil || !strings.Contains(err.Error(), "repository \"other\" does not match target repository \"base\"") {
+		t.Fatalf("validatePushRemote error = %v, want repository-mismatch error", err)
+	}
+}
+
 func TestPRCreatePushRejectsMismatchedQualifiedOwner(t *testing.T) {
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("git not installed")

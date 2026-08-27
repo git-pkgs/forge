@@ -395,6 +395,9 @@ func validatePushRemote(ctx context.Context, domain, owner, repo, headOwner, bra
 		if !strings.EqualFold(headOwner, pushOwner) {
 			return fmt.Errorf("head owner %q does not match push remote %q owner %q", headOwner, remote, pushOwner)
 		}
+		if strings.EqualFold(headOwner, owner) && !strings.EqualFold(pushRepo, repo) {
+			return fmt.Errorf("push remote %q repository %q does not match target repository %q", remote, pushRepo, repo)
+		}
 		return nil
 	}
 	if !strings.EqualFold(pushOwner, owner) {
