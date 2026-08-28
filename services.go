@@ -43,6 +43,12 @@ type PullRequestService interface {
 	ListURL(repoHTMLURL string) string
 }
 
+// QualifiedPRHeadProvider is implemented by pull request services that accept
+// OWNER:BRANCH heads to identify a source repository in the same fork network.
+type QualifiedPRHeadProvider interface {
+	SupportsQualifiedPRHeads() bool
+}
+
 // LabelService provides operations on repository labels.
 type LabelService interface {
 	List(ctx context.Context, owner, repo string, opts ListLabelOpts) ([]Label, error)

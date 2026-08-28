@@ -2,7 +2,9 @@ package git
 
 import (
 	"context"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"testing"
 
 	"github.com/git-pkgs/forge"
@@ -170,6 +172,125 @@ func TestCurrentBranch(t *testing.T) {
 	}
 	if got != "feature" {
 		t.Fatalf("CurrentBranch = %q, want %q", got, "feature")
+	}
+}
+
+func TestPushBranch(t *testing.T) {
+	dir := initGitRepo(t)
+	remoteDir := filepath.Join(t.TempDir(), "remote.git")
+	mustGit(t, "", "init", "--bare", "-q", remoteDir)
+	mustGit(t, dir, "config", "user.name", "Test")
+	mustGit(t, dir, "config", "user.email", "test@example.com")
+	if err := os.WriteFile(filepath.Join(dir, "README"), []byte("test\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	mustGit(t, dir, "add", "README")
+	mustGit(t, dir, "commit", "-q", "-m", "initial commit")
+	mustGit(t, dir, "checkout", "-q", "-b", "feature")
+	mustGit(t, dir, "remote", "add", "origin", remoteDir)
+
+	if err := PushBranch(context.Background(), dir, "origin", "feature"); err != nil {
+		t.Fatalf("PushBranch: %v", err)
+	}
+
+	localSHA, err := runGit(context.Background(), dir, "rev-parse", "refs/heads/feature")
+	if err != nil {
+		t.Fatalf("reading local branch: %v", err)
+	}
+	remoteSHA, err := runGit(context.Background(), "", "--git-dir", remoteDir, "rev-parse", "refs/heads/feature")
+	if err != nil {
+		t.Fatalf("reading remote branch: %v", err)
+	}
+	if remoteSHA != localSHA {
+		t.Fatalf("remote branch SHA = %q, want %q", remoteSHA, localSHA)
+	}
+
+	upstream, err := runGit(context.Background(), dir, "rev-parse", "--abbrev-ref", "feature@{upstream}")
+	if err != nil {
+		t.Fatalf("reading branch upstream: %v", err)
+	}
+	if upstream != "origin/feature" {
+		t.Fatalf("branch upstream = %q, want %q", upstream, "origin/feature")
+	}
+}
+
+func TestPushBranchPreservesTrackingWithSeparatePushRepo(t *testing.T) {
+	dir := initGitRepo(t)
+	fetchDir := filepath.Join(t.TempDir(), "upstream.git")
+	pushDir := filepath.Join(t.TempDir(), "fork.git")
+	mustGit(t, "", "init", "--bare", "-q", fetchDir)
+	mustGit(t, "", "init", "--bare", "-q", pushDir)
+	mustGit(t, dir, "config", "user.name", "Test")
+	mustGit(t, dir, "config", "user.email", "test@example.com")
+	if err := os.WriteFile(filepath.Join(dir, "README"), []byte("test\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	mustGit(t, dir, "add", "README")
+	mustGit(t, dir, "commit", "-q", "-m", "initial commit")
+	mustGit(t, dir, "branch", "-M", "main")
+	mustGit(t, dir, "remote", "add", "origin", fetchDir)
+	mustGit(t, dir, "push", "origin", "main")
+	mustGit(t, dir, "checkout", "-q", "-b", "feature")
+	mustGit(t, dir, "config", "branch.feature.remote", "origin")
+	mustGit(t, dir, "config", "branch.feature.merge", "refs/heads/main")
+	mustGit(t, dir, "remote", "set-url", "--push", "origin", pushDir)
+
+	if err := PushBranch(context.Background(), dir, "origin", "feature"); err != nil {
+		t.Fatalf("PushBranch: %v", err)
+	}
+
+	trackingRemote, err := runGit(context.Background(), dir, "config", "--get", "branch.feature.remote")
+	if err != nil {
+		t.Fatalf("reading tracking remote: %v", err)
+	}
+	trackingRef, err := runGit(context.Background(), dir, "config", "--get", "branch.feature.merge")
+	if err != nil {
+		t.Fatalf("reading tracking ref: %v", err)
+	}
+	if trackingRemote != "origin" || trackingRef != "refs/heads/main" {
+		t.Fatalf("tracking = %q %q, want %q %q", trackingRemote, trackingRef, "origin", "refs/heads/main")
+	}
+
+	localSHA, err := runGit(context.Background(), dir, "rev-parse", "refs/heads/feature")
+	if err != nil {
+		t.Fatalf("reading local branch: %v", err)
+	}
+	pushSHA, err := runGit(context.Background(), "", "--git-dir", pushDir, "rev-parse", "refs/heads/feature")
+	if err != nil {
+		t.Fatalf("reading pushed branch: %v", err)
+	}
+	if pushSHA != localSHA {
+		t.Fatalf("pushed branch SHA = %q, want %q", pushSHA, localSHA)
+	}
+
+	mustGit(t, dir, "fetch", "--prune", "origin")
+	upstream, err := runGit(context.Background(), dir, "rev-parse", "--abbrev-ref", "feature@{upstream}")
+	if err != nil {
+		t.Fatalf("reading branch upstream after fetch: %v", err)
+	}
+	if upstream != "origin/main" {
+		t.Fatalf("branch upstream after fetch = %q, want %q", upstream, "origin/main")
+	}
+}
+
+func TestPushBranchErrors(t *testing.T) {
+	tests := []struct {
+		name   string
+		remote string
+		branch string
+		want   string
+	}{
+		{name: "empty remote", branch: "feature", want: "empty remote name"},
+		{name: "empty branch", remote: "origin", want: "empty branch name"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := PushBranch(context.Background(), "", tt.remote, tt.branch)
+			if err == nil || err.Error() != tt.want {
+				t.Fatalf("PushBranch error = %v, want %q", err, tt.want)
+			}
+		})
 	}
 }
 

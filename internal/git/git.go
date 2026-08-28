@@ -131,6 +131,51 @@ func CurrentBranch(ctx context.Context, dir string) (string, error) {
 	return branch, nil
 }
 
+// PushBranch pushes a local branch to the same branch name on a remote. It
+// configures upstream tracking only when the remote fetches from and pushes to
+// the same repository, so a fork push URL cannot replace existing tracking for
+// the upstream repository.
+func PushBranch(ctx context.Context, dir, remote, branch string) error {
+	if remote == "" {
+		return fmt.Errorf("empty remote name")
+	}
+	if branch == "" {
+		return fmt.Errorf("empty branch name")
+	}
+
+	ref := "refs/heads/" + branch
+	args := []string{"push"}
+	if remoteFetchAndPushReposMatch(ctx, dir, remote) {
+		args = append(args, "--set-upstream")
+	}
+	args = append(args, remote, ref+":"+ref)
+	if _, err := runGit(ctx, dir, args...); err != nil {
+		return fmt.Errorf("failed to push branch %q to remote %q: %w", branch, remote, err)
+	}
+	return nil
+}
+
+func remoteFetchAndPushReposMatch(ctx context.Context, dir, remote string) bool {
+	fetchURL, err := runGit(ctx, dir, "remote", "get-url", remote)
+	if err != nil {
+		return false
+	}
+	pushURL, err := runGit(ctx, dir, "remote", "get-url", "--push", remote)
+	if err != nil {
+		return false
+	}
+	if fetchURL == pushURL {
+		return true
+	}
+
+	fetchDomain, fetchOwner, fetchRepo, fetchErr := forges.ParseRepoURL(fetchURL)
+	pushDomain, pushOwner, pushRepo, pushErr := forges.ParseRepoURL(pushURL)
+	return fetchErr == nil && pushErr == nil &&
+		strings.EqualFold(fetchDomain, pushDomain) &&
+		strings.EqualFold(fetchOwner, pushOwner) &&
+		strings.EqualFold(fetchRepo, pushRepo)
+}
+
 func branchConfigKey(branch, name string) string {
 	return fmt.Sprintf("branch.%s.%s", branch, name)
 }

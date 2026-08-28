@@ -13,6 +13,8 @@ type giteaPRService struct {
 	client *gitea.Client
 }
 
+func (*giteaPRService) SupportsQualifiedPRHeads() bool { return true }
+
 func (f *giteaForge) PullRequests() forge.PullRequestService {
 	return &giteaPRService{client: f.client}
 }

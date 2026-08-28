@@ -277,6 +277,7 @@ func prCreateCmd() *cobra.Command {
 		flagHead      string
 		flagBase      string
 		flagDraft     bool
+		flagPush      bool
 		flagReviewers []string
 		flagAssignees []string
 		flagLabels    []string
@@ -295,9 +296,30 @@ func prCreateCmd() *cobra.Command {
 				return fmt.Errorf("--head is required")
 			}
 
-			forge, owner, repoName, _, err := resolve.Repo(flagRepo, flagForgeType)
+			forge, owner, repoName, domain, err := resolve.Repo(flagRepo, flagForgeType)
 			if err != nil {
 				return err
+			}
+			prService := forge.PullRequests()
+			qualifiedHeadProvider, ok := prService.(forges.QualifiedPRHeadProvider)
+			supportsQualifiedHeads := ok && qualifiedHeadProvider.SupportsQualifiedPRHeads()
+
+			localHead := flagHead
+			if flagPush {
+				headOwner, localBranch, err := splitPRHead(flagHead)
+				if err != nil {
+					return err
+				}
+				if headOwner != "" && !supportsQualifiedHeads {
+					return fmt.Errorf("qualified head %q is not supported by this forge; fork pushes require GitHub or Gitea", flagHead)
+				}
+				if err := validatePushRemote(cmd.Context(), domain, owner, repoName, headOwner, localBranch, supportsQualifiedHeads); err != nil {
+					return err
+				}
+				if err := git.PushBranch(cmd.Context(), "", resolve.RemoteName(), localBranch); err != nil {
+					return fmt.Errorf("pushing head branch: %w", err)
+				}
+				localHead = localBranch
 			}
 
 			opts := forges.CreatePROpts{
@@ -312,13 +334,13 @@ func prCreateCmd() *cobra.Command {
 				Milestone: flagMilestone,
 			}
 
-			pr, err := forge.PullRequests().Create(cmd.Context(), owner, repoName, opts)
+			pr, err := prService.Create(cmd.Context(), owner, repoName, opts)
 			if err != nil {
 				return fmt.Errorf("creating pull request: %w", err)
 			}
 
-			if flagHead != "" && pr.Base.Ref != "" {
-				_ = git.SetBaseBranch(cmd.Context(), "", flagHead, pr.Base.Ref)
+			if localHead != "" && pr.Base.Ref != "" {
+				_ = git.SetBaseBranch(cmd.Context(), "", localHead, pr.Base.Ref)
 			}
 
 			p := printer()
@@ -336,6 +358,7 @@ func prCreateCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&flagHead, "head", "H", "", "Head branch")
 	cmd.Flags().StringVarP(&flagBase, "base", "B", "", "Base branch")
 	cmd.Flags().BoolVarP(&flagDraft, "draft", "d", false, "Create as draft")
+	cmd.Flags().BoolVar(&flagPush, "push", false, "Push the head branch before creating the PR")
 	cmd.Flags().StringSliceVarP(&flagReviewers, "reviewer", "r", nil, "Request a reviewer")
 	cmd.Flags().StringSliceVarP(&flagAssignees, "assignee", "a", nil, "Assign to a user")
 	cmd.Flags().StringSliceVarP(&flagLabels, "label", "l", nil, "Add a label")
@@ -343,6 +366,50 @@ func prCreateCmd() *cobra.Command {
 	_ = cmd.Flags().MarkHidden("labels")
 	cmd.Flags().StringVarP(&flagMilestone, "milestone", "m", "", "Assign to a milestone")
 	return cmd
+}
+
+func splitPRHead(head string) (owner, branch string, err error) {
+	owner, branch, qualified := strings.Cut(head, ":")
+	if !qualified {
+		return "", head, nil
+	}
+	if owner == "" || branch == "" {
+		return "", "", fmt.Errorf("invalid qualified head %q, expected OWNER:BRANCH", head)
+	}
+	return owner, branch, nil
+}
+
+func validatePushRemote(ctx context.Context, domain, owner, repo, headOwner, branch string, supportsQualifiedHeads bool) error {
+	remote := resolve.RemoteName()
+	pushDomain, pushOwner, pushRepo, err := resolve.PushRemoteRepo(ctx, remote)
+	if err != nil {
+		// Local-path remotes cannot be mapped to a forge repository, but Git can
+		// still push to them. Let the push itself determine whether they work.
+		return nil
+	}
+
+	if !strings.EqualFold(pushDomain, domain) {
+		return fmt.Errorf("push remote %q points to %s/%s/%s, not %s/%s/%s", remote, pushDomain, pushOwner, pushRepo, domain, owner, repo)
+	}
+	if headOwner != "" {
+		if !strings.EqualFold(headOwner, pushOwner) {
+			return fmt.Errorf("head owner %q does not match push remote %q owner %q", headOwner, remote, pushOwner)
+		}
+		if strings.EqualFold(headOwner, owner) && !strings.EqualFold(pushRepo, repo) {
+			return fmt.Errorf("push remote %q repository %q does not match target repository %q", remote, pushRepo, repo)
+		}
+		return nil
+	}
+	if !strings.EqualFold(pushOwner, owner) {
+		if !supportsQualifiedHeads {
+			return fmt.Errorf("push remote %q belongs to %q; fork pushes are not supported by this forge", remote, pushOwner)
+		}
+		return fmt.Errorf("push remote %q belongs to %q; use --head %s:%s for a fork pull request", remote, pushOwner, pushOwner, branch)
+	}
+	if !strings.EqualFold(pushRepo, repo) {
+		return fmt.Errorf("push remote %q repository %q does not match target repository %q", remote, pushRepo, repo)
+	}
+	return nil
 }
 
 func prCloseCmd() *cobra.Command {
