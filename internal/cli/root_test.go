@@ -31,6 +31,18 @@ func TestNotSupportedPassesThrough(t *testing.T) {
 	}
 }
 
+func TestRemoteFlagHelp(t *testing.T) {
+	flag := rootCmd.PersistentFlags().Lookup("remote")
+	if flag == nil {
+		t.Fatal("remote flag not found")
+	}
+
+	want := "Git remote to use when --repo (-R) is not specified (default from config, otherwise origin)"
+	if flag.Usage != want {
+		t.Errorf("remote flag help = %q, want %q", flag.Usage, want)
+	}
+}
+
 func TestRemotePrecedence(t *testing.T) {
 	tests := []struct {
 		name         string

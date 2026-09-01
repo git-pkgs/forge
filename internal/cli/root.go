@@ -56,7 +56,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&flagForgeType, "forge-type", "", "Force forge type: github, gitlab, gitea, forgejo, bitbucket, gerrit, tangled")
 	rootCmd.PersistentFlags().StringVar(&flagHost, "host", "", "Force forge host (e.g. gitea.com, http://forgejo.local:3000); overrides FORGE_HOST and remote detection")
 	rootCmd.PersistentFlags().StringVarP(&flagOutput, "output", "o", "table", "Output format: table, json, plain")
-	rootCmd.PersistentFlags().StringVar(&flagRemote, "remote", "", "Git remote to use when not specifying -R (default from config, otherwise origin)")
+	rootCmd.PersistentFlags().StringVar(&flagRemote, "remote", "", "Git remote to use when --repo (-R) is not specified (default from config, otherwise origin)")
 }
 
 // notSupported wraps ErrNotSupported with a user-friendly message
