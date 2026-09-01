@@ -26,13 +26,21 @@ var rootCmd = &cobra.Command{
 	Long:         "Supports GitHub, GitLab, Gitea, Forgejo, Bitbucket Cloud, Gerrit, and Tangled through a single interface.",
 	SilenceUsage: true,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
-		if !cmd.Flags().Changed("output") {
-			cfg, err := config.Load()
-			if err == nil && cfg != nil && cfg.Default.Output != "" {
+		cfg, _ := config.Load()
+		if cfg != nil {
+			if !cmd.Flags().Changed("output") && cfg.Default.Output != "" {
 				flagOutput = cfg.Default.Output
 			}
 		}
-		resolve.SetRemote(flagRemote)
+
+		remote := "origin"
+		if cfg != nil && cfg.Default.Remote != "" {
+			remote = cfg.Default.Remote
+		}
+		if cmd.Flags().Changed("remote") && flagRemote != "" {
+			remote = flagRemote
+		}
+		resolve.SetRemote(remote)
 		resolve.SetHost(flagHost)
 		resolve.SetForgeType(flagForgeType)
 	},
@@ -48,7 +56,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&flagForgeType, "forge-type", "", "Force forge type: github, gitlab, gitea, forgejo, bitbucket, gerrit, tangled")
 	rootCmd.PersistentFlags().StringVar(&flagHost, "host", "", "Force forge host (e.g. gitea.com, http://forgejo.local:3000); overrides FORGE_HOST and remote detection")
 	rootCmd.PersistentFlags().StringVarP(&flagOutput, "output", "o", "table", "Output format: table, json, plain")
-	rootCmd.PersistentFlags().StringVar(&flagRemote, "remote", "", "Git remote to use when not specifying -R (default origin)")
+	rootCmd.PersistentFlags().StringVar(&flagRemote, "remote", "", "Git remote to use when not specifying -R (default from config, otherwise origin)")
 }
 
 // notSupported wraps ErrNotSupported with a user-friendly message

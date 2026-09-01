@@ -70,6 +70,7 @@ Two config files, both INI-style:
 ```ini
 [default]
 output = json
+remote = origin
 
 [github.com]
 token = ghp_abc123
@@ -121,12 +122,15 @@ token-cmd = pass show forge/$FORGE_DOMAIN
 ```ini
 [default]
 forge-type = gitlab
+remote = devrepo
 
 [gitlab.internal.dev]
 type = gitlab
 ```
 
-This tells forge that the project uses GitLab and that `gitlab.internal.dev` is a GitLab instance, so contributors don't each need `--forge-type` or `FORGE_HOST`.
+This tells forge to use the `devrepo` git remote, that the project uses GitLab, and that `gitlab.internal.dev` is a GitLab instance, so contributors don't each need `--remote`, `--forge-type`, or `FORGE_HOST`.
+
+The `[default]` `remote` setting selects the git remote used when `--remote` is omitted. If neither is set, forge uses `origin`.
 
 For a self-hosted instance served over plain HTTP (a local Forgejo in Docker, say), add `scheme = http` to its section in `~/.config/forge/config`, use `forge auth login --scheme http`, or pass a full URL to `--host`/`FORGE_HOST`:
 

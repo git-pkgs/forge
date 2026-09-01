@@ -27,6 +27,7 @@ type DefaultSection struct {
 	Output      string // table, json, plain
 	ForgeType   string // default forge type
 	GitProtocol string // https or ssh
+	Remote      string // default git remote name
 }
 
 type DomainSection struct {
@@ -199,6 +200,9 @@ func loadFile(cfg *Config, path string, userConfig bool) error {
 		}
 		if v, ok := def["forge-type"]; ok {
 			cfg.Default.ForgeType = v
+		}
+		if v, ok := def["remote"]; ok {
+			cfg.Default.Remote = v
 		}
 		if v, ok := def["git_protocol"]; ok {
 			p, err := parseGitProtocol(v)
