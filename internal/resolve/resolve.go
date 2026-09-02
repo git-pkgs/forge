@@ -112,9 +112,9 @@ var builders = forges.ForgeBuilders{
 	Tangled: tangled.New,
 }
 
-// Repo figures out the forge, owner, and repo name from flags or the current
-// git remote. The -R flag takes precedence; otherwise we read the "origin"
-// remote URL and parse it.
+// Repo figures out the forge, owner, and repo name from flags or a git remote.
+// The --repo (-R) flag takes precedence; otherwise it parses the remote selected
+// by --remote, config, or the "origin" fallback.
 func Repo(flagRepo, flagForgeType string) (forge forges.Forge, owner, repo, domain string, err error) {
 	if testForge != nil {
 		return testForge, testOwner, testRepo, testDomain, nil

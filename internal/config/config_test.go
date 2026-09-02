@@ -18,6 +18,7 @@ func TestParseINI(t *testing.T) {
 [default]
 output = json
 forge-type = gitlab
+remote = devrepo
 
 [github.com]
 token = ghp_abc123
@@ -37,6 +38,9 @@ token = abc123
 	}
 	if sections[sectionDefault]["forge-type"] != "gitlab" {
 		t.Errorf("expected forge-type=gitlab, got %q", sections[sectionDefault]["forge-type"])
+	}
+	if sections[sectionDefault]["remote"] != "devrepo" {
+		t.Errorf("expected remote=devrepo, got %q", sections[sectionDefault]["remote"])
 	}
 	if sections["github.com"]["token"] != "ghp_abc123" {
 		t.Errorf("expected github.com token=ghp_abc123, got %q", sections["github.com"]["token"])
@@ -209,6 +213,7 @@ func TestLoadMergesUserAndProject(t *testing.T) {
 	_ = os.WriteFile(userConfig, []byte(`
 [default]
 output = json
+remote = personal
 
 [github.com]
 token = ghp_user
@@ -225,6 +230,7 @@ token = gitea_tok
 	_ = os.WriteFile(projectConfig, []byte(`
 [default]
 forge-type = gitlab
+remote = devrepo
 
 [gitea.example.com]
 type = forgejo
@@ -249,6 +255,9 @@ token = should_be_ignored
 	// Project config sets forge-type
 	if cfg.Default.ForgeType != "gitlab" {
 		t.Errorf("expected forge-type=gitlab, got %q", cfg.Default.ForgeType)
+	}
+	if cfg.Default.Remote != "devrepo" {
+		t.Errorf("expected project remote to override user remote, got %q", cfg.Default.Remote)
 	}
 
 	// User config token preserved
