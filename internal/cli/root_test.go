@@ -1,9 +1,15 @@
 package cli
 
 import (
+	"encoding/json"
 	"errors"
+	"fmt"
+	"net/http"
+	"net/http/httptest"
+	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/git-pkgs/forge"
@@ -48,44 +54,87 @@ func TestRemotePrecedence(t *testing.T) {
 		name         string
 		configRemote string
 		flagRemote   string
-		want         string
+		wantRepo     string
 	}{
-		{name: "origin fallback", want: "origin"},
-		{name: "config remote", configRemote: "devrepo", want: "devrepo"},
-		{name: "flag overrides config", configRemote: "devrepo", flagRemote: "fork", want: "fork"},
+		{name: "origin fallback", wantRepo: "origin-owner/origin-repo"},
+		{name: "config remote", configRemote: "devrepo", wantRepo: "config-owner/config-repo"},
+		{name: "flag overrides config", configRemote: "devrepo", flagRemote: "fork", wantRepo: "flag-owner/flag-repo"},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			resetCmd(rootCmd)
+			t.Cleanup(func() {
+				resetCmd(rootCmd)
+				rootCmd.SetArgs(nil)
+			})
+			resolve.ResetTestForge()
+			t.Cleanup(resolve.ResetTestForge)
 			config.ResetCache()
 			t.Cleanup(config.ResetCache)
 			resolve.SetRemote("origin")
 			t.Cleanup(func() { resolve.SetRemote("origin") })
+			t.Setenv("FORGE_HOST", "")
+			t.Setenv("GIT_CONFIG_GLOBAL", os.DevNull)
+			t.Setenv("GIT_CONFIG_SYSTEM", os.DevNull)
 
-			dir := t.TempDir()
-			t.Chdir(dir)
-			t.Setenv("XDG_CONFIG_HOME", filepath.Join(dir, "config"))
+			requestedRepo := make(chan string, 1)
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				path := strings.TrimPrefix(r.URL.Path, "/api/v1/repos/")
+				if strings.HasSuffix(path, "/topics") {
+					_ = json.NewEncoder(w).Encode(map[string]any{"topics": []string{}})
+					return
+				}
+
+				requestedRepo <- path
+				parts := strings.SplitN(path, "/", 2)
+				_ = json.NewEncoder(w).Encode(map[string]any{
+					"full_name": path,
+					"name":      parts[1],
+					"owner":     map[string]any{"login": parts[0]},
+				})
+			}))
+			defer server.Close()
+
+			repoDir := setupTestRepo(t, server.URL+"/origin-owner/origin-repo.git")
+			mustGit(t, repoDir, "remote", "add", "devrepo", server.URL+"/config-owner/config-repo.git")
+			mustGit(t, repoDir, "remote", "add", "fork", server.URL+"/flag-owner/flag-repo.git")
+			t.Chdir(repoDir)
+
+			serverURL, err := url.Parse(server.URL)
+			if err != nil {
+				t.Fatal(err)
+			}
+			configHome := t.TempDir()
+			configDir := filepath.Join(configHome, "forge")
+			if err := os.MkdirAll(configDir, 0o700); err != nil {
+				t.Fatal(err)
+			}
+			configContents := "[default]\n"
 			if tt.configRemote != "" {
-				configDir := filepath.Join(dir, "config", "forge")
-				if err := os.MkdirAll(configDir, 0o700); err != nil {
-					t.Fatal(err)
-				}
-				contents := []byte("[default]\nremote = " + tt.configRemote + "\n")
-				if err := os.WriteFile(filepath.Join(configDir, "config"), contents, 0o600); err != nil {
-					t.Fatal(err)
-				}
+				configContents += "remote = " + tt.configRemote + "\n"
 			}
+			configContents += fmt.Sprintf("\n[%s]\ntype = gitea\nscheme = http\n", serverURL.Host)
+			if err := os.WriteFile(filepath.Join(configDir, "config"), []byte(configContents), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			t.Setenv("XDG_CONFIG_HOME", configHome)
 
+			args := []string{"--output", "json"}
 			if tt.flagRemote != "" {
-				if err := rootCmd.PersistentFlags().Set("remote", tt.flagRemote); err != nil {
-					t.Fatal(err)
-				}
+				args = append(args, "--remote", tt.flagRemote)
 			}
-			rootCmd.PersistentPreRun(rootCmd, nil)
+			rootCmd.SetArgs(append(args, "repo", "view"))
+			stdout, err := captureStdout(t, rootCmd.Execute)
+			if err != nil {
+				t.Fatalf("root command: %v", err)
+			}
 
-			if got := resolve.RemoteName(); got != tt.want {
-				t.Fatalf("remote = %q, want %q", got, tt.want)
+			if got := <-requestedRepo; got != tt.wantRepo {
+				t.Fatalf("requested repo = %q, want %q", got, tt.wantRepo)
+			}
+			if !strings.Contains(stdout, tt.wantRepo) {
+				t.Fatalf("output does not contain selected repo %q: %s", tt.wantRepo, stdout)
 			}
 		})
 	}
