@@ -597,6 +597,69 @@ func TestRemoteSelectsCorrectGitURL(t *testing.T) {
 	}
 }
 
+func TestRepoResolvesGitRemoteURLs(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not installed")
+	}
+
+	dir := t.TempDir()
+	t.Chdir(dir)
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	config.ResetCache()
+	t.Cleanup(config.ResetCache)
+	if err := os.WriteFile(filepath.Join(dir, ".forge"), []byte("[2001:db8::1]\ntype = github\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	mustGit(t, "init", "-q")
+	mustGit(t, "remote", "add", "origin", "git@github.com:owner/repo.git")
+
+	old := remoteName
+	t.Cleanup(func() { remoteName = old })
+	SetRemote("origin")
+
+	tests := []struct {
+		name      string
+		remoteURL string
+		domain    string
+		owner     string
+		wantErr   bool
+	}{
+		{name: "arbitrary SSH user", remoteURL: "org-12345@github.com:owner/repo.git", domain: "github.com", owner: "owner"},
+		{name: "numeric owner", remoteURL: "git@github.com:123/repo.git", domain: "github.com", owner: "123"},
+		{name: "HTTPS userinfo", remoteURL: "https://user:token@github.com/owner/repo.git", domain: "github.com", owner: "owner"},
+		{name: "bracketed IPv6", remoteURL: "ssh://git@[2001:db8::1]:2222/owner/repo.git", domain: "2001:db8::1", owner: "owner"},
+		{name: "bracketed IPv6 SCP", remoteURL: "git@[2001:db8::1]:owner/repo.git", domain: "2001:db8::1", owner: "owner"},
+		{name: "empty host", remoteURL: ":owner/repo", wantErr: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mustGit(t, "remote", "set-url", "origin", tt.remoteURL)
+
+			_, owner, repo, domain, err := Repo("", "")
+			if tt.wantErr {
+				if err == nil {
+					t.Fatal("expected error, got nil")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("Repo: %v", err)
+			}
+			if domain != tt.domain {
+				t.Errorf("domain = %q, want %q", domain, tt.domain)
+			}
+			if owner != tt.owner {
+				t.Errorf("owner = %q, want %q", owner, tt.owner)
+			}
+			if repo != "repo" {
+				t.Errorf("repo = %q, want repo", repo)
+			}
+		})
+	}
+}
+
 func TestRemoteUnknownNameError(t *testing.T) {
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("git not installed")

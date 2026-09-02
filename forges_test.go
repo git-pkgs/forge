@@ -73,6 +73,34 @@ func TestParseRepoURL(t *testing.T) {
 			domain: "github.com", owner: "user", repo: "repo",
 		},
 		{
+			input:  "github.com:owner/repo.git",
+			domain: "github.com", owner: "owner", repo: "repo",
+		},
+		{
+			input:  "sshuser@github.com:owner/repo.git",
+			domain: "github.com", owner: "owner", repo: "repo",
+		},
+		{
+			input:  "git@github.com:123/repo.git",
+			domain: "github.com", owner: "123", repo: "repo",
+		},
+		{
+			input:  "https://user:token@github.com/owner/repo.git",
+			domain: "github.com", owner: "owner", repo: "repo",
+		},
+		{
+			input:  "ssh://git@[2001:db8::1]:2222/owner/repo.git",
+			domain: "2001:db8::1", owner: "owner", repo: "repo",
+		},
+		{
+			input:  "git@[2001:db8::1]:owner/repo.git",
+			domain: "2001:db8::1", owner: "owner", repo: "repo",
+		},
+		{
+			input:  "[2001:db8::1]:owner/repo.git",
+			domain: "2001:db8::1", owner: "owner", repo: "repo",
+		},
+		{
 			input:  "git@gitlab.com:group/project.git",
 			domain: "gitlab.com", owner: "group", repo: "project",
 		},
@@ -98,6 +126,10 @@ func TestParseRepoURL(t *testing.T) {
 		},
 		{
 			input:   "git@github.com",
+			wantErr: true,
+		},
+		{
+			input:   ":owner/repo",
 			wantErr: true,
 		},
 	}
