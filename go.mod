@@ -6,7 +6,7 @@ toolchain go1.26.7
 
 require (
 	code.gitea.io/sdk/gitea v0.25.1
-	github.com/git-pkgs/purl v0.1.19
+	github.com/git-pkgs/purl v0.1.20
 	github.com/google/go-github/v82 v82.0.0
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.0.10
