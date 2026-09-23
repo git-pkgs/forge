@@ -6,11 +6,17 @@ on:
       - main
     paths:
       - '.github/**'
+      - '**/action.yml'
+      - '**/action.yaml'
+      - 'zizmor.yml'
+      - 'zizmor.yaml'
   pull_request:
-    branches:
-      - main
     paths:
       - '.github/**'
+      - '**/action.yml'
+      - '**/action.yaml'
+      - 'zizmor.yml'
+      - 'zizmor.yaml'
   workflow_dispatch:
 
 permissions: {}
