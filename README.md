@@ -146,6 +146,10 @@ Precedence from highest to lowest: CLI flags, environment variables, `.forge`, `
 
 ## Library
 
+```sh
+go get github.com/git-pkgs/forge
+```
+
 ```go
 import "github.com/git-pkgs/forge"
 ```
@@ -220,4 +224,4 @@ sha, err := resolver.ResolveCommit(ctx, "actions", "checkout", "v4.2.1")
 
 ## License
 
-MIT. See [LICENSE](LICENSE).
+[MIT](LICENSE).
