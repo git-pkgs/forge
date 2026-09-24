@@ -2,7 +2,6 @@ package gitea
 
 import (
 	"context"
-	"net/http"
 
 	"code.gitea.io/sdk/gitea"
 	forge "github.com/git-pkgs/forge"
@@ -21,10 +20,7 @@ func convertGiteaReaction(r *gitea.Reaction) forge.Reaction {
 func (s *giteaIssueService) ListReactions(ctx context.Context, owner, repo string, number int, commentID int64) ([]forge.Reaction, error) {
 	reactions, resp, err := s.client.GetIssueCommentReactions(owner, repo, commentID)
 	if err != nil {
-		if resp != nil && resp.StatusCode == http.StatusNotFound {
-			return nil, forge.ErrNotFound
-		}
-		return nil, err
+		return nil, wrapErr("list reactions", resp, err)
 	}
 	var all []forge.Reaction
 	for _, r := range reactions {
@@ -36,10 +32,7 @@ func (s *giteaIssueService) ListReactions(ctx context.Context, owner, repo strin
 func (s *giteaIssueService) AddReaction(ctx context.Context, owner, repo string, number int, commentID int64, reaction string) (*forge.Reaction, error) {
 	r, resp, err := s.client.PostIssueCommentReaction(owner, repo, commentID, reaction)
 	if err != nil {
-		if resp != nil && resp.StatusCode == http.StatusNotFound {
-			return nil, forge.ErrNotFound
-		}
-		return nil, err
+		return nil, wrapErr("add reaction", resp, err)
 	}
 	result := convertGiteaReaction(r)
 	return &result, nil
@@ -49,10 +42,7 @@ func (s *giteaPRService) ListReactions(ctx context.Context, owner, repo string, 
 	// Gitea uses the same issue comment reactions API for PR comments
 	reactions, resp, err := s.client.GetIssueCommentReactions(owner, repo, commentID)
 	if err != nil {
-		if resp != nil && resp.StatusCode == http.StatusNotFound {
-			return nil, forge.ErrNotFound
-		}
-		return nil, err
+		return nil, wrapErr("list reactions", resp, err)
 	}
 	var all []forge.Reaction
 	for _, r := range reactions {
@@ -64,10 +54,7 @@ func (s *giteaPRService) ListReactions(ctx context.Context, owner, repo string, 
 func (s *giteaPRService) AddReaction(ctx context.Context, owner, repo string, number int, commentID int64, reaction string) (*forge.Reaction, error) {
 	r, resp, err := s.client.PostIssueCommentReaction(owner, repo, commentID, reaction)
 	if err != nil {
-		if resp != nil && resp.StatusCode == http.StatusNotFound {
-			return nil, forge.ErrNotFound
-		}
-		return nil, err
+		return nil, wrapErr("add reaction", resp, err)
 	}
 	result := convertGiteaReaction(r)
 	return &result, nil

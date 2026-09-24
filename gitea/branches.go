@@ -3,7 +3,6 @@ package gitea
 import (
 	"context"
 	forge "github.com/git-pkgs/forge"
-	"net/http"
 
 	"code.gitea.io/sdk/gitea"
 )
@@ -29,10 +28,7 @@ func (s *giteaBranchService) List(ctx context.Context, owner, repo string, opts 
 			ListOptions: gitea.ListOptions{Page: page, PageSize: perPage},
 		})
 		if err != nil {
-			if resp != nil && resp.StatusCode == http.StatusNotFound {
-				return nil, forge.ErrNotFound
-			}
-			return nil, err
+			return nil, wrapErr("list branches", resp, err)
 		}
 		for _, b := range branches {
 			branch := forge.Branch{
@@ -63,10 +59,7 @@ func (s *giteaBranchService) Create(ctx context.Context, owner, repo, name, from
 		OldBranchName: from,
 	})
 	if err != nil {
-		if resp != nil && resp.StatusCode == http.StatusNotFound {
-			return nil, forge.ErrNotFound
-		}
-		return nil, err
+		return nil, wrapErr("create branch", resp, err)
 	}
 
 	result := forge.Branch{
@@ -81,10 +74,7 @@ func (s *giteaBranchService) Create(ctx context.Context, owner, repo, name, from
 func (s *giteaBranchService) Delete(ctx context.Context, owner, repo, name string) error {
 	_, resp, err := s.client.DeleteRepoBranch(owner, repo, name)
 	if err != nil {
-		if resp != nil && resp.StatusCode == http.StatusNotFound {
-			return forge.ErrNotFound
-		}
-		return err
+		return wrapErr("delete branch", resp, err)
 	}
 	return nil
 }

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	forge "github.com/git-pkgs/forge"
-	"net/http"
 
 	"code.gitea.io/sdk/gitea"
 )
@@ -102,10 +101,7 @@ func convertGiteaComment(c *gitea.Comment) forge.Comment {
 func (s *giteaIssueService) Get(ctx context.Context, owner, repo string, number int) (*forge.Issue, error) {
 	i, resp, err := s.client.GetIssue(owner, repo, int64(number))
 	if err != nil {
-		if resp != nil && resp.StatusCode == http.StatusNotFound {
-			return nil, forge.ErrNotFound
-		}
-		return nil, err
+		return nil, wrapErr("get issue", resp, err)
 	}
 	result := convertGiteaIssue(i)
 	return &result, nil
@@ -142,10 +138,7 @@ func (s *giteaIssueService) List(ctx context.Context, owner, repo string, opts f
 	for {
 		issues, resp, err := s.client.ListRepoIssues(owner, repo, gOpts)
 		if err != nil {
-			if resp != nil && resp.StatusCode == http.StatusNotFound {
-				return nil, forge.ErrNotFound
-			}
-			return nil, err
+			return nil, wrapErr("list issues", resp, err)
 		}
 		for _, i := range issues {
 			all = append(all, convertGiteaIssue(i))
@@ -188,10 +181,7 @@ func (s *giteaIssueService) Create(ctx context.Context, owner, repo string, opts
 
 	i, resp, err := s.client.CreateIssue(owner, repo, gOpts)
 	if err != nil {
-		if resp != nil && resp.StatusCode == http.StatusNotFound {
-			return nil, forge.ErrNotFound
-		}
-		return nil, err
+		return nil, wrapErr("create issue", resp, err)
 	}
 	result := convertGiteaIssue(i)
 	return &result, nil
@@ -227,8 +217,8 @@ func (s *giteaIssueService) Update(ctx context.Context, owner, repo string, numb
 		if err != nil {
 			return nil, fmt.Errorf("resolving labels: %w", err)
 		}
-		if _, _, err := s.client.ReplaceIssueLabels(owner, repo, int64(number), gitea.IssueLabelsOption{Labels: ids}); err != nil {
-			return nil, fmt.Errorf("replacing labels: %w", err)
+		if _, resp, err := s.client.ReplaceIssueLabels(owner, repo, int64(number), gitea.IssueLabelsOption{Labels: ids}); err != nil {
+			return nil, wrapErr("replace issue labels", resp, err)
 		}
 		if !changed {
 			return s.Get(ctx, owner, repo, number)
@@ -241,10 +231,7 @@ func (s *giteaIssueService) Update(ctx context.Context, owner, repo string, numb
 
 	i, resp, err := s.client.EditIssue(owner, repo, int64(number), gOpts)
 	if err != nil {
-		if resp != nil && resp.StatusCode == http.StatusNotFound {
-			return nil, forge.ErrNotFound
-		}
-		return nil, err
+		return nil, wrapErr("update issue", resp, err)
 	}
 	result := convertGiteaIssue(i)
 	return &result, nil
@@ -257,10 +244,7 @@ func (s *giteaIssueService) Close(ctx context.Context, owner, repo string, numbe
 	}
 	_, resp, err := s.client.EditIssue(owner, repo, int64(number), gOpts)
 	if err != nil {
-		if resp != nil && resp.StatusCode == http.StatusNotFound {
-			return forge.ErrNotFound
-		}
-		return err
+		return wrapErr("close issue", resp, err)
 	}
 	return nil
 }
@@ -272,10 +256,7 @@ func (s *giteaIssueService) Reopen(ctx context.Context, owner, repo string, numb
 	}
 	_, resp, err := s.client.EditIssue(owner, repo, int64(number), gOpts)
 	if err != nil {
-		if resp != nil && resp.StatusCode == http.StatusNotFound {
-			return forge.ErrNotFound
-		}
-		return err
+		return wrapErr("reopen issue", resp, err)
 	}
 	return nil
 }
@@ -283,10 +264,7 @@ func (s *giteaIssueService) Reopen(ctx context.Context, owner, repo string, numb
 func (s *giteaIssueService) Delete(ctx context.Context, owner, repo string, number int) error {
 	resp, err := s.client.DeleteIssue(owner, repo, int64(number))
 	if err != nil {
-		if resp != nil && resp.StatusCode == http.StatusNotFound {
-			return forge.ErrNotFound
-		}
-		return err
+		return wrapErr("delete issue", resp, err)
 	}
 	return nil
 }
@@ -296,10 +274,7 @@ func (s *giteaIssueService) CreateComment(ctx context.Context, owner, repo strin
 		Body: body,
 	})
 	if err != nil {
-		if resp != nil && resp.StatusCode == http.StatusNotFound {
-			return nil, forge.ErrNotFound
-		}
-		return nil, err
+		return nil, wrapErr("create issue comment", resp, err)
 	}
 	result := convertGiteaComment(c)
 	return &result, nil
@@ -317,10 +292,7 @@ func (s *giteaIssueService) ListComments(ctx context.Context, owner, repo string
 			ListOptions: gitea.ListOptions{Page: page, PageSize: defaultPageSize},
 		})
 		if err != nil {
-			if resp != nil && resp.StatusCode == http.StatusNotFound {
-				return nil, forge.ErrNotFound
-			}
-			return nil, err
+			return nil, wrapErr("list issue comments", resp, err)
 		}
 		for _, c := range comments {
 			all = append(all, convertGiteaComment(c))

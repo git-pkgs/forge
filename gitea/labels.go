@@ -39,10 +39,7 @@ func (s *giteaLabelService) List(ctx context.Context, owner, repo string, opts f
 			ListOptions: gitea.ListOptions{Page: page, PageSize: perPage},
 		})
 		if err != nil {
-			if resp != nil && resp.StatusCode == http.StatusNotFound {
-				return nil, forge.ErrNotFound
-			}
-			return nil, err
+			return nil, wrapErr("list labels", resp, err)
 		}
 		for _, l := range labels {
 			all = append(all, convertGiteaLabel(l))
@@ -69,10 +66,7 @@ func (s *giteaLabelService) findLabelByName(owner, repo, name string) (*gitea.La
 			ListOptions: gitea.ListOptions{Page: page, PageSize: defaultPageSize},
 		})
 		if err != nil {
-			if resp != nil && resp.StatusCode == http.StatusNotFound {
-				return nil, forge.ErrNotFound
-			}
-			return nil, err
+			return nil, wrapErr("list labels", resp, err)
 		}
 		for _, l := range labels {
 			if l.Name == name {
@@ -102,10 +96,7 @@ func resolveLabelIDs(client *gitea.Client, owner, repo string, names []string) (
 			ListOptions: gitea.ListOptions{Page: page, PageSize: defaultPageSize},
 		})
 		if err != nil {
-			if resp != nil && resp.StatusCode == http.StatusNotFound {
-				return nil, forge.ErrNotFound
-			}
-			return nil, err
+			return nil, wrapErr("list labels", resp, err)
 		}
 		for _, l := range labels {
 			if _, ok := nameSet[l.Name]; ok {
@@ -150,13 +141,11 @@ func (s *giteaLabelService) Create(ctx context.Context, owner, repo string, opts
 	if err != nil {
 		if resp != nil {
 			switch resp.StatusCode {
-			case http.StatusNotFound:
-				return nil, forge.ErrNotFound
 			case http.StatusConflict, http.StatusUnprocessableEntity:
 				return nil, forge.ErrLabelExists
 			}
 		}
-		return nil, err
+		return nil, wrapErr("create label", resp, err)
 	}
 	result := convertGiteaLabel(l)
 	return &result, nil
@@ -191,10 +180,7 @@ func (s *giteaLabelService) Update(ctx context.Context, owner, repo, name string
 
 	l, resp, err := s.client.EditLabel(owner, repo, existing.ID, gOpts)
 	if err != nil {
-		if resp != nil && resp.StatusCode == http.StatusNotFound {
-			return nil, forge.ErrNotFound
-		}
-		return nil, err
+		return nil, wrapErr("update label", resp, err)
 	}
 	result := convertGiteaLabel(l)
 	return &result, nil
@@ -208,10 +194,7 @@ func (s *giteaLabelService) Delete(ctx context.Context, owner, repo, name string
 
 	resp, err := s.client.DeleteLabel(owner, repo, existing.ID)
 	if err != nil {
-		if resp != nil && resp.StatusCode == http.StatusNotFound {
-			return forge.ErrNotFound
-		}
-		return err
+		return wrapErr("delete label", resp, err)
 	}
 	return nil
 }
