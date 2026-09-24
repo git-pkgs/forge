@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	forge "github.com/git-pkgs/forge"
-	"net/http"
 
 	"code.gitea.io/sdk/gitea"
 )
@@ -134,10 +133,7 @@ func convertGiteaPR(pr *gitea.PullRequest) forge.PullRequest {
 func (s *giteaPRService) Get(ctx context.Context, owner, repo string, number int) (*forge.PullRequest, error) {
 	pr, resp, err := s.client.GetPullRequest(owner, repo, int64(number))
 	if err != nil {
-		if resp != nil && resp.StatusCode == http.StatusNotFound {
-			return nil, forge.ErrNotFound
-		}
-		return nil, err
+		return nil, wrapErr("get pull request", resp, err)
 	}
 	result := convertGiteaPR(pr)
 	return &result, nil
@@ -173,10 +169,7 @@ func (s *giteaPRService) List(ctx context.Context, owner, repo string, opts forg
 	for {
 		prs, resp, err := s.client.ListRepoPullRequests(owner, repo, gOpts)
 		if err != nil {
-			if resp != nil && resp.StatusCode == http.StatusNotFound {
-				return nil, forge.ErrNotFound
-			}
-			return nil, err
+			return nil, wrapErr("list pull requests", resp, err)
 		}
 		for _, pr := range prs {
 			all = append(all, convertGiteaPR(pr))
@@ -214,10 +207,7 @@ func (s *giteaPRService) Create(ctx context.Context, owner, repo string, opts fo
 
 	pr, resp, err := s.client.CreatePullRequest(owner, repo, gOpts)
 	if err != nil {
-		if resp != nil && resp.StatusCode == http.StatusNotFound {
-			return nil, forge.ErrNotFound
-		}
-		return nil, err
+		return nil, wrapErr("create pull request", resp, err)
 	}
 	result := convertGiteaPR(pr)
 	return &result, nil
@@ -250,10 +240,7 @@ func (s *giteaPRService) Update(ctx context.Context, owner, repo string, number 
 
 	pr, resp, err := s.client.EditPullRequest(owner, repo, int64(number), gOpts)
 	if err != nil {
-		if resp != nil && resp.StatusCode == http.StatusNotFound {
-			return nil, forge.ErrNotFound
-		}
-		return nil, err
+		return nil, wrapErr("update pull request", resp, err)
 	}
 	result := convertGiteaPR(pr)
 	return &result, nil
@@ -266,10 +253,7 @@ func (s *giteaPRService) Close(ctx context.Context, owner, repo string, number i
 	}
 	_, resp, err := s.client.EditPullRequest(owner, repo, int64(number), gOpts)
 	if err != nil {
-		if resp != nil && resp.StatusCode == http.StatusNotFound {
-			return forge.ErrNotFound
-		}
-		return err
+		return wrapErr("close pull request", resp, err)
 	}
 	return nil
 }
@@ -281,10 +265,7 @@ func (s *giteaPRService) Reopen(ctx context.Context, owner, repo string, number 
 	}
 	_, resp, err := s.client.EditPullRequest(owner, repo, int64(number), gOpts)
 	if err != nil {
-		if resp != nil && resp.StatusCode == http.StatusNotFound {
-			return forge.ErrNotFound
-		}
-		return err
+		return wrapErr("reopen pull request", resp, err)
 	}
 	return nil
 }
@@ -304,10 +285,7 @@ func (s *giteaPRService) Merge(ctx context.Context, owner, repo string, number i
 
 	_, resp, err := s.client.MergePullRequest(owner, repo, int64(number), gOpts)
 	if err != nil {
-		if resp != nil && resp.StatusCode == http.StatusNotFound {
-			return forge.ErrNotFound
-		}
-		return err
+		return wrapErr("merge pull request", resp, err)
 	}
 	return nil
 }
@@ -315,10 +293,7 @@ func (s *giteaPRService) Merge(ctx context.Context, owner, repo string, number i
 func (s *giteaPRService) Diff(ctx context.Context, owner, repo string, number int) (string, error) {
 	raw, resp, err := s.client.GetPullRequestDiff(owner, repo, int64(number), gitea.PullRequestDiffOptions{})
 	if err != nil {
-		if resp != nil && resp.StatusCode == http.StatusNotFound {
-			return "", forge.ErrNotFound
-		}
-		return "", err
+		return "", wrapErr("get pull request diff", resp, err)
 	}
 	return string(raw), nil
 }
@@ -328,10 +303,7 @@ func (s *giteaPRService) CreateComment(ctx context.Context, owner, repo string, 
 		Body: body,
 	})
 	if err != nil {
-		if resp != nil && resp.StatusCode == http.StatusNotFound {
-			return nil, forge.ErrNotFound
-		}
-		return nil, err
+		return nil, wrapErr("create pull request comment", resp, err)
 	}
 	result := convertGiteaComment(c)
 	return &result, nil
@@ -345,10 +317,7 @@ func (s *giteaPRService) ListComments(ctx context.Context, owner, repo string, n
 			ListOptions: gitea.ListOptions{Page: page, PageSize: defaultPageSize},
 		})
 		if err != nil {
-			if resp != nil && resp.StatusCode == http.StatusNotFound {
-				return nil, forge.ErrNotFound
-			}
-			return nil, err
+			return nil, wrapErr("list pull request comments", resp, err)
 		}
 		for _, c := range comments {
 			all = append(all, convertGiteaComment(c))

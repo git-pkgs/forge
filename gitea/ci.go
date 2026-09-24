@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"io"
-	"net/http"
 
 	forge "github.com/git-pkgs/forge"
 
@@ -93,10 +92,7 @@ func (s *giteaCIService) ListRuns(_ context.Context, owner, repo string, opts fo
 	for {
 		resp, httpResp, err := s.client.ListRepoActionRuns(owner, repo, gOpts)
 		if err != nil {
-			if httpResp != nil && httpResp.StatusCode == http.StatusNotFound {
-				return nil, forge.ErrNotFound
-			}
-			return nil, err
+			return nil, wrapErr("list workflow runs", httpResp, err)
 		}
 		for _, r := range resp.WorkflowRuns {
 			all = append(all, convertGiteaWorkflowRun(r))
@@ -117,10 +113,7 @@ func (s *giteaCIService) ListRuns(_ context.Context, owner, repo string, opts fo
 func (s *giteaCIService) GetRun(_ context.Context, owner, repo string, runID int64) (*forge.CIRun, error) {
 	r, resp, err := s.client.GetRepoActionRun(owner, repo, runID)
 	if err != nil {
-		if resp != nil && resp.StatusCode == http.StatusNotFound {
-			return nil, forge.ErrNotFound
-		}
-		return nil, err
+		return nil, wrapErr("get workflow run", resp, err)
 	}
 	result := convertGiteaWorkflowRun(r)
 
@@ -149,10 +142,7 @@ func (s *giteaCIService) RetryRun(_ context.Context, _, _ string, _ int64) error
 func (s *giteaCIService) GetJobLog(_ context.Context, owner, repo string, jobID int64) (io.ReadCloser, error) {
 	data, resp, err := s.client.GetRepoActionJobLogs(owner, repo, jobID)
 	if err != nil {
-		if resp != nil && resp.StatusCode == http.StatusNotFound {
-			return nil, forge.ErrNotFound
-		}
-		return nil, err
+		return nil, wrapErr("get job log", resp, err)
 	}
 	return io.NopCloser(bytes.NewReader(data)), nil
 }

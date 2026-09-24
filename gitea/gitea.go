@@ -87,10 +87,7 @@ func convertGiteaRepo(r *gitea.Repository) forge.Repository {
 func (s *giteaRepoService) Get(ctx context.Context, owner, repo string) (*forge.Repository, error) {
 	r, resp, err := s.client.GetRepo(owner, repo)
 	if err != nil {
-		if resp != nil && resp.StatusCode == http.StatusNotFound {
-			return nil, forge.ErrNotFound
-		}
-		return nil, err
+		return nil, wrapErr("get repo", resp, err)
 	}
 
 	result := convertGiteaRepo(r)
@@ -134,7 +131,7 @@ func (s *giteaRepoService) listOrgRepos(_ context.Context, owner string, perPage
 			if resp != nil && resp.StatusCode == http.StatusNotFound {
 				return nil, forge.ErrOwnerNotFound
 			}
-			return nil, err
+			return nil, wrapErr("list org repos", resp, err)
 		}
 		for _, r := range gRepos {
 			repo := convertGiteaRepo(r)
@@ -166,7 +163,7 @@ func (s *giteaRepoService) listUserRepos(_ context.Context, owner string, perPag
 			if resp != nil && resp.StatusCode == http.StatusNotFound {
 				return nil, forge.ErrOwnerNotFound
 			}
-			return nil, err
+			return nil, wrapErr("list user repos", resp, err)
 		}
 		for _, r := range gRepos {
 			repo := convertGiteaRepo(r)
@@ -229,7 +226,7 @@ func (s *giteaRepoService) Create(ctx context.Context, opts forge.CreateRepoOpts
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return nil, forge.ErrOwnerNotFound
 		}
-		return nil, err
+		return nil, wrapErr("create repo", resp, err)
 	}
 
 	result := convertGiteaRepo(r)
@@ -276,10 +273,7 @@ func (s *giteaRepoService) Edit(ctx context.Context, owner, repo string, opts fo
 
 	r, resp, err := s.client.EditRepo(owner, repo, gOpts)
 	if err != nil {
-		if resp != nil && resp.StatusCode == http.StatusNotFound {
-			return nil, forge.ErrNotFound
-		}
-		return nil, err
+		return nil, wrapErr("edit repo", resp, err)
 	}
 
 	result := convertGiteaRepo(r)
@@ -289,10 +283,7 @@ func (s *giteaRepoService) Edit(ctx context.Context, owner, repo string, opts fo
 func (s *giteaRepoService) Delete(ctx context.Context, owner, repo string) error {
 	resp, err := s.client.DeleteRepo(owner, repo)
 	if err != nil {
-		if resp != nil && resp.StatusCode == http.StatusNotFound {
-			return forge.ErrNotFound
-		}
-		return err
+		return wrapErr("delete repo", resp, err)
 	}
 	return nil
 }
@@ -310,10 +301,7 @@ func (s *giteaRepoService) Fork(ctx context.Context, owner, repo string, opts fo
 
 	r, resp, err := s.client.CreateFork(owner, repo, gOpts)
 	if err != nil {
-		if resp != nil && resp.StatusCode == http.StatusNotFound {
-			return nil, forge.ErrNotFound
-		}
-		return nil, err
+		return nil, wrapErr("fork repo", resp, err)
 	}
 
 	result := convertGiteaRepo(r)
@@ -333,10 +321,7 @@ func (s *giteaRepoService) ListForks(ctx context.Context, owner, repo string, op
 			ListOptions: gitea.ListOptions{Page: page, PageSize: perPage},
 		})
 		if err != nil {
-			if resp != nil && resp.StatusCode == http.StatusNotFound {
-				return nil, forge.ErrNotFound
-			}
-			return nil, err
+			return nil, wrapErr("list forks", resp, err)
 		}
 		for _, r := range forks {
 			all = append(all, convertGiteaRepo(r))
@@ -362,10 +347,7 @@ func (s *giteaRepoService) ListTags(ctx context.Context, owner, repo string) ([]
 			ListOptions: gitea.ListOptions{Page: page, PageSize: defaultPageSize},
 		})
 		if err != nil {
-			if resp != nil && resp.StatusCode == http.StatusNotFound {
-				return nil, forge.ErrNotFound
-			}
-			return nil, err
+			return nil, wrapErr("list tags", resp, err)
 		}
 		for _, t := range tags {
 			tag := forge.Tag{Name: t.Name}
@@ -414,7 +396,7 @@ func (s *giteaRepoService) Search(ctx context.Context, opts forge.SearchRepoOpts
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return nil, nil
 		}
-		return nil, err
+		return nil, wrapErr("search repos", resp, err)
 	}
 
 	var repos []forge.Repository

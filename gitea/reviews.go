@@ -3,7 +3,6 @@ package gitea
 import (
 	"context"
 	forge "github.com/git-pkgs/forge"
-	"net/http"
 	"strings"
 
 	"code.gitea.io/sdk/gitea"
@@ -70,10 +69,7 @@ func (s *giteaReviewService) List(ctx context.Context, owner, repo string, numbe
 			ListOptions: gitea.ListOptions{Page: page, PageSize: perPage},
 		})
 		if err != nil {
-			if resp != nil && resp.StatusCode == http.StatusNotFound {
-				return nil, forge.ErrNotFound
-			}
-			return nil, err
+			return nil, wrapErr("list reviews", resp, err)
 		}
 		for _, r := range reviews {
 			all = append(all, convertGiteaReview(r))
@@ -108,10 +104,7 @@ func (s *giteaReviewService) Submit(ctx context.Context, owner, repo string, num
 		Body:  opts.Body,
 	})
 	if err != nil {
-		if resp != nil && resp.StatusCode == http.StatusNotFound {
-			return nil, forge.ErrNotFound
-		}
-		return nil, err
+		return nil, wrapErr("submit review", resp, err)
 	}
 	result := convertGiteaReview(review)
 	return &result, nil
@@ -122,10 +115,7 @@ func (s *giteaReviewService) RequestReviewers(ctx context.Context, owner, repo s
 		Reviewers: users,
 	})
 	if err != nil {
-		if resp != nil && resp.StatusCode == http.StatusNotFound {
-			return forge.ErrNotFound
-		}
-		return err
+		return wrapErr("request reviewers", resp, err)
 	}
 	return nil
 }
@@ -135,10 +125,7 @@ func (s *giteaReviewService) RemoveReviewers(ctx context.Context, owner, repo st
 		Reviewers: users,
 	})
 	if err != nil {
-		if resp != nil && resp.StatusCode == http.StatusNotFound {
-			return forge.ErrNotFound
-		}
-		return err
+		return wrapErr("remove reviewers", resp, err)
 	}
 	return nil
 }

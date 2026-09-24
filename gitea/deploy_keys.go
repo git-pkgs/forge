@@ -3,7 +3,6 @@ package gitea
 import (
 	"context"
 	forge "github.com/git-pkgs/forge"
-	"net/http"
 
 	"code.gitea.io/sdk/gitea"
 )
@@ -29,10 +28,7 @@ func (s *giteaDeployKeyService) List(ctx context.Context, owner, repo string, op
 			ListOptions: gitea.ListOptions{Page: page, PageSize: perPage},
 		})
 		if err != nil {
-			if resp != nil && resp.StatusCode == http.StatusNotFound {
-				return nil, forge.ErrNotFound
-			}
-			return nil, err
+			return nil, wrapErr("list deploy keys", resp, err)
 		}
 		for _, k := range keys {
 			all = append(all, forge.DeployKey{
@@ -59,10 +55,7 @@ func (s *giteaDeployKeyService) List(ctx context.Context, owner, repo string, op
 func (s *giteaDeployKeyService) Get(ctx context.Context, owner, repo string, id int64) (*forge.DeployKey, error) {
 	k, resp, err := s.client.GetDeployKey(owner, repo, id)
 	if err != nil {
-		if resp != nil && resp.StatusCode == http.StatusNotFound {
-			return nil, forge.ErrNotFound
-		}
-		return nil, err
+		return nil, wrapErr("get deploy key", resp, err)
 	}
 
 	return &forge.DeployKey{
@@ -81,10 +74,7 @@ func (s *giteaDeployKeyService) Create(ctx context.Context, owner, repo string, 
 		ReadOnly: opts.ReadOnly,
 	})
 	if err != nil {
-		if resp != nil && resp.StatusCode == http.StatusNotFound {
-			return nil, forge.ErrNotFound
-		}
-		return nil, err
+		return nil, wrapErr("create deploy key", resp, err)
 	}
 
 	return &forge.DeployKey{
@@ -99,10 +89,7 @@ func (s *giteaDeployKeyService) Create(ctx context.Context, owner, repo string, 
 func (s *giteaDeployKeyService) Delete(ctx context.Context, owner, repo string, id int64) error {
 	resp, err := s.client.DeleteDeployKey(owner, repo, id)
 	if err != nil {
-		if resp != nil && resp.StatusCode == http.StatusNotFound {
-			return forge.ErrNotFound
-		}
-		return err
+		return wrapErr("delete deploy key", resp, err)
 	}
 	return nil
 }

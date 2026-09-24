@@ -38,7 +38,7 @@ func (s *giteaCommitService) ResolveCommit(_ context.Context, owner, repo, ref s
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return "", forge.CommitRefError(owner, repo, ref, forge.ErrNotFound)
 		}
-		return "", forge.CommitRefError(owner, repo, ref, err)
+		return "", forge.CommitRefError(owner, repo, ref, wrapErr("get commit", resp, err))
 	}
 	if commit == nil || commit.CommitMeta == nil {
 		return "", forge.CommitRefError(owner, repo, ref, errors.New("empty response"))
