@@ -3,7 +3,6 @@ package gitea
 import (
 	"context"
 	forge "github.com/git-pkgs/forge"
-	"net/http"
 
 	"code.gitea.io/sdk/gitea"
 )
@@ -50,10 +49,7 @@ func (s *giteaCommitStatusService) List(ctx context.Context, owner, repo, sha st
 			ListOptions: gitea.ListOptions{Page: page, PageSize: defaultPageSize},
 		})
 		if err != nil {
-			if resp != nil && resp.StatusCode == http.StatusNotFound {
-				return nil, forge.ErrNotFound
-			}
-			return nil, err
+			return nil, wrapErr("list commit statuses", resp, err)
 		}
 		for _, st := range statuses {
 			cs := forge.CommitStatus{
@@ -84,10 +80,7 @@ func (s *giteaCommitStatusService) Set(ctx context.Context, owner, repo, sha str
 		Context:     opts.Context,
 	})
 	if err != nil {
-		if resp != nil && resp.StatusCode == http.StatusNotFound {
-			return nil, forge.ErrNotFound
-		}
-		return nil, err
+		return nil, wrapErr("set commit status", resp, err)
 	}
 
 	cs := &forge.CommitStatus{

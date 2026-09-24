@@ -3,7 +3,6 @@ package gitea
 import (
 	"context"
 	forge "github.com/git-pkgs/forge"
-	"net/http"
 
 	"code.gitea.io/sdk/gitea"
 )
@@ -29,10 +28,7 @@ func (s *giteaCollaboratorService) List(ctx context.Context, owner, repo string,
 			ListOptions: gitea.ListOptions{Page: page, PageSize: perPage},
 		})
 		if err != nil {
-			if resp != nil && resp.StatusCode == http.StatusNotFound {
-				return nil, forge.ErrNotFound
-			}
-			return nil, err
+			return nil, wrapErr("list collaborators", resp, err)
 		}
 		for _, u := range users {
 			perm, err := s.getPermission(owner, repo, u.UserName)
@@ -60,10 +56,7 @@ func (s *giteaCollaboratorService) List(ctx context.Context, owner, repo string,
 func (s *giteaCollaboratorService) getPermission(owner, repo, username string) (string, error) {
 	result, resp, err := s.client.CollaboratorPermission(owner, repo, username)
 	if err != nil {
-		if resp != nil && resp.StatusCode == http.StatusNotFound {
-			return "", forge.ErrNotFound
-		}
-		return "", err
+		return "", wrapErr("get collaborator permission", resp, err)
 	}
 	switch result.Permission {
 	case "admin", "owner":
@@ -86,10 +79,7 @@ func (s *giteaCollaboratorService) Add(ctx context.Context, owner, repo, usernam
 		Permission: perm,
 	})
 	if err != nil {
-		if resp != nil && resp.StatusCode == http.StatusNotFound {
-			return forge.ErrNotFound
-		}
-		return err
+		return wrapErr("add collaborator", resp, err)
 	}
 	return nil
 }
@@ -110,10 +100,7 @@ func giteaPermission(permission forge.AccessLevel) string {
 func (s *giteaCollaboratorService) Remove(ctx context.Context, owner, repo, username string) error {
 	resp, err := s.client.DeleteCollaborator(owner, repo, username)
 	if err != nil {
-		if resp != nil && resp.StatusCode == http.StatusNotFound {
-			return forge.ErrNotFound
-		}
-		return err
+		return wrapErr("remove collaborator", resp, err)
 	}
 	return nil
 }

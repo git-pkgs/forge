@@ -3,7 +3,6 @@ package gitea
 import (
 	"context"
 	forge "github.com/git-pkgs/forge"
-	"net/http"
 
 	"code.gitea.io/sdk/gitea"
 )
@@ -29,10 +28,7 @@ func (s *giteaSecretService) List(ctx context.Context, owner, repo string, opts 
 			ListOptions: gitea.ListOptions{Page: page, PageSize: perPage},
 		})
 		if err != nil {
-			if resp != nil && resp.StatusCode == http.StatusNotFound {
-				return nil, forge.ErrNotFound
-			}
-			return nil, err
+			return nil, wrapErr("list secrets", resp, err)
 		}
 		for _, sec := range secrets {
 			all = append(all, forge.Secret{
@@ -58,10 +54,7 @@ func (s *giteaSecretService) Set(ctx context.Context, owner, repo string, opts f
 		Data: opts.Value,
 	})
 	if err != nil {
-		if resp != nil && resp.StatusCode == http.StatusNotFound {
-			return forge.ErrNotFound
-		}
-		return err
+		return wrapErr("set secret", resp, err)
 	}
 	return nil
 }
@@ -69,10 +62,7 @@ func (s *giteaSecretService) Set(ctx context.Context, owner, repo string, opts f
 func (s *giteaSecretService) Delete(ctx context.Context, owner, repo, name string) error {
 	resp, err := s.client.DeleteRepoActionSecret(owner, repo, name)
 	if err != nil {
-		if resp != nil && resp.StatusCode == http.StatusNotFound {
-			return forge.ErrNotFound
-		}
-		return err
+		return wrapErr("delete secret", resp, err)
 	}
 	return nil
 }
