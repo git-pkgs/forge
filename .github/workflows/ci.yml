@@ -39,6 +39,17 @@ jobs:
       - name: Test
         run: go test -v -race ./...
 
+      - name: Test TinyGo GitLab fallback
+        run: go test -tags=tinygo ./gitlab
+
+      - name: Build WebAssembly
+        if: runner.os == 'Linux'
+        run: GOOS=js GOARCH=wasm go build ./...
+
+      - name: Build WASI
+        if: runner.os == 'Linux'
+        run: GOOS=wasip1 GOARCH=wasm go build ./...
+
   lint:
     runs-on: ubuntu-latest
     steps:
