@@ -1,3 +1,5 @@
+//go:build !tinygo
+
 package gitlab
 
 import (
@@ -441,24 +443,4 @@ func (s *gitLabRepoService) Search(ctx context.Context, opts forge.SearchRepoOpt
 		repos = append(repos, convertGitLabProject(p))
 	}
 	return repos, nil
-}
-
-func (s *gitLabRepoService) SettingsURL(repoHTMLURL string) string {
-	return repoHTMLURL + "/-/settings"
-}
-
-func (s *gitLabRepoService) WikiURL(repoHTMLURL string) string {
-	return repoHTMLURL + "/-/wikis"
-}
-
-func (s *gitLabRepoService) ActionsURL(repoHTMLURL string) string {
-	return repoHTMLURL + "/-/pipelines"
-}
-
-func (s *gitLabRepoService) ReleasesURL(repoHTMLURL string) string {
-	return repoHTMLURL + "/-/releases"
-}
-
-func (s *gitLabRepoService) BlobURL(repoHTMLURL, ref, path string) string {
-	return repoHTMLURL + "/-/blob/" + ref + "/" + path
 }

@@ -1,3 +1,5 @@
+//go:build !tinygo
+
 package gitlab
 
 import (
@@ -340,8 +342,4 @@ func (s *gitLabIssueService) ListComments(ctx context.Context, owner, repo strin
 		glOpts.Page = int64(resp.NextPage)
 	}
 	return all, nil
-}
-
-func (s *gitLabIssueService) ListURL(repoHTMLURL string) string {
-	return repoHTMLURL + "/-/issues"
 }

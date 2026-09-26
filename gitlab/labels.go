@@ -1,3 +1,5 @@
+//go:build !tinygo
+
 package gitlab
 
 import (
@@ -144,8 +146,4 @@ func (s *gitLabLabelService) Delete(ctx context.Context, owner, repo, name strin
 		return err
 	}
 	return nil
-}
-
-func (s *gitLabLabelService) ListURL(repoHTMLURL string) string {
-	return repoHTMLURL + "/-/labels"
 }

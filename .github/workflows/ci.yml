@@ -39,6 +39,55 @@ jobs:
       - name: Test
         run: go test -v -race ./...
 
+      - name: Test TinyGo GitLab fallback
+        run: go test -tags=tinygo ./gitlab
+
+      - name: Build WebAssembly
+        if: runner.os == 'Linux'
+        run: GOOS=js GOARCH=wasm go build ./...
+
+      - name: Build WASI
+        if: runner.os == 'Linux'
+        run: GOOS=wasip1 GOARCH=wasm go build ./...
+
+  tinygo:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '24'
+          package-manager-cache: false
+
+      - name: Install TinyGo and Wasmtime
+        working-directory: ${{ runner.temp }}
+        run: |
+          curl --fail --location --silent --show-error --output tinygo.tar.gz https://github.com/tinygo-org/tinygo/releases/download/v0.42.0/tinygo0.42.0.linux-amd64.tar.gz
+          echo 'b87688fa2e19cee7d813cad7fd7dadb71dff3198e47125aba66ba4af5e490438  tinygo.tar.gz' | sha256sum --check
+          tar -xzf tinygo.tar.gz
+          echo "$RUNNER_TEMP/tinygo/bin" >> "$GITHUB_PATH"
+          curl --fail --location --silent --show-error --output wasmtime.tar.xz https://github.com/bytecodealliance/wasmtime/releases/download/v44.0.1/wasmtime-v44.0.1-x86_64-linux.tar.xz
+          echo 'afd58715f105e3a7f454169daed22168c5736ec5f225fb04c4ac62c54c9508a3  wasmtime.tar.xz' | sha256sum --check
+          tar -xJf wasmtime.tar.xz
+          echo "$RUNNER_TEMP/wasmtime-v44.0.1-x86_64-linux" >> "$GITHUB_PATH"
+
+      - name: Test TinyGo WebAssembly GitLab fallback and URLs
+        run: tinygo test -target=wasm -run '^(TestTinyGoClientRouting|TestTinyGoServicesReturnUnsupported|TestGitLabPortableURLs)$' -v ./gitlab
+
+      - name: Test TinyGo WASI GitLab fallback and URLs
+        run: tinygo test -target=wasip1 -run '^(TestTinyGoClientRouting|TestTinyGoServicesReturnUnsupported|TestGitLabPortableURLs)$' -v ./gitlab
+
   lint:
     runs-on: ubuntu-latest
     steps:

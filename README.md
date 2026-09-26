@@ -165,6 +165,8 @@ repo, err := client.FetchRepository(ctx, "https://github.com/octocat/hello-world
 
 The `Forge` interface exposes services for repos, issues, pull requests, reviews, releases, CI, branches, labels, milestones, deploy keys, secrets, notifications, files, collaborators, commit statuses and commits. Each backend implements these using its native SDK.
 
+Under TinyGo, `gitlab.New` retains its signature and returns a backend whose API operations report `forges.ErrNotSupported`. GitLab URL parsing and web link builders remain available. Native Go retains the full GitLab implementation.
+
 ```go
 f, _ := client.ForgeFor("github.com")
 issues, _ := f.Issues().List(ctx, "octocat", "hello-world", forges.ListIssueOpts{State: "open"})

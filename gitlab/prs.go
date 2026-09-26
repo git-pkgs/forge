@@ -1,3 +1,5 @@
+//go:build !tinygo
+
 package gitlab
 
 import (
@@ -483,8 +485,4 @@ func (s *gitLabPRService) ListComments(ctx context.Context, owner, repo string, 
 		glOpts.Page = int64(resp.NextPage)
 	}
 	return all, nil
-}
-
-func (s *gitLabPRService) ListURL(repoHTMLURL string) string {
-	return repoHTMLURL + "/-/merge_requests"
 }
