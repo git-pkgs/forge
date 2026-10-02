@@ -6,7 +6,7 @@ toolchain go1.26.7
 
 require (
 	code.gitea.io/sdk/gitea v0.25.1
-	github.com/git-pkgs/purl v0.1.20
+	github.com/git-pkgs/purl v0.1.21
 	github.com/google/go-github/v82 v82.0.0
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.0.10
@@ -19,7 +19,7 @@ require (
 	github.com/42wim/httpsig v1.2.4 // indirect
 	github.com/davidmz/go-pageant v1.0.2 // indirect
 	github.com/fatih/color v1.18.0 // indirect
-	github.com/git-pkgs/vers v0.6.0 // indirect
+	github.com/git-pkgs/vers v0.7.1 // indirect
 	github.com/go-fed/httpsig v1.1.0 // indirect
 	github.com/google/go-querystring v1.2.0 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
