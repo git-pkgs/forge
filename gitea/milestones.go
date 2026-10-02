@@ -63,10 +63,7 @@ func (s *giteaMilestoneService) List(ctx context.Context, owner, repo string, op
 	for {
 		milestones, resp, err := s.client.ListRepoMilestones(owner, repo, gOpts)
 		if err != nil {
-			if resp != nil && resp.StatusCode == http.StatusNotFound {
-				return nil, forge.ErrNotFound
-			}
-			return nil, err
+			return nil, wrapErr("list milestones", resp, err)
 		}
 		for _, m := range milestones {
 			all = append(all, convertGiteaMilestone(m))
@@ -93,7 +90,7 @@ func resolveMilestoneID(client *gitea.Client, owner, repo, name string) (int64, 
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return 0, fmt.Errorf("milestone not found: %s", name)
 		}
-		return 0, err
+		return 0, wrapErr("get milestone", resp, err)
 	}
 	return m.ID, nil
 }
@@ -101,10 +98,7 @@ func resolveMilestoneID(client *gitea.Client, owner, repo, name string) (int64, 
 func (s *giteaMilestoneService) Get(ctx context.Context, owner, repo string, id int) (*forge.Milestone, error) {
 	m, resp, err := s.client.GetMilestone(owner, repo, int64(id))
 	if err != nil {
-		if resp != nil && resp.StatusCode == http.StatusNotFound {
-			return nil, forge.ErrNotFound
-		}
-		return nil, err
+		return nil, wrapErr("get milestone", resp, err)
 	}
 	result := convertGiteaMilestone(m)
 	return &result, nil
@@ -121,10 +115,7 @@ func (s *giteaMilestoneService) Create(ctx context.Context, owner, repo string, 
 
 	m, resp, err := s.client.CreateMilestone(owner, repo, gOpts)
 	if err != nil {
-		if resp != nil && resp.StatusCode == http.StatusNotFound {
-			return nil, forge.ErrNotFound
-		}
-		return nil, err
+		return nil, wrapErr("create milestone", resp, err)
 	}
 	result := convertGiteaMilestone(m)
 	return &result, nil
@@ -164,10 +155,7 @@ func (s *giteaMilestoneService) Update(ctx context.Context, owner, repo string, 
 
 	m, resp, err := s.client.EditMilestone(owner, repo, int64(id), gOpts)
 	if err != nil {
-		if resp != nil && resp.StatusCode == http.StatusNotFound {
-			return nil, forge.ErrNotFound
-		}
-		return nil, err
+		return nil, wrapErr("update milestone", resp, err)
 	}
 	result := convertGiteaMilestone(m)
 	return &result, nil
@@ -178,10 +166,7 @@ func (s *giteaMilestoneService) Close(ctx context.Context, owner, repo string, i
 	gOpts := gitea.EditMilestoneOption{State: &closed}
 	_, resp, err := s.client.EditMilestone(owner, repo, int64(id), gOpts)
 	if err != nil {
-		if resp != nil && resp.StatusCode == http.StatusNotFound {
-			return forge.ErrNotFound
-		}
-		return err
+		return wrapErr("close milestone", resp, err)
 	}
 	return nil
 }
@@ -191,10 +176,7 @@ func (s *giteaMilestoneService) Reopen(ctx context.Context, owner, repo string, 
 	gOpts := gitea.EditMilestoneOption{State: &open}
 	_, resp, err := s.client.EditMilestone(owner, repo, int64(id), gOpts)
 	if err != nil {
-		if resp != nil && resp.StatusCode == http.StatusNotFound {
-			return forge.ErrNotFound
-		}
-		return err
+		return wrapErr("reopen milestone", resp, err)
 	}
 	return nil
 }
@@ -202,10 +184,7 @@ func (s *giteaMilestoneService) Reopen(ctx context.Context, owner, repo string, 
 func (s *giteaMilestoneService) Delete(ctx context.Context, owner, repo string, id int) error {
 	resp, err := s.client.DeleteMilestone(owner, repo, int64(id))
 	if err != nil {
-		if resp != nil && resp.StatusCode == http.StatusNotFound {
-			return forge.ErrNotFound
-		}
-		return err
+		return wrapErr("delete milestone", resp, err)
 	}
 	return nil
 }

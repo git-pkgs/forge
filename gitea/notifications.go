@@ -2,7 +2,6 @@ package gitea
 
 import (
 	"context"
-	"net/http"
 	"strconv"
 	"strings"
 
@@ -97,10 +96,7 @@ func (s *giteaNotificationService) listRepoNotifications(owner, repo string, pag
 			Status:      statuses,
 		})
 		if err != nil {
-			if resp != nil && resp.StatusCode == http.StatusNotFound {
-				return nil, forge.ErrNotFound
-			}
-			return nil, err
+			return nil, wrapErr("list notifications", resp, err)
 		}
 		for _, n := range notifications {
 			all = append(all, convertGiteaNotification(n))
@@ -121,7 +117,7 @@ func (s *giteaNotificationService) listAllNotifications(page, perPage int, statu
 			Status:      statuses,
 		})
 		if err != nil {
-			return nil, err
+			return nil, wrapErr("list notifications", resp, err)
 		}
 		for _, n := range notifications {
 			all = append(all, convertGiteaNotification(n))
@@ -142,10 +138,7 @@ func (s *giteaNotificationService) MarkRead(ctx context.Context, opts forge.Mark
 		}
 		_, resp, err := s.client.ReadNotification(id)
 		if err != nil {
-			if resp != nil && resp.StatusCode == http.StatusNotFound {
-				return forge.ErrNotFound
-			}
-			return err
+			return wrapErr("mark notification read", resp, err)
 		}
 		return nil
 	}
@@ -154,17 +147,17 @@ func (s *giteaNotificationService) MarkRead(ctx context.Context, opts forge.Mark
 		if i := strings.LastIndex(opts.Repo, "/"); i > 0 {
 			_, resp, err := s.client.ReadRepoNotifications(opts.Repo[:i], opts.Repo[i+1:], gitea.MarkNotificationOptions{})
 			if err != nil {
-				if resp != nil && resp.StatusCode == http.StatusNotFound {
-					return forge.ErrNotFound
-				}
-				return err
+				return wrapErr("mark notifications read", resp, err)
 			}
 			return nil
 		}
 	}
 
-	_, _, err := s.client.ReadNotifications(gitea.MarkNotificationOptions{})
-	return err
+	_, resp, err := s.client.ReadNotifications(gitea.MarkNotificationOptions{})
+	if err != nil {
+		return wrapErr("mark notifications read", resp, err)
+	}
+	return nil
 }
 
 func (s *giteaNotificationService) Get(ctx context.Context, id string) (*forge.Notification, error) {
@@ -175,10 +168,7 @@ func (s *giteaNotificationService) Get(ctx context.Context, id string) (*forge.N
 
 	n, resp, err := s.client.GetNotification(nID)
 	if err != nil {
-		if resp != nil && resp.StatusCode == http.StatusNotFound {
-			return nil, forge.ErrNotFound
-		}
-		return nil, err
+		return nil, wrapErr("get notification", resp, err)
 	}
 
 	result := convertGiteaNotification(n)

@@ -2,6 +2,7 @@ package gitea
 
 import (
 	"context"
+	"fmt"
 	forge "github.com/git-pkgs/forge"
 	"io"
 	"net/http"
@@ -69,10 +70,7 @@ func (s *giteaReleaseService) List(ctx context.Context, owner, repo string, opts
 			ListOptions: gitea.ListOptions{Page: page, PageSize: perPage},
 		})
 		if err != nil {
-			if resp != nil && resp.StatusCode == http.StatusNotFound {
-				return nil, forge.ErrNotFound
-			}
-			return nil, err
+			return nil, wrapErr("list releases", resp, err)
 		}
 		for _, r := range releases {
 			all = append(all, convertGiteaRelease(r))
@@ -93,10 +91,7 @@ func (s *giteaReleaseService) List(ctx context.Context, owner, repo string, opts
 func (s *giteaReleaseService) Get(ctx context.Context, owner, repo, tag string) (*forge.Release, error) {
 	r, resp, err := s.client.GetReleaseByTag(owner, repo, tag)
 	if err != nil {
-		if resp != nil && resp.StatusCode == http.StatusNotFound {
-			return nil, forge.ErrNotFound
-		}
-		return nil, err
+		return nil, wrapErr("get release", resp, err)
 	}
 	result := convertGiteaRelease(r)
 	return &result, nil
@@ -108,10 +103,7 @@ func (s *giteaReleaseService) GetLatest(ctx context.Context, owner, repo string)
 		ListOptions: gitea.ListOptions{Page: 1, PageSize: latestReleasesPageSize},
 	})
 	if err != nil {
-		if resp != nil && resp.StatusCode == http.StatusNotFound {
-			return nil, forge.ErrNotFound
-		}
-		return nil, err
+		return nil, wrapErr("get latest release", resp, err)
 	}
 	for _, r := range releases {
 		if !r.IsDraft && !r.IsPrerelease {
@@ -140,10 +132,10 @@ func (s *giteaReleaseService) Create(ctx context.Context, owner, repo string, op
 
 	r, resp, err := s.client.CreateRelease(owner, repo, gOpts)
 	if err != nil {
-		if resp != nil && resp.StatusCode == http.StatusNotFound {
-			return nil, forge.ErrNotFound
+		if resp != nil && resp.StatusCode == http.StatusConflict {
+			return nil, fmt.Errorf("release for tag %q already exists", opts.TagName)
 		}
-		return nil, err
+		return nil, wrapErr("create release", resp, err)
 	}
 	result := convertGiteaRelease(r)
 	return &result, nil
@@ -152,10 +144,7 @@ func (s *giteaReleaseService) Create(ctx context.Context, owner, repo string, op
 func (s *giteaReleaseService) Update(ctx context.Context, owner, repo, tag string, opts forge.UpdateReleaseOpts) (*forge.Release, error) {
 	existing, resp, err := s.client.GetReleaseByTag(owner, repo, tag)
 	if err != nil {
-		if resp != nil && resp.StatusCode == http.StatusNotFound {
-			return nil, forge.ErrNotFound
-		}
-		return nil, err
+		return nil, wrapErr("update release", resp, err)
 	}
 
 	gOpts := gitea.EditReleaseOption{}
@@ -193,10 +182,7 @@ func (s *giteaReleaseService) Update(ctx context.Context, owner, repo, tag strin
 
 	r, resp, err := s.client.EditRelease(owner, repo, existing.ID, gOpts)
 	if err != nil {
-		if resp != nil && resp.StatusCode == http.StatusNotFound {
-			return nil, forge.ErrNotFound
-		}
-		return nil, err
+		return nil, wrapErr("update release", resp, err)
 	}
 	result := convertGiteaRelease(r)
 	return &result, nil
@@ -205,18 +191,12 @@ func (s *giteaReleaseService) Update(ctx context.Context, owner, repo, tag strin
 func (s *giteaReleaseService) Delete(ctx context.Context, owner, repo, tag string) error {
 	existing, resp, err := s.client.GetReleaseByTag(owner, repo, tag)
 	if err != nil {
-		if resp != nil && resp.StatusCode == http.StatusNotFound {
-			return forge.ErrNotFound
-		}
-		return err
+		return wrapErr("delete release", resp, err)
 	}
 
 	resp, err = s.client.DeleteRelease(owner, repo, existing.ID)
 	if err != nil {
-		if resp != nil && resp.StatusCode == http.StatusNotFound {
-			return forge.ErrNotFound
-		}
-		return err
+		return wrapErr("delete release", resp, err)
 	}
 	return nil
 }
@@ -224,19 +204,13 @@ func (s *giteaReleaseService) Delete(ctx context.Context, owner, repo, tag strin
 func (s *giteaReleaseService) UploadAsset(ctx context.Context, owner, repo, tag string, file *os.File) (*forge.ReleaseAsset, error) {
 	existing, resp, err := s.client.GetReleaseByTag(owner, repo, tag)
 	if err != nil {
-		if resp != nil && resp.StatusCode == http.StatusNotFound {
-			return nil, forge.ErrNotFound
-		}
-		return nil, err
+		return nil, wrapErr("upload release asset", resp, err)
 	}
 
 	name := filepath.Base(file.Name())
 	a, resp, err := s.client.CreateReleaseAttachment(owner, repo, existing.ID, file, name)
 	if err != nil {
-		if resp != nil && resp.StatusCode == http.StatusNotFound {
-			return nil, forge.ErrNotFound
-		}
-		return nil, err
+		return nil, wrapErr("upload release asset", resp, err)
 	}
 
 	result := forge.ReleaseAsset{

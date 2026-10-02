@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/base64"
 	forge "github.com/git-pkgs/forge"
-	"net/http"
 
 	"code.gitea.io/sdk/gitea"
 )
@@ -20,10 +19,7 @@ func (f *giteaForge) Files() forge.FileService {
 func (s *giteaFileService) Get(ctx context.Context, owner, repo, path, ref string) (*forge.FileContent, error) {
 	cr, resp, err := s.client.GetContents(owner, repo, ref, path)
 	if err != nil {
-		if resp != nil && resp.StatusCode == http.StatusNotFound {
-			return nil, forge.ErrNotFound
-		}
-		return nil, err
+		return nil, wrapErr("get file", resp, err)
 	}
 
 	var content []byte
@@ -49,10 +45,7 @@ func (s *giteaFileService) Get(ctx context.Context, owner, repo, path, ref strin
 func (s *giteaFileService) List(ctx context.Context, owner, repo, path, ref string) ([]forge.FileEntry, error) {
 	items, resp, err := s.client.ListContents(owner, repo, ref, path)
 	if err != nil {
-		if resp != nil && resp.StatusCode == http.StatusNotFound {
-			return nil, forge.ErrNotFound
-		}
-		return nil, err
+		return nil, wrapErr("list files", resp, err)
 	}
 
 	entries := make([]forge.FileEntry, len(items))
