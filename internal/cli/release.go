@@ -312,14 +312,36 @@ func releaseDeleteCmd() *cobra.Command {
 	return cmd
 }
 
+// uploadTagAndFile resolves the release tag and file for "release upload". The tag comes from --tag with the file as
+// the only argument, or from the first of two positional arguments.
+func uploadTagAndFile(flagTag string, args []string) (tag, file string, err error) {
+	if flagTag != "" {
+		if len(args) != 1 {
+			return "", "", fmt.Errorf("with --tag, expected one <file> argument, got %d", len(args))
+		}
+		return flagTag, args[0], nil
+	}
+	if len(args) != releaseAssetArgs {
+		return "", "", fmt.Errorf("expected <tag> <file> (or --tag <tag> <file>), got %d argument(s)", len(args))
+	}
+	return args[0], args[1], nil
+}
+
 func releaseUploadCmd() *cobra.Command {
-	return &cobra.Command{
-		Use:   "upload <tag> <file>",
+	var flagTag string
+
+	cmd := &cobra.Command{
+		Use:   "upload (<tag> <file> | --tag <tag> <file>)",
 		Short: "Upload an asset to a release",
-		Args:  cobra.ExactArgs(releaseAssetArgs),
+		Args: func(cmd *cobra.Command, args []string) error {
+			_, _, err := uploadTagAndFile(flagTag, args)
+			return err
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			tag := args[0]
-			filePath := args[1]
+			tag, filePath, err := uploadTagAndFile(flagTag, args)
+			if err != nil {
+				return err
+			}
 
 			forge, owner, repoName, _, err := resolve.Repo(flagRepo, flagForgeType)
 			if err != nil {
@@ -349,6 +371,9 @@ func releaseUploadCmd() *cobra.Command {
 			return nil
 		},
 	}
+
+	cmd.Flags().StringVar(&flagTag, "tag", "", "Tag name of the release (alternative to the positional <tag>)")
+	return cmd
 }
 
 func releaseDownloadCmd() *cobra.Command {
