@@ -36,6 +36,13 @@ func assertEqualInt(t *testing.T, field string, want, got int) {
 	}
 }
 
+func assertEqualInt64(t *testing.T, field string, want, got int64) {
+	t.Helper()
+	if want != got {
+		t.Errorf("%s: want %d, got %d", field, want, got)
+	}
+}
+
 func assertSliceEqual(t *testing.T, field string, want, got []string) {
 	t.Helper()
 	if len(want) != len(got) {

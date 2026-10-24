@@ -372,6 +372,7 @@ type UpdateMilestoneOpts struct {
 
 // Release holds normalized metadata about a release.
 type Release struct {
+	ID          int64          `json:"id"`
 	TagName     string         `json:"tag_name"`
 	Title       string         `json:"title"`
 	Body        string         `json:"body,omitempty"`

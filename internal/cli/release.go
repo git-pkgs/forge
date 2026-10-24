@@ -94,6 +94,7 @@ func releaseViewCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "view <tag>",
 		Short: "View a release",
+		Long:  "View a release. Pass the release ID instead of the tag to target a draft release, since drafts cannot be looked up by tag.",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			tag := args[0]
@@ -225,6 +226,7 @@ func releaseEditCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "edit <tag>",
 		Short: "Edit a release",
+		Long:  "Edit a release. Pass the release ID instead of the tag to target a draft release, since drafts cannot be looked up by tag.",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			tag := args[0]
@@ -284,6 +286,7 @@ func releaseDeleteCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "delete <tag>",
 		Short: "Delete a release",
+		Long:  "Delete a release. Pass the release ID instead of the tag to target a draft release, since drafts cannot be looked up by tag.",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			tag := args[0]
@@ -338,6 +341,7 @@ func releaseUploadCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "upload (<tag> <file> | --tag <tag> <file>)",
 		Short: "Upload an asset to a release",
+		Long:  "Upload an asset to a release. Pass the release ID instead of the tag to target a draft release, since drafts cannot be looked up by tag.",
 		Args: func(cmd *cobra.Command, args []string) error {
 			_, _, err := uploadTagAndFile(flagTag, cmd.Flags().Changed("tag"), args)
 			return err
@@ -387,7 +391,7 @@ func releaseDownloadCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "download <tag> <asset-name>",
 		Short: "Download a release asset",
-		Long:  "Downloads a release asset by first listing assets to find the matching name, then downloading by ID.",
+		Long:  "Downloads a release asset by first listing assets to find the matching name, then downloading by ID. Pass the release ID instead of the tag to target a draft release, since drafts cannot be looked up by tag.",
 		Args:  cobra.ExactArgs(releaseAssetArgs),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			tag := args[0]

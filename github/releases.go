@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 
 	"github.com/google/go-github/v82/github"
 )
@@ -21,6 +22,7 @@ func (f *gitHubForge) Releases() forge.ReleaseService {
 
 func convertGitHubRelease(r *github.RepositoryRelease) forge.Release {
 	result := forge.Release{
+		ID:         r.GetID(),
 		TagName:    r.GetTagName(),
 		Title:      r.GetName(),
 		Body:       r.GetBody(),
@@ -100,12 +102,34 @@ func (s *gitHubReleaseService) List(ctx context.Context, owner, repo string, opt
 	return all, nil
 }
 
-func (s *gitHubReleaseService) Get(ctx context.Context, owner, repo, tag string) (*forge.Release, error) {
+// Draft releases 404 by tag on GitHub, so fall back to treating tag as a release ID.
+func (s *gitHubReleaseService) getReleaseByTagOrID(ctx context.Context, owner, repo, tag string) (*github.RepositoryRelease, error) {
 	r, resp, err := s.client.Repositories.GetReleaseByTag(ctx, owner, repo, tag)
+	if err == nil {
+		return r, nil
+	}
+	if resp == nil || resp.StatusCode != http.StatusNotFound {
+		return nil, err
+	}
+
+	id, parseErr := strconv.ParseInt(tag, 10, 64)
+	if parseErr != nil {
+		return nil, forge.ErrNotFound
+	}
+
+	r, resp, err = s.client.Repositories.GetRelease(ctx, owner, repo, id)
 	if err != nil {
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return nil, forge.ErrNotFound
 		}
+		return nil, err
+	}
+	return r, nil
+}
+
+func (s *gitHubReleaseService) Get(ctx context.Context, owner, repo, tag string) (*forge.Release, error) {
+	r, err := s.getReleaseByTagOrID(ctx, owner, repo, tag)
+	if err != nil {
 		return nil, err
 	}
 	result := convertGitHubRelease(r)
@@ -152,11 +176,8 @@ func (s *gitHubReleaseService) Create(ctx context.Context, owner, repo string, o
 
 func (s *gitHubReleaseService) Update(ctx context.Context, owner, repo, tag string, opts forge.UpdateReleaseOpts) (*forge.Release, error) {
 	// Get existing release to find its ID
-	existing, resp, err := s.client.Repositories.GetReleaseByTag(ctx, owner, repo, tag)
+	existing, err := s.getReleaseByTagOrID(ctx, owner, repo, tag)
 	if err != nil {
-		if resp != nil && resp.StatusCode == http.StatusNotFound {
-			return nil, forge.ErrNotFound
-		}
 		return nil, err
 	}
 
@@ -205,15 +226,12 @@ func (s *gitHubReleaseService) Update(ctx context.Context, owner, repo, tag stri
 }
 
 func (s *gitHubReleaseService) Delete(ctx context.Context, owner, repo, tag string) error {
-	existing, resp, err := s.client.Repositories.GetReleaseByTag(ctx, owner, repo, tag)
+	existing, err := s.getReleaseByTagOrID(ctx, owner, repo, tag)
 	if err != nil {
-		if resp != nil && resp.StatusCode == http.StatusNotFound {
-			return forge.ErrNotFound
-		}
 		return err
 	}
 
-	resp, err = s.client.Repositories.DeleteRelease(ctx, owner, repo, existing.GetID())
+	resp, err := s.client.Repositories.DeleteRelease(ctx, owner, repo, existing.GetID())
 	if err != nil {
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return forge.ErrNotFound
@@ -224,11 +242,8 @@ func (s *gitHubReleaseService) Delete(ctx context.Context, owner, repo, tag stri
 }
 
 func (s *gitHubReleaseService) UploadAsset(ctx context.Context, owner, repo, tag string, file *os.File) (*forge.ReleaseAsset, error) {
-	existing, resp, err := s.client.Repositories.GetReleaseByTag(ctx, owner, repo, tag)
+	existing, err := s.getReleaseByTagOrID(ctx, owner, repo, tag)
 	if err != nil {
-		if resp != nil && resp.StatusCode == http.StatusNotFound {
-			return nil, forge.ErrNotFound
-		}
 		return nil, err
 	}
 

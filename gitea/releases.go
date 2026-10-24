@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 
 	"code.gitea.io/sdk/gitea"
 )
@@ -24,6 +25,7 @@ func (f *giteaForge) Releases() forge.ReleaseService {
 
 func convertGiteaRelease(r *gitea.Release) forge.Release {
 	result := forge.Release{
+		ID:          r.ID,
 		TagName:     r.TagName,
 		Title:       r.Title,
 		Body:        r.Note,
@@ -88,10 +90,31 @@ func (s *giteaReleaseService) List(ctx context.Context, owner, repo string, opts
 	return all, nil
 }
 
-func (s *giteaReleaseService) Get(ctx context.Context, owner, repo, tag string) (*forge.Release, error) {
+// getReleaseByTagOrID resolves a release by tag, falling back to a numeric
+// release ID when the tag lookup returns 404.
+func (s *giteaReleaseService) getReleaseByTagOrID(owner, repo, tag, op string) (*gitea.Release, error) {
 	r, resp, err := s.client.GetReleaseByTag(owner, repo, tag)
+	if err == nil {
+		return r, nil
+	}
+	if resp == nil || resp.StatusCode != http.StatusNotFound {
+		return nil, wrapErr(op, resp, err)
+	}
+	id, parseErr := strconv.ParseInt(tag, 10, 64)
+	if parseErr != nil {
+		return nil, forge.ErrNotFound
+	}
+	r, resp, err = s.client.GetRelease(owner, repo, id)
 	if err != nil {
-		return nil, wrapErr("get release", resp, err)
+		return nil, wrapErr(op, resp, err)
+	}
+	return r, nil
+}
+
+func (s *giteaReleaseService) Get(ctx context.Context, owner, repo, tag string) (*forge.Release, error) {
+	r, err := s.getReleaseByTagOrID(owner, repo, tag, "get release")
+	if err != nil {
+		return nil, err
 	}
 	result := convertGiteaRelease(r)
 	return &result, nil
@@ -142,9 +165,9 @@ func (s *giteaReleaseService) Create(ctx context.Context, owner, repo string, op
 }
 
 func (s *giteaReleaseService) Update(ctx context.Context, owner, repo, tag string, opts forge.UpdateReleaseOpts) (*forge.Release, error) {
-	existing, resp, err := s.client.GetReleaseByTag(owner, repo, tag)
+	existing, err := s.getReleaseByTagOrID(owner, repo, tag, "update release")
 	if err != nil {
-		return nil, wrapErr("update release", resp, err)
+		return nil, err
 	}
 
 	gOpts := gitea.EditReleaseOption{}
@@ -189,10 +212,11 @@ func (s *giteaReleaseService) Update(ctx context.Context, owner, repo, tag strin
 }
 
 func (s *giteaReleaseService) Delete(ctx context.Context, owner, repo, tag string) error {
-	existing, resp, err := s.client.GetReleaseByTag(owner, repo, tag)
+	existing, err := s.getReleaseByTagOrID(owner, repo, tag, "delete release")
 	if err != nil {
-		return wrapErr("delete release", resp, err)
+		return err
 	}
+	var resp *gitea.Response
 
 	resp, err = s.client.DeleteRelease(owner, repo, existing.ID)
 	if err != nil {
@@ -202,10 +226,11 @@ func (s *giteaReleaseService) Delete(ctx context.Context, owner, repo, tag strin
 }
 
 func (s *giteaReleaseService) UploadAsset(ctx context.Context, owner, repo, tag string, file *os.File) (*forge.ReleaseAsset, error) {
-	existing, resp, err := s.client.GetReleaseByTag(owner, repo, tag)
+	existing, err := s.getReleaseByTagOrID(owner, repo, tag, "upload release asset")
 	if err != nil {
-		return nil, wrapErr("upload release asset", resp, err)
+		return nil, err
 	}
+	var resp *gitea.Response
 
 	name := filepath.Base(file.Name())
 	a, resp, err := s.client.CreateReleaseAttachment(owner, repo, existing.ID, file, name)
