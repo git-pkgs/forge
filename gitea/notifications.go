@@ -2,6 +2,7 @@ package gitea
 
 import (
 	"context"
+	"net/url"
 	"strconv"
 	"strings"
 
@@ -32,6 +33,27 @@ func convertGiteaSubjectType(t string) forge.NotificationSubjectType {
 	}
 }
 
+// giteaSubjectNumber returns the issue or pull request number at the end of a
+// subject URL such as .../issues/12 or .../pulls/12, or 0 if there is none.
+func giteaSubjectNumber(subjectURL string) int {
+	u, err := url.Parse(subjectURL)
+	if err != nil {
+		return 0
+	}
+	parts := strings.Split(strings.Trim(u.Path, "/"), "/")
+	if len(parts) < 2 {
+		return 0
+	}
+	if kind := parts[len(parts)-2]; kind != "issues" && kind != "pulls" {
+		return 0
+	}
+	number, err := strconv.Atoi(parts[len(parts)-1])
+	if err != nil || number <= 0 {
+		return 0
+	}
+	return number
+}
+
 func convertGiteaNotification(n *gitea.NotificationThread) forge.Notification {
 	result := forge.Notification{
 		ID:     strconv.FormatInt(n.ID, 10),
@@ -42,10 +64,18 @@ func convertGiteaNotification(n *gitea.NotificationThread) forge.Notification {
 		result.Title = n.Subject.Title
 		result.SubjectType = convertGiteaSubjectType(string(n.Subject.Type))
 		result.URL = n.Subject.HTMLURL
+		switch result.SubjectType {
+		case forge.NotificationSubjectIssue, forge.NotificationSubjectPullRequest:
+			result.SubjectNumber = giteaSubjectNumber(n.Subject.HTMLURL)
+			if result.SubjectNumber == 0 {
+				result.SubjectNumber = giteaSubjectNumber(n.Subject.URL)
+			}
+		}
 	}
 
 	if n.Repository != nil {
 		result.Repo = n.Repository.FullName
+		result.RepoURL = n.Repository.HTMLURL
 	}
 
 	if !n.UpdatedAt.IsZero() {

@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"code.gitea.io/sdk/gitea"
 	forge "github.com/git-pkgs/forge"
 )
 
@@ -26,6 +27,7 @@ func TestGiteaListNotifications(t *testing.T) {
 				"repository": map[string]any{
 					"full_name": "testorg/testrepo",
 					"name":      "testrepo",
+					"html_url":  "https://codeberg.org/testorg/testrepo",
 					"owner":     map[string]any{"login": "testorg"},
 				},
 				"updated_at": "2024-06-01T10:00:00Z",
@@ -50,6 +52,36 @@ func TestGiteaListNotifications(t *testing.T) {
 	assertEqual(t, "Title", "Bug fix", notifications[0].Title)
 	assertEqual(t, "SubjectType", "issue", string(notifications[0].SubjectType))
 	assertEqual(t, "Repo", "testorg/testrepo", notifications[0].Repo)
+	assertEqualInt(t, "SubjectNumber", 1, notifications[0].SubjectNumber)
+	assertEqual(t, "URL", "https://codeberg.org/testorg/testrepo/issues/1", notifications[0].URL)
+	assertEqual(t, "RepoURL", "https://codeberg.org/testorg/testrepo", notifications[0].RepoURL)
+}
+
+func TestConvertGiteaNotificationSubject(t *testing.T) {
+	tests := []struct {
+		name       string
+		subject    *gitea.NotificationSubject
+		wantNumber int
+	}{
+		{"pull request", &gitea.NotificationSubject{Type: gitea.NotifySubjectPull,
+			HTMLURL: "https://codeberg.org/o/r/pulls/42"}, 42},
+		{"falls back to API URL", &gitea.NotificationSubject{Type: gitea.NotifySubjectIssue,
+			URL: "https://codeberg.org/api/v1/repos/o/r/issues/7"}, 7},
+		{"commit has no number", &gitea.NotificationSubject{Type: gitea.NotifySubjectCommit,
+			HTMLURL: "https://codeberg.org/o/r/commit/abc123"}, 0},
+		{"repository has no number", &gitea.NotificationSubject{Type: gitea.NotifySubjectRepository,
+			HTMLURL: "https://codeberg.org/o/r"}, 0},
+		{"non-numeric", &gitea.NotificationSubject{Type: gitea.NotifySubjectIssue,
+			HTMLURL: "https://codeberg.org/o/r/issues/new"}, 0},
+		{"no URLs", &gitea.NotificationSubject{Type: gitea.NotifySubjectIssue}, 0},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			n := convertGiteaNotification(&gitea.NotificationThread{Subject: tt.subject})
+			assertEqualInt(t, "SubjectNumber", tt.wantNumber, n.SubjectNumber)
+			assertEqual(t, "URL", tt.subject.HTMLURL, n.URL)
+		})
+	}
 }
 
 func TestGiteaListNotificationsForRepo(t *testing.T) {

@@ -3,6 +3,8 @@ package github
 import (
 	"context"
 	"net/http"
+	"net/url"
+	"strconv"
 	"strings"
 
 	forge "github.com/git-pkgs/forge"
@@ -36,6 +38,47 @@ func convertGitHubSubjectType(t string) forge.NotificationSubjectType {
 	}
 }
 
+// gitHubSubjectLink derives a subject's web URL and number from the API URL
+// GitHub reports for it, such as .../repos/octocat/hello/pulls/42, using the
+// repository's web URL as the base so GitHub Enterprise works too. Subjects
+// without a web page that can be built from the API URL, such as releases
+// (addressed by ID rather than tag), return an empty URL.
+func gitHubSubjectLink(repoHTMLURL, apiURL string) (string, int) {
+	if repoHTMLURL == "" || apiURL == "" {
+		return "", 0
+	}
+	u, err := url.Parse(apiURL)
+	if err != nil {
+		return "", 0
+	}
+	parts := strings.Split(strings.Trim(u.Path, "/"), "/")
+	// Expect .../repos/{owner}/{repo}/{kind}/{id}.
+	if len(parts) < 5 || parts[len(parts)-5] != "repos" {
+		return "", 0
+	}
+	kind, id := parts[len(parts)-2], parts[len(parts)-1]
+	base := strings.TrimSuffix(repoHTMLURL, "/")
+
+	var page string
+	switch kind {
+	case "issues":
+		page = "issues"
+	case "pulls":
+		page = "pull"
+	case "discussions":
+		page = "discussions"
+	case "commits":
+		return base + "/commit/" + id, 0
+	default:
+		return "", 0
+	}
+	number, err := strconv.Atoi(id)
+	if err != nil || number <= 0 {
+		return "", 0
+	}
+	return base + "/" + page + "/" + id, number
+}
+
 func convertGitHubNotification(n *github.Notification) forge.Notification {
 	result := forge.Notification{
 		ID:     n.GetID(),
@@ -45,12 +88,13 @@ func convertGitHubNotification(n *github.Notification) forge.Notification {
 
 	if r := n.GetRepository(); r != nil {
 		result.Repo = r.GetFullName()
-		result.URL = r.GetHTMLURL()
+		result.RepoURL = r.GetHTMLURL()
 	}
 
 	if s := n.GetSubject(); s != nil {
 		result.Title = s.GetTitle()
 		result.SubjectType = convertGitHubSubjectType(s.GetType())
+		result.URL, result.SubjectNumber = gitHubSubjectLink(result.RepoURL, s.GetURL())
 	}
 
 	if t := n.GetUpdatedAt(); !t.IsZero() {

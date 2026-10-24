@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	forge "github.com/git-pkgs/forge"
+	gitlab "gitlab.com/gitlab-org/api/client-go"
 )
 
 func TestGitLabListNotifications(t *testing.T) {
@@ -22,7 +23,7 @@ func TestGitLabListNotifications(t *testing.T) {
 				"action_name": "mentioned",
 				"target_type": "Issue",
 				"target_url":  "https://gitlab.com/mygroup/myrepo/-/issues/5",
-				"target":      map[string]any{"id": 5},
+				"target":      map[string]any{"id": 501, "iid": 5},
 				"state":       "pending",
 				"project": map[string]any{
 					"id":                  10,
@@ -52,6 +53,64 @@ func TestGitLabListNotifications(t *testing.T) {
 	assertEqual(t, "SubjectType", "issue", string(notifications[0].SubjectType))
 	assertEqual(t, "Repo", "mygroup/myrepo", notifications[0].Repo)
 	assertEqualBool(t, "Unread", true, notifications[0].Unread)
+	assertEqualInt(t, "SubjectNumber", 5, notifications[0].SubjectNumber)
+	assertEqual(t, "URL", "https://gitlab.com/mygroup/myrepo/-/issues/5", notifications[0].URL)
+	assertEqual(t, "RepoURL", "https://gitlab.com/mygroup/myrepo", notifications[0].RepoURL)
+}
+
+func TestConvertGitLabTodoSubject(t *testing.T) {
+	tests := []struct {
+		name        string
+		todo        *gitlab.Todo
+		wantNumber  int
+		wantURL     string
+		wantRepoURL string
+	}{
+		{
+			name: "merge request",
+			todo: &gitlab.Todo{
+				TargetType: "MergeRequest",
+				Target:     &gitlab.TodoTarget{IID: 42},
+				TargetURL:  "https://gitlab.com/group/sub/repo/-/merge_requests/42",
+				Project:    &gitlab.BasicProject{PathWithNamespace: "group/sub/repo"},
+			},
+			wantNumber:  42,
+			wantURL:     "https://gitlab.com/group/sub/repo/-/merge_requests/42",
+			wantRepoURL: "https://gitlab.com/group/sub/repo",
+		},
+		{
+			name: "commit has no number",
+			todo: &gitlab.Todo{
+				TargetType: "Commit",
+				Target:     &gitlab.TodoTarget{IID: 0},
+				TargetURL:  "https://gitlab.com/group/repo/-/commit/abc123",
+				Project:    &gitlab.BasicProject{PathWithNamespace: "group/repo"},
+			},
+			wantURL:     "https://gitlab.com/group/repo/-/commit/abc123",
+			wantRepoURL: "https://gitlab.com/group/repo",
+		},
+		{
+			name: "epic keeps no number",
+			todo: &gitlab.Todo{
+				TargetType: "Epic",
+				Target:     &gitlab.TodoTarget{IID: 3},
+				TargetURL:  "https://gitlab.com/groups/group/-/epics/3",
+			},
+			wantURL: "https://gitlab.com/groups/group/-/epics/3",
+		},
+		{
+			name: "no target",
+			todo: &gitlab.Todo{TargetType: "Issue"},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			n := convertGitLabTodo(tt.todo)
+			assertEqualInt(t, "SubjectNumber", tt.wantNumber, n.SubjectNumber)
+			assertEqual(t, "URL", tt.wantURL, n.URL)
+			assertEqual(t, "RepoURL", tt.wantRepoURL, n.RepoURL)
+		})
+	}
 }
 
 func TestGitLabListNotificationsUnread(t *testing.T) {

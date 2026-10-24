@@ -28,6 +28,7 @@ func TestGitHubListNotifications(t *testing.T) {
 				Subject: &github.NotificationSubject{
 					Title: ptr("Fix bug"),
 					Type:  ptr("Issue"),
+					URL:   ptr("https://api.github.com/repos/octocat/hello-world/issues/123"),
 				},
 				Repository: &github.Repository{
 					FullName: ptr("octocat/hello-world"),
@@ -55,7 +56,41 @@ func TestGitHubListNotifications(t *testing.T) {
 	assertEqual(t, "Reason", "mention", notifications[0].Reason)
 	assertEqual(t, "Title", "Fix bug", notifications[0].Title)
 	assertEqual(t, "SubjectType", "issue", string(notifications[0].SubjectType))
+	assertEqualInt(t, "SubjectNumber", 123, notifications[0].SubjectNumber)
+	assertEqual(t, "URL", "https://github.com/octocat/hello-world/issues/123", notifications[0].URL)
 	assertEqual(t, "Repo", "octocat/hello-world", notifications[0].Repo)
+	assertEqual(t, "RepoURL", "https://github.com/octocat/hello-world", notifications[0].RepoURL)
+}
+
+func TestGitHubSubjectLink(t *testing.T) {
+	const repo = "https://github.com/octocat/hello"
+	tests := []struct {
+		name       string
+		repoURL    string
+		apiURL     string
+		wantURL    string
+		wantNumber int
+	}{
+		{"issue", repo, "https://api.github.com/repos/octocat/hello/issues/12", repo + "/issues/12", 12},
+		{"pull request", repo, "https://api.github.com/repos/octocat/hello/pulls/42", repo + "/pull/42", 42},
+		{"discussion", repo, "https://api.github.com/repos/octocat/hello/discussions/7", repo + "/discussions/7", 7},
+		{"commit", repo, "https://api.github.com/repos/octocat/hello/commits/abc123", repo + "/commit/abc123", 0},
+		{"release by ID", repo, "https://api.github.com/repos/octocat/hello/releases/987654", "", 0},
+		{"enterprise", "https://ghe.example.com/octocat/hello", "https://ghe.example.com/api/v3/repos/octocat/hello/pulls/5",
+			"https://ghe.example.com/octocat/hello/pull/5", 5},
+		{"trailing slash on repo URL", repo + "/", "https://api.github.com/repos/octocat/hello/issues/3", repo + "/issues/3", 3},
+		{"no subject URL", repo, "", "", 0},
+		{"no repository URL", "", "https://api.github.com/repos/octocat/hello/issues/12", "", 0},
+		{"non-numeric number", repo, "https://api.github.com/repos/octocat/hello/issues/abc", "", 0},
+		{"not a repository path", repo, "https://api.github.com/notifications/threads/1", "", 0},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gotURL, gotNumber := gitHubSubjectLink(tt.repoURL, tt.apiURL)
+			assertEqual(t, "URL", tt.wantURL, gotURL)
+			assertEqualInt(t, "Number", tt.wantNumber, gotNumber)
+		})
+	}
 }
 
 func TestGitHubListNotificationsUnread(t *testing.T) {

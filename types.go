@@ -626,15 +626,21 @@ const (
 )
 
 // Notification holds normalized metadata about a notification thread.
+//
+// URL is the web page of the subject (the issue, pull request, commit and so
+// on) and RepoURL is the web page of its repository. Either is empty when the
+// forge does not report it.
 type Notification struct {
-	ID          string                  `json:"id"`
-	Title       string                  `json:"title"`
-	SubjectType NotificationSubjectType `json:"subject_type"`
-	Repo        string                  `json:"repo"`
-	Unread      bool                    `json:"unread"`
-	Reason      string                  `json:"reason,omitempty"`
-	URL         string                  `json:"url,omitempty"`
-	UpdatedAt   time.Time               `json:"updated_at"`
+	ID            string                  `json:"id"`
+	Title         string                  `json:"title"`
+	SubjectType   NotificationSubjectType `json:"subject_type"`
+	SubjectNumber int                     `json:"subject_number,omitempty"` // issue, pull request or discussion number; 0 for other subjects
+	Repo          string                  `json:"repo"`
+	RepoURL       string                  `json:"repo_url,omitempty"`
+	Unread        bool                    `json:"unread"`
+	Reason        string                  `json:"reason,omitempty"`
+	URL           string                  `json:"url,omitempty"`
+	UpdatedAt     time.Time               `json:"updated_at"`
 }
 
 // ListNotificationOpts holds options for listing notifications.
