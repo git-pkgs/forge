@@ -2,10 +2,12 @@ package cli
 
 import (
 	"fmt"
+	"net/url"
 	"os"
 	"os/exec"
 	"runtime"
 	"strconv"
+	"strings"
 
 	"github.com/git-pkgs/forge/internal/resolve"
 	"github.com/spf13/cobra"
@@ -67,7 +69,7 @@ var browseCmd = &cobra.Command{
 			return nil
 		}
 
-		return openBrowser(url)
+		return openBrowser(url, domain)
 	},
 }
 
@@ -94,9 +96,29 @@ func init() {
 	browseCmd.Flags().BoolVar(&flagBrowsePulls, "pulls", false, "Open pull requests page")
 }
 
-func openBrowser(url string) error {
-	argv := browserCmd(runtime.GOOS, url)
+func openBrowser(rawURL, domain string) error {
+	if err := validateBrowserURL(rawURL, domain); err != nil {
+		return err
+	}
+	argv := browserCmd(runtime.GOOS, rawURL)
 	return exec.Command(argv[0], argv[1:]...).Start()
+}
+
+func validateBrowserURL(rawURL, domain string) error {
+	u, err := url.Parse(rawURL)
+	if err != nil {
+		return fmt.Errorf("invalid browser URL: %w", err)
+	}
+	if (u.Scheme != "http" && u.Scheme != "https") || u.Hostname() == "" || u.Opaque != "" {
+		return fmt.Errorf("invalid browser URL: must be an absolute HTTP or HTTPS URL with a host")
+	}
+	if u.User != nil {
+		return fmt.Errorf("invalid browser URL: user information is not allowed")
+	}
+	if !strings.EqualFold(u.Host, domain) {
+		return fmt.Errorf("invalid browser URL: host %q does not match forge host %q", u.Host, domain)
+	}
+	return nil
 }
 
 // browserCmd returns the argv to open url in a browser. The BROWSER

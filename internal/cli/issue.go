@@ -53,7 +53,7 @@ func issueViewCmd() *cobra.Command {
 				return fmt.Errorf("invalid issue number: %s", args[0])
 			}
 
-			forge, owner, repoName, _, err := resolve.Repo(flagRepo, flagForgeType)
+			forge, owner, repoName, domain, err := resolve.Repo(flagRepo, flagForgeType)
 			if err != nil {
 				return err
 			}
@@ -64,7 +64,7 @@ func issueViewCmd() *cobra.Command {
 			}
 
 			if flagWeb {
-				return openBrowser(issue.HTMLURL)
+				return openBrowser(issue.HTMLURL, domain)
 			}
 
 			p := printer()
@@ -139,7 +139,7 @@ func issueListCmd() *cobra.Command {
 		Aliases: []string{"ls"},
 		Short:   "List issues",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			forge, owner, repoName, _, err := resolve.Repo(flagRepo, flagForgeType)
+			forge, owner, repoName, domain, err := resolve.Repo(flagRepo, flagForgeType)
 			if err != nil {
 				return err
 			}
@@ -149,7 +149,7 @@ func issueListCmd() *cobra.Command {
 				if err != nil {
 					return fmt.Errorf("getting repository: %w", err)
 				}
-				return openBrowser(forge.Issues().ListURL(repo.HTMLURL))
+				return openBrowser(forge.Issues().ListURL(repo.HTMLURL), domain)
 			}
 
 			opts := forges.ListIssueOpts{

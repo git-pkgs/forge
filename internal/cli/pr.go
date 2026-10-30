@@ -71,7 +71,7 @@ branch matches the current git branch.`,
 				return fmt.Errorf("--json is not supported; use --output json instead (field selection is not supported)\n\nTry: %s", strings.Join(hints, "\n     "))
 			}
 
-			forge, owner, repoName, _, err := resolve.Repo(flagRepo, flagForgeType)
+			forge, owner, repoName, domain, err := resolve.Repo(flagRepo, flagForgeType)
 			if err != nil {
 				return err
 			}
@@ -102,7 +102,7 @@ branch matches the current git branch.`,
 			}
 
 			if flagWeb {
-				return openBrowser(pr.HTMLURL)
+				return openBrowser(pr.HTMLURL, domain)
 			}
 
 			p := printer()
@@ -194,7 +194,7 @@ func prListCmd() *cobra.Command {
 		Aliases: []string{"ls"},
 		Short:   "List pull requests",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			forge, owner, repoName, _, err := resolve.Repo(flagRepo, flagForgeType)
+			forge, owner, repoName, domain, err := resolve.Repo(flagRepo, flagForgeType)
 			if err != nil {
 				return err
 			}
@@ -204,7 +204,7 @@ func prListCmd() *cobra.Command {
 				if err != nil {
 					return fmt.Errorf("getting repository: %w", err)
 				}
-				return openBrowser(forge.PullRequests().ListURL(repo.HTMLURL))
+				return openBrowser(forge.PullRequests().ListURL(repo.HTMLURL), domain)
 			}
 
 			opts := forges.ListPROpts{
