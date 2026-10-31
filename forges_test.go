@@ -782,6 +782,10 @@ func (m *mockForge) GetRateLimit(_ context.Context) (*RateLimit, error) {
 	return nil, ErrNotSupported
 }
 
+func (m *mockForge) GetAuthenticatedUser(_ context.Context) (*User, error) {
+	return nil, ErrNotSupported
+}
+
 func (m *mockForge) ParsePath(_ []string) (*ResourceRef, error) {
 	return &ResourceRef{}, nil
 }
