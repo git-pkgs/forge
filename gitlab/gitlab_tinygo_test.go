@@ -69,6 +69,7 @@ func TestTinyGoServicesReturnUnsupported(t *testing.T) {
 		{"commit statuses", func() error { _, err := f.CommitStatuses().List(ctx, "group", "project", "main"); return err }},
 		{"commits", func() error { _, err := f.Commits().ResolveCommit(ctx, "group", "project", "main"); return err }},
 		{"rate limit", func() error { _, err := f.GetRateLimit(ctx); return err }},
+		{"authenticated user", func() error { _, err := f.GetAuthenticatedUser(ctx); return err }},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

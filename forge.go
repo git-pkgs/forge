@@ -82,6 +82,9 @@ type Forge interface {
 	CheckRuns() CheckRunService
 	Commits() CommitService
 	GetRateLimit(ctx context.Context) (*RateLimit, error)
+	// GetAuthenticatedUser returns the profile of the user the client's
+	// token belongs to.
+	GetAuthenticatedUser(ctx context.Context) (*User, error)
 	// ParsePath parses URL path segments into a resource reference.
 	ParsePath(pathParts []string) (*ResourceRef, error)
 }
