@@ -7,9 +7,9 @@ import (
 )
 
 func (f *giteaForge) GetAuthenticatedUser(ctx context.Context) (*forge.User, error) {
-	u, _, err := f.client.GetMyUserInfo()
+	u, resp, err := f.client.GetMyUserInfo()
 	if err != nil {
-		return nil, err
+		return nil, wrapErr("get authenticated user", resp, err)
 	}
 
 	return &forge.User{

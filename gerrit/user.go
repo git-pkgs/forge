@@ -13,6 +13,6 @@ func (f *gerritForge) GetAuthenticatedUser(ctx context.Context) (*forge.User, er
 		return nil, err
 	}
 
-	user := (&gerritPRService{forge: f}).convertAccount(&account)
+	user := convertAccount(&account)
 	return &user, nil
 }
