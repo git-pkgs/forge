@@ -15,20 +15,20 @@ import (
 
 // Links is the parsed content of a FUNDING.yml file.
 type Links struct {
-	GitHub          stringOrList `yaml:"github" json:"github,omitempty"`
-	Patreon         string       `yaml:"patreon" json:"patreon,omitempty"`
-	OpenCollective  string       `yaml:"open_collective" json:"open_collective,omitempty"`
-	KoFi            string       `yaml:"ko_fi" json:"ko_fi,omitempty"`
-	Tidelift        string       `yaml:"tidelift" json:"tidelift,omitempty"`
-	CommunityBridge string       `yaml:"community_bridge" json:"community_bridge,omitempty"`
-	Liberapay       string       `yaml:"liberapay" json:"liberapay,omitempty"`
-	IssueHunt       string       `yaml:"issuehunt" json:"issuehunt,omitempty"`
-	LFXCrowdfunding string       `yaml:"lfx_crowdfunding" json:"lfx_crowdfunding,omitempty"`
-	Polar           string       `yaml:"polar" json:"polar,omitempty"`
-	BuyMeACoffee    string       `yaml:"buy_me_a_coffee" json:"buy_me_a_coffee,omitempty"`
-	ThanksDev       string       `yaml:"thanks_dev" json:"thanks_dev,omitempty"`
-	Otechie         string       `yaml:"otechie" json:"otechie,omitempty"`
-	Custom          stringOrList `yaml:"custom" json:"custom,omitempty"`
+	GitHub          StringList `yaml:"github" json:"github,omitempty"`
+	Patreon         string     `yaml:"patreon" json:"patreon,omitempty"`
+	OpenCollective  string     `yaml:"open_collective" json:"open_collective,omitempty"`
+	KoFi            string     `yaml:"ko_fi" json:"ko_fi,omitempty"`
+	Tidelift        string     `yaml:"tidelift" json:"tidelift,omitempty"`
+	CommunityBridge string     `yaml:"community_bridge" json:"community_bridge,omitempty"`
+	Liberapay       string     `yaml:"liberapay" json:"liberapay,omitempty"`
+	IssueHunt       string     `yaml:"issuehunt" json:"issuehunt,omitempty"`
+	LFXCrowdfunding string     `yaml:"lfx_crowdfunding" json:"lfx_crowdfunding,omitempty"`
+	Polar           string     `yaml:"polar" json:"polar,omitempty"`
+	BuyMeACoffee    string     `yaml:"buy_me_a_coffee" json:"buy_me_a_coffee,omitempty"`
+	ThanksDev       string     `yaml:"thanks_dev" json:"thanks_dev,omitempty"`
+	Otechie         string     `yaml:"otechie" json:"otechie,omitempty"`
+	Custom          StringList `yaml:"custom" json:"custom,omitempty"`
 }
 
 // Empty reports whether the file declared no funding destination.
@@ -136,11 +136,11 @@ func Parse(content []byte) (Links, error) {
 	return links, nil
 }
 
-// stringOrList is a value GitHub accepts either as one entry or as a list of
+// StringList is a value GitHub accepts either as one entry or as a list of
 // them: "github" and "custom" both allow either.
-type stringOrList []string
+type StringList []string
 
-func (l *stringOrList) UnmarshalYAML(node *yaml.Node) error {
+func (l *StringList) UnmarshalYAML(node *yaml.Node) error {
 	switch node.Kind {
 	case yaml.ScalarNode:
 		var value string
@@ -148,7 +148,7 @@ func (l *stringOrList) UnmarshalYAML(node *yaml.Node) error {
 			return err
 		}
 		if value != "" {
-			*l = stringOrList{value}
+			*l = StringList{value}
 		}
 		return nil
 	case yaml.SequenceNode:

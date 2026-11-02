@@ -62,7 +62,7 @@ unknown_platform: ignored
 		t.Fatalf("Parse: %v", err)
 	}
 	want := Links{
-		GitHub:          stringOrList{"alice", "bob"},
+		GitHub:          StringList{"alice", "bob"},
 		Patreon:         "alice",
 		OpenCollective:  "my-collective",
 		KoFi:            "alice",
@@ -75,7 +75,7 @@ unknown_platform: ignored
 		BuyMeACoffee:    "alice",
 		ThanksDev:       "gh/alice",
 		Otechie:         "alice",
-		Custom:          stringOrList{"https://example.com/donate", "https://example.org/#giving"},
+		Custom:          StringList{"https://example.com/donate", "https://example.org/#giving"},
 	}
 	if !reflect.DeepEqual(links, want) {
 		t.Errorf("Parse:\n got %+v\nwant %+v", links, want)
@@ -98,11 +98,11 @@ patreon: alice  # a trailing comment
 	if err != nil {
 		t.Fatalf("Parse: %v", err)
 	}
-	if !reflect.DeepEqual(links.GitHub, stringOrList{"alice", "bob"}) {
+	if !reflect.DeepEqual(links.GitHub, StringList{"alice", "bob"}) {
 		t.Errorf("GitHub = %v", links.GitHub)
 	}
 	// A "#" inside a URL does not start a comment, so the fragment survives.
-	if !reflect.DeepEqual(links.Custom, stringOrList{"https://example.com/donate", "https://example.org/docs#donate"}) {
+	if !reflect.DeepEqual(links.Custom, StringList{"https://example.com/donate", "https://example.org/docs#donate"}) {
 		t.Errorf("Custom = %v", links.Custom)
 	}
 	if links.Patreon != "alice" {
@@ -131,7 +131,7 @@ func TestParseSkipsABOMAndADocumentMarker(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Parse: %v", err)
 	}
-	if !reflect.DeepEqual(links.GitHub, stringOrList{"alice"}) {
+	if !reflect.DeepEqual(links.GitHub, StringList{"alice"}) {
 		t.Errorf("GitHub = %v, want [alice]", links.GitHub)
 	}
 }
@@ -143,11 +143,11 @@ func TestParseReadsGitHubsYAMLShapes(t *testing.T) {
 	}{
 		"unknown key with a block list": {
 			content: "new_platform:\n  - a\n  - b\ngithub: alice\n",
-			want:    Links{GitHub: stringOrList{"alice"}},
+			want:    Links{GitHub: StringList{"alice"}},
 		},
 		"flow list split across lines": {
 			content: "custom: [\"https://a.example\",\n  \"https://b.example\"]\n",
-			want:    Links{Custom: stringOrList{"https://a.example", "https://b.example"}},
+			want:    Links{Custom: StringList{"https://a.example", "https://b.example"}},
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
@@ -168,7 +168,7 @@ func TestParseHandlesCRLF(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Parse: %v", err)
 	}
-	if !reflect.DeepEqual(links.GitHub, stringOrList{"alice", "bob"}) || links.Patreon != "alice" {
+	if !reflect.DeepEqual(links.GitHub, StringList{"alice", "bob"}) || links.Patreon != "alice" {
 		t.Errorf("Parse = %+v", links)
 	}
 }
@@ -218,7 +218,7 @@ func TestDiscoverPrefersTheGitHubDirectory(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Discover: %v", err)
 	}
-	if !reflect.DeepEqual(links.GitHub, stringOrList{"alice"}) || links.Patreon != "" {
+	if !reflect.DeepEqual(links.GitHub, StringList{"alice"}) || links.Patreon != "" {
 		t.Errorf("Discover = %+v, want the .github directory file", links)
 	}
 	if len(files.calls) != 1 {
@@ -251,7 +251,7 @@ func TestDiscoverFallsBackInGitHubsOrder(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Discover: %v", err)
 			}
-			if !reflect.DeepEqual(links.GitHub, stringOrList{"a"}) {
+			if !reflect.DeepEqual(links.GitHub, StringList{"a"}) {
 				t.Errorf("Discover = %+v, want the %s file", links, name)
 			}
 			if len(files.calls) != tc.calls {
