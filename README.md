@@ -244,6 +244,19 @@ sha, err = client.ResolveCommit(ctx, "https://github.com/actions/checkout", "v4.
 
 A ref that does not exist returns `forges.ErrNotFound`. A ref that is already a full 40-character SHA is normalized and returned without a network request.
 
+Funding links live in a `FUNDING.yml` file, and the `funding` package looks for it where GitHub does: `.github/`, the repository root, `docs/`, then the owner's `.github` repository.
+
+```go
+import "github.com/git-pkgs/forge/funding"
+
+f, _ := client.ForgeFor("github.com")
+links, err := funding.Discover(ctx, f.Files(), "octocat", "hello-world", "")
+// links.GitHub holds ["sponsors-handle"], links.Custom the URLs the file lists.
+
+// A caller that already has the file parses it without a forge:
+links, err = funding.Parse(body)
+```
+
 The GitHub backend also exposes a standalone resolver for callers that do not need the full `Forge` interface:
 
 ```go
