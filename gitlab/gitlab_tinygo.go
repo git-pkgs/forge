@@ -28,6 +28,10 @@ func (f *gitLabForge) GetRateLimit(context.Context) (*forge.RateLimit, error) {
 	return nil, errTinyGo
 }
 
+func (f *gitLabForge) GetAuthenticatedUser(context.Context) (*forge.User, error) {
+	return nil, errTinyGo
+}
+
 type gitLabBranchService struct{}
 
 func (f *gitLabForge) Branches() forge.BranchService { return &gitLabBranchService{} }

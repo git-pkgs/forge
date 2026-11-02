@@ -71,6 +71,10 @@ func (f *tangledForge) GetRateLimit(context.Context) (*forges.RateLimit, error) 
 	return nil, forges.ErrNotSupported
 }
 
+func (f *tangledForge) GetAuthenticatedUser(context.Context) (*forges.User, error) {
+	return nil, forges.ErrNotSupported
+}
+
 func (f *tangledForge) APIBaseURL() string {
 	return f.baseURL + "/xrpc"
 }

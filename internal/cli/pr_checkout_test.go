@@ -114,6 +114,9 @@ func (m *mockForge) Commits() forges.CommitService              { return nil }
 func (m *mockForge) GetRateLimit(_ context.Context) (*forges.RateLimit, error) {
 	return nil, forges.ErrNotSupported
 }
+func (m *mockForge) GetAuthenticatedUser(_ context.Context) (*forges.User, error) {
+	return nil, forges.ErrNotSupported
+}
 
 func (m *mockForge) ParsePath(_ []string) (*forges.ResourceRef, error) {
 	return &forges.ResourceRef{

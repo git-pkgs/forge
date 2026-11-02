@@ -60,7 +60,7 @@ func (f *gerritForge) PullRequests() forge.PullRequestService {
 	return &gerritPRService{forge: f}
 }
 
-func (s *gerritPRService) convertAccount(a *gerritAccountInfo) forge.User {
+func convertAccount(a *gerritAccountInfo) forge.User {
 	if a == nil {
 		return forge.User{}
 	}
@@ -100,7 +100,7 @@ func (s *gerritPRService) convertChange(c gerritChangeInfo) forge.PullRequest {
 		Title:        c.Subject,
 		State:        state,
 		Draft:        c.WorkInProgress,
-		Author:       s.convertAccount(c.Owner),
+		Author:       convertAccount(c.Owner),
 		Head:         head,
 		Base:         forge.PRBranch{Ref: c.Branch},
 		Merged:       merged,
@@ -261,7 +261,7 @@ func (s *gerritPRService) ListComments(ctx context.Context, owner, repo string, 
 	for _, msg := range messages {
 		comments = append(comments, forge.Comment{
 			Body:      msg.Message,
-			Author:    s.convertAccount(msg.Author),
+			Author:    convertAccount(msg.Author),
 			HTMLURL:   s.changeURL(projectName(owner, repo), number),
 			CreatedAt: parseGerritTime(msg.Date),
 			UpdatedAt: parseGerritTime(msg.Date),

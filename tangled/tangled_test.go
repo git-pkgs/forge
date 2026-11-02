@@ -2,6 +2,7 @@ package tangled
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -177,4 +178,11 @@ func tangledTestServer(t *testing.T) *httptest.Server {
 		_, _ = fmt.Fprint(w, `{"tree":[{"name":"tangled","mode":"040000"},{"name":"defs.go","mode":"100644","size":1234}]}`)
 	})
 	return httptest.NewServer(mux)
+}
+
+func TestGetAuthenticatedUserUnsupported(t *testing.T) {
+	f := New("https://tangled.org", "", nil)
+	if _, err := f.GetAuthenticatedUser(context.Background()); !errors.Is(err, forges.ErrNotSupported) {
+		t.Fatalf("expected ErrNotSupported, got %v", err)
+	}
 }
