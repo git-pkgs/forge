@@ -339,6 +339,30 @@ func (s *gitLabNotificationService) Get(ctx context.Context, id string) (*forge.
 	return nil, errTinyGo
 }
 
+func (s *gitLabNotificationService) GetRepoSubscription(ctx context.Context, owner, repo string) (*forge.Subscription, error) {
+	return nil, errTinyGo
+}
+
+func (s *gitLabNotificationService) SetRepoSubscription(ctx context.Context, owner, repo string, opts forge.SetSubscriptionOpts) (*forge.Subscription, error) {
+	return nil, errTinyGo
+}
+
+func (s *gitLabNotificationService) DeleteRepoSubscription(ctx context.Context, owner, repo string) error {
+	return errTinyGo
+}
+
+func (s *gitLabNotificationService) GetThreadSubscription(ctx context.Context, id string) (*forge.Subscription, error) {
+	return nil, errTinyGo
+}
+
+func (s *gitLabNotificationService) SetThreadSubscription(ctx context.Context, id string, opts forge.SetSubscriptionOpts) (*forge.Subscription, error) {
+	return nil, errTinyGo
+}
+
+func (s *gitLabNotificationService) DeleteThreadSubscription(ctx context.Context, id string) error {
+	return errTinyGo
+}
+
 type gitLabPRService struct{}
 
 func (f *gitLabForge) PullRequests() forge.PullRequestService { return &gitLabPRService{} }

@@ -256,6 +256,11 @@ func TestUnsupportedServicesReturnErrNotSupported(t *testing.T) {
 	if !errors.Is(err, forge.ErrNotSupported) {
 		t.Fatalf("PullRequests().Create error = %v, want ErrNotSupported", err)
 	}
+
+	_, err = f.Notifications().GetRepoSubscription(context.Background(), "org", "repo")
+	if !errors.Is(err, forge.ErrNotSupported) {
+		t.Fatalf("Notifications().GetRepoSubscription error = %v, want ErrNotSupported", err)
+	}
 }
 
 func TestParsePath(t *testing.T) {

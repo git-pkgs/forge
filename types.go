@@ -659,6 +659,20 @@ type MarkNotificationOpts struct {
 	Repo string // mark all in a repo; empty = mark all
 }
 
+// Subscription holds the authenticated user's notification subscription to a
+// repository or notification thread. Subscribed means the user is notified of
+// all activity and Ignored means they are notified of none. When both are
+// false the forge's default applies.
+type Subscription struct {
+	Subscribed bool `json:"subscribed"`
+	Ignored    bool `json:"ignored"`
+}
+
+// SetSubscriptionOpts holds options for subscribing to a repository or thread.
+type SetSubscriptionOpts struct {
+	Ignored bool // mute all notifications instead of subscribing
+}
+
 // ReviewState represents the state of a pull request review.
 type ReviewState string
 

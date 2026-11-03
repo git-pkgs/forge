@@ -214,6 +214,24 @@ func (s *unsupportedNotificationService) MarkRead(context.Context, forge.MarkNot
 func (s *unsupportedNotificationService) Get(context.Context, string) (*forge.Notification, error) {
 	return nil, forge.ErrNotSupported
 }
+func (s *unsupportedNotificationService) GetRepoSubscription(context.Context, string, string) (*forge.Subscription, error) {
+	return nil, forge.ErrNotSupported
+}
+func (s *unsupportedNotificationService) SetRepoSubscription(context.Context, string, string, forge.SetSubscriptionOpts) (*forge.Subscription, error) {
+	return nil, forge.ErrNotSupported
+}
+func (s *unsupportedNotificationService) DeleteRepoSubscription(context.Context, string, string) error {
+	return forge.ErrNotSupported
+}
+func (s *unsupportedNotificationService) GetThreadSubscription(context.Context, string) (*forge.Subscription, error) {
+	return nil, forge.ErrNotSupported
+}
+func (s *unsupportedNotificationService) SetThreadSubscription(context.Context, string, forge.SetSubscriptionOpts) (*forge.Subscription, error) {
+	return nil, forge.ErrNotSupported
+}
+func (s *unsupportedNotificationService) DeleteThreadSubscription(context.Context, string) error {
+	return forge.ErrNotSupported
+}
 
 func (s *unsupportedCollaboratorService) List(context.Context, string, string, forge.ListCollaboratorOpts) ([]forge.Collaborator, error) {
 	return nil, forge.ErrNotSupported
