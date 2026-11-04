@@ -37,7 +37,7 @@ func labelListCmd() *cobra.Command {
 		Aliases: []string{"ls"},
 		Short:   "List labels",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			f, owner, repoName, _, err := resolve.Repo(flagRepo, flagForgeType)
+			f, owner, repoName, domain, err := resolve.Repo(flagRepo, flagForgeType)
 			if err != nil {
 				return err
 			}
@@ -47,7 +47,7 @@ func labelListCmd() *cobra.Command {
 				if err != nil {
 					return fmt.Errorf("getting repository: %w", err)
 				}
-				return openBrowser(f.Labels().ListURL(repo.HTMLURL))
+				return openBrowser(f.Labels().ListURL(repo.HTMLURL), domain)
 			}
 
 			opts := forges.ListLabelOpts{
