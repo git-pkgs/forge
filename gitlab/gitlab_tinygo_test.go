@@ -57,6 +57,10 @@ func TestTinyGoServicesReturnUnsupported(t *testing.T) {
 		{"webhooks", func() error { _, err := f.Webhooks().Get(ctx, "group", "project", 12); return err }},
 		{"secrets", func() error { _, err := f.Secrets().List(ctx, "group", "project", forge.ListSecretOpts{}); return err }},
 		{"notifications", func() error { _, err := f.Notifications().Get(ctx, "12"); return err }},
+		{"repo subscription", func() error {
+			_, err := f.Notifications().GetRepoSubscription(ctx, "group", "project")
+			return err
+		}},
 		{"reviews", func() error {
 			_, err := f.Reviews().List(ctx, "group", "project", 12, forge.ListReviewOpts{})
 			return err

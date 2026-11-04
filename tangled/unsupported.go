@@ -233,6 +233,24 @@ func (unsupportedNotificationService) MarkRead(context.Context, forges.MarkNotif
 func (unsupportedNotificationService) Get(context.Context, string) (*forges.Notification, error) {
 	return nil, forges.ErrNotSupported
 }
+func (unsupportedNotificationService) GetRepoSubscription(context.Context, string, string) (*forges.Subscription, error) {
+	return nil, forges.ErrNotSupported
+}
+func (unsupportedNotificationService) SetRepoSubscription(context.Context, string, string, forges.SetSubscriptionOpts) (*forges.Subscription, error) {
+	return nil, forges.ErrNotSupported
+}
+func (unsupportedNotificationService) DeleteRepoSubscription(context.Context, string, string) error {
+	return forges.ErrNotSupported
+}
+func (unsupportedNotificationService) GetThreadSubscription(context.Context, string) (*forges.Subscription, error) {
+	return nil, forges.ErrNotSupported
+}
+func (unsupportedNotificationService) SetThreadSubscription(context.Context, string, forges.SetSubscriptionOpts) (*forges.Subscription, error) {
+	return nil, forges.ErrNotSupported
+}
+func (unsupportedNotificationService) DeleteThreadSubscription(context.Context, string) error {
+	return forges.ErrNotSupported
+}
 
 type unsupportedReviewService struct{}
 

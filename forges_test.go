@@ -741,6 +741,24 @@ func (m *mockNotificationService) MarkRead(_ context.Context, opts MarkNotificat
 func (m *mockNotificationService) Get(_ context.Context, id string) (*Notification, error) {
 	return nil, nil
 }
+func (m *mockNotificationService) GetRepoSubscription(_ context.Context, owner, repo string) (*Subscription, error) {
+	return nil, nil
+}
+func (m *mockNotificationService) SetRepoSubscription(_ context.Context, owner, repo string, opts SetSubscriptionOpts) (*Subscription, error) {
+	return nil, nil
+}
+func (m *mockNotificationService) DeleteRepoSubscription(_ context.Context, owner, repo string) error {
+	return nil
+}
+func (m *mockNotificationService) GetThreadSubscription(_ context.Context, id string) (*Subscription, error) {
+	return nil, nil
+}
+func (m *mockNotificationService) SetThreadSubscription(_ context.Context, id string, opts SetSubscriptionOpts) (*Subscription, error) {
+	return nil, nil
+}
+func (m *mockNotificationService) DeleteThreadSubscription(_ context.Context, id string) error {
+	return nil
+}
 
 func (m *mockForge) Reviews() ReviewService {
 	if m.reviewService != nil {

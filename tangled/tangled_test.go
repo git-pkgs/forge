@@ -186,3 +186,15 @@ func TestGetAuthenticatedUserUnsupported(t *testing.T) {
 		t.Fatalf("expected ErrNotSupported, got %v", err)
 	}
 }
+
+func TestSubscriptionsUnsupported(t *testing.T) {
+	ctx := context.Background()
+	n := New("https://tangled.org", "", nil).Notifications()
+
+	if _, err := n.GetRepoSubscription(ctx, "tangled.org", "core"); !errors.Is(err, forges.ErrNotSupported) {
+		t.Errorf("GetRepoSubscription: expected ErrNotSupported, got %v", err)
+	}
+	if _, err := n.SetThreadSubscription(ctx, "1", forges.SetSubscriptionOpts{}); !errors.Is(err, forges.ErrNotSupported) {
+		t.Errorf("SetThreadSubscription: expected ErrNotSupported, got %v", err)
+	}
+}

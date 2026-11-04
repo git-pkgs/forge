@@ -129,10 +129,22 @@ type SecretService interface {
 }
 
 // NotificationService provides operations on user notifications.
+//
+// Repository subscriptions control whether the authenticated user watches a
+// repository. Thread subscriptions apply to a single notification thread,
+// identified by the ID that List and Get return. Deleting a subscription
+// returns to the forge's default, which usually notifies only on
+// participation.
 type NotificationService interface {
 	List(ctx context.Context, opts ListNotificationOpts) ([]Notification, error)
 	MarkRead(ctx context.Context, opts MarkNotificationOpts) error
 	Get(ctx context.Context, id string) (*Notification, error)
+	GetRepoSubscription(ctx context.Context, owner, repo string) (*Subscription, error)
+	SetRepoSubscription(ctx context.Context, owner, repo string, opts SetSubscriptionOpts) (*Subscription, error)
+	DeleteRepoSubscription(ctx context.Context, owner, repo string) error
+	GetThreadSubscription(ctx context.Context, id string) (*Subscription, error)
+	SetThreadSubscription(ctx context.Context, id string, opts SetSubscriptionOpts) (*Subscription, error)
+	DeleteThreadSubscription(ctx context.Context, id string) error
 }
 
 // ReviewService provides operations on pull request reviews.
