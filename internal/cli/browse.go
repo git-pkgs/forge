@@ -115,10 +115,28 @@ func validateBrowserURL(rawURL, domain string) error {
 	if u.User != nil {
 		return fmt.Errorf("invalid browser URL: user information is not allowed")
 	}
-	if !strings.EqualFold(u.Host, domain) {
+	if !sameHost(u, domain) {
 		return fmt.Errorf("invalid browser URL: host %q does not match forge host %q", u.Host, domain)
 	}
 	return nil
+}
+
+func sameHost(u *url.URL, domain string) bool {
+	d, err := url.Parse(u.Scheme + "://" + domain)
+	if err != nil {
+		return false
+	}
+	return strings.EqualFold(u.Hostname(), d.Hostname()) && effectivePort(u) == effectivePort(d)
+}
+
+func effectivePort(u *url.URL) string {
+	if p := u.Port(); p != "" {
+		return p
+	}
+	if u.Scheme == "http" {
+		return "80"
+	}
+	return "443"
 }
 
 // browserCmd returns the argv to open url in a browser. The BROWSER
