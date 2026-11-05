@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 )
 
 // maxRedirects matches the limit net/http applies when CheckRedirect is nil.
@@ -36,9 +37,22 @@ func checkRedirect(req *http.Request, via []*http.Request) error {
 		return errors.New("stopped after 10 redirects")
 	}
 	if len(via) > 0 && via[len(via)-1].URL.Scheme == "https" && req.URL.Scheme == "http" {
-		return fmt.Errorf("refusing redirect from %s to insecure %s", via[len(via)-1].URL.Redacted(), req.URL.Redacted())
+		return fmt.Errorf("refusing redirect from %s to insecure %s", urlForError(via[len(via)-1].URL), urlForError(req.URL))
 	}
 	return nil
+}
+
+// urlForError formats u for an error message without userinfo, query or
+// fragment, any of which can carry credentials such as an access_token
+// parameter or a signed URL.
+func urlForError(u *url.URL) string {
+	c := *u
+	c.User = nil
+	c.RawQuery = ""
+	c.ForceQuery = false
+	c.Fragment = ""
+	c.RawFragment = ""
+	return c.String()
 }
 
 type userAgentTransport struct {

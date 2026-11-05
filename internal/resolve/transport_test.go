@@ -1,8 +1,10 @@
 package resolve
 
 import (
+	"errors"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
 )
@@ -211,5 +213,63 @@ func TestHTTPClientKeepsRedirectLimit(t *testing.T) {
 	}
 	if hits != maxRedirects {
 		t.Errorf("server hit %d times, want %d", hits, maxRedirects)
+	}
+}
+
+func TestHTTPClientRedirectErrorOmitsCredentials(t *testing.T) {
+	plain := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		t.Error("plain HTTP server should not be contacted")
+	}))
+	defer plain.Close()
+
+	secure := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, plain.URL+"/target?sig=locsecret#frag", http.StatusFound)
+	}))
+	defer secure.Close()
+
+	start, _ := url.Parse(secure.URL + "/start?access_token=reqsecret")
+	start.User = url.UserPassword("user", "pwsecret")
+	resp, err := tlsHTTPClient(secure).Get(start.String())
+	if err == nil {
+		_ = resp.Body.Close()
+		t.Fatal("expected HTTPS to HTTP redirect to be refused")
+	}
+
+	// net/http wraps the CheckRedirect error in a *url.Error naming the
+	// redirect target, as it does for every request error. Only the message
+	// built by checkRedirect is under test here.
+	var uerr *url.Error
+	if !errors.As(err, &uerr) {
+		t.Fatalf("error %T is not a *url.Error: %v", err, err)
+	}
+	msg := uerr.Err.Error()
+	for _, secret := range []string{"reqsecret", "locsecret", "pwsecret", "frag", "user"} {
+		if strings.Contains(msg, secret) {
+			t.Errorf("redirect error %q contains %q", msg, secret)
+		}
+	}
+	if !strings.Contains(msg, secure.URL+"/start") || !strings.Contains(msg, plain.URL+"/target") {
+		t.Errorf("redirect error %q should still name both URLs without their query", msg)
+	}
+	if strings.Contains(err.Error(), "reqsecret") {
+		t.Errorf("full error %q contains the original request query", err)
+	}
+}
+
+func TestURLForError(t *testing.T) {
+	tests := map[string]string{
+		"https://forge.example/api/v1/repos?token=abc": "https://forge.example/api/v1/repos",
+		"https://user:pw@forge.example:8443/a/b#L1":    "https://forge.example:8443/a/b",
+		"http://forge.example/path%20with%20space?":    "http://forge.example/path%20with%20space",
+		"https://forge.example":                        "https://forge.example",
+	}
+	for in, want := range tests {
+		u, err := url.Parse(in)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := urlForError(u); got != want {
+			t.Errorf("urlForError(%q) = %q, want %q", in, got, want)
+		}
 	}
 }
