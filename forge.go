@@ -203,6 +203,11 @@ func (c *Client) RegisterDomain(ctx context.Context, domain, token string, build
 			return fmt.Errorf("no builder registered for forge type %q at %s", ft, domain)
 		}
 		c.forges[domain] = builders.Tangled(baseURL, token, c.httpClient)
+	case Radicle:
+		if builders.Radicle == nil {
+			return fmt.Errorf("no builder registered for forge type %q at %s", ft, domain)
+		}
+		c.forges[domain] = builders.Radicle(baseURL, token, c.httpClient)
 	default:
 		return fmt.Errorf("unsupported forge type %q for %s", ft, domain)
 	}
@@ -217,6 +222,7 @@ type ForgeBuilders struct {
 	Gitea   func(baseURL, token string, hc *http.Client) Forge
 	Gerrit  func(baseURL, token string, hc *http.Client) Forge
 	Tangled func(baseURL, token string, hc *http.Client) Forge
+	Radicle func(baseURL, token string, hc *http.Client) Forge
 }
 
 func (c *Client) forgeFor(domain string) (Forge, error) {

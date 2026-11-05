@@ -227,7 +227,7 @@ func labelDeleteCmd() *cobra.Command {
 			}
 
 			if !flagYes {
-				if err := confirm(fmt.Sprintf("Delete label %q in %s/%s? [y/N] ", labelName, owner, repoName)); err != nil {
+				if err := confirm(fmt.Sprintf("Delete label %q in %s? [y/N] ", labelName, repoDisplayName(owner, repoName))); err != nil {
 					return err
 				}
 			}

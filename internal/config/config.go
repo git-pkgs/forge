@@ -31,7 +31,7 @@ type DefaultSection struct {
 }
 
 type DomainSection struct {
-	Type        string // github, gitlab, gitea, forgejo, bitbucket, gerrit, tangled
+	Type        string // github, gitlab, gitea, forgejo, bitbucket, gerrit, tangled, radicle
 	Scheme      string // http or https; only from user config (empty = https)
 	Token       string // resolved token value; only from user config, never .forge
 	TokenExec   string // non-empty when token is retrieved via a shell command (from "token-cmd" config key)

@@ -138,7 +138,7 @@ func branchDeleteCmd() *cobra.Command {
 			}
 
 			if !flagYes {
-				if err := confirm(fmt.Sprintf("Delete branch %q in %s/%s? [y/N] ", name, owner, repoName)); err != nil {
+				if err := confirm(fmt.Sprintf("Delete branch %q in %s? [y/N] ", name, repoDisplayName(owner, repoName))); err != nil {
 					return err
 				}
 			}

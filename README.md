@@ -1,6 +1,6 @@
 # forge
 
-Go library and CLI for working with git forges. Supports GitHub, GitLab, Gitea/Forgejo, Bitbucket Cloud, Gerrit, and Tangled through a single interface.
+Go library and CLI for working with git forges. Supports GitHub, GitLab, Gitea/Forgejo, Bitbucket Cloud, Gerrit, Tangled and Radicle (read-only) through a single interface.
 
 ## CLI
 
@@ -61,6 +61,8 @@ Command for token (e.g. rbw get github.com): rbw get github-token
 Check what's configured with `forge auth status`.
 
 Tokens are resolved in this order: CLI flags, environment variables (`FORGE_TOKEN`, `GITHUB_TOKEN`/`GH_TOKEN`, `GITLAB_TOKEN`, `FORGEJO_TOKEN`/`GITEA_TOKEN`, `BITBUCKET_TOKEN`, `TANGLED_TOKEN`), then the config file at `~/.config/forge/config`. The target host is inferred from the current directory's git remote; use `--host` to override it (for example `forge --host gitea.com repo list someone`). `FORGE_HOST` sets the host for `-R OWNER/REPO` and for commands that don't act on the current repo, but doesn't override the current repo's remote.
+
+Radicle repositories have no owner, so they're selected by repository ID: `-R rad:<RID>` or `-R HOST/rad:<RID>`. The node to query comes from the host in `-R`, `--host`, `FORGE_HOST` or a config section with `type = radicle`. There's no default node, so a repository ID is never sent to a seed you didn't choose. For example `forge --host seed.radicle.dev -R rad:z3gqcJUoA1n9HaHKufZs5FCSGazv5 file ls`. The Radicle backend is read-only over `radicle-httpd` and currently covers repositories, branches, tags and files.
 
 ### Configuration
 
@@ -208,6 +210,7 @@ Self-hosted instances can be registered explicitly or detected automatically:
 import (
     "github.com/git-pkgs/forge/gitea"
     "github.com/git-pkgs/forge/gitlab"
+    "github.com/git-pkgs/forge/radicle"
     "github.com/git-pkgs/forge/tangled"
 )
 
@@ -222,6 +225,7 @@ err := client.RegisterDomain(ctx, "git.example.com", token, forges.ForgeBuilders
     GitLab: gitlab.New,
     Gitea:  gitea.New,
     Tangled: tangled.New,
+    Radicle: radicle.New,
 })
 ```
 

@@ -30,6 +30,11 @@ var browseCmd = &cobra.Command{
 
 		repoURL := repo.HTMLURL
 		if repoURL == "" {
+			// Without an owner there is no web path to guess. Radicle nodes
+			// in particular serve only an API, not web pages.
+			if owner == "" {
+				return fmt.Errorf("browse is not supported for %s: the forge has no web interface", repoName)
+			}
 			repoURL = fmt.Sprintf("https://%s/%s/%s", domain, owner, repoName)
 		}
 

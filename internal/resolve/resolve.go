@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/git-pkgs/forge"
@@ -17,6 +18,7 @@ import (
 	ghforge "github.com/git-pkgs/forge/github"
 	glforge "github.com/git-pkgs/forge/gitlab"
 	"github.com/git-pkgs/forge/internal/config"
+	"github.com/git-pkgs/forge/radicle"
 	"github.com/git-pkgs/forge/tangled"
 )
 
@@ -110,6 +112,7 @@ var builders = forges.ForgeBuilders{
 	Gitea:   gitea.New,
 	Gerrit:  gerrit.New,
 	Tangled: tangled.New,
+	Radicle: radicle.New,
 }
 
 // Repo figures out the forge, owner, and repo name from flags or a git remote.
@@ -126,6 +129,10 @@ func Repo(flagRepo, flagForgeType string) (forge forges.Forge, owner, repo, doma
 }
 
 func repoFromFlag(flagRepo, flagForgeType string) (forges.Forge, string, string, string, error) {
+	if host, hasHost, rid, ok := splitRadicleRepo(flagRepo); ok {
+		return radicleRepoFromFlag(host, hasHost, rid, flagForgeType)
+	}
+
 	parts := strings.Split(flagRepo, "/")
 
 	var domain, owner, repo string
@@ -150,6 +157,95 @@ func repoFromFlag(flagRepo, flagForgeType string) (forges.Forge, string, string,
 		return nil, "", "", "", err
 	}
 	return f, owner, repo, domain, nil
+}
+
+// splitRadicleRepo reports whether flagRepo names a Radicle repository, given
+// as rad:<RID> or HOST/rad:<RID>, and splits off the host when there is one.
+// hasHost is true whenever a host part was given, even an empty one, so that
+// "/rad:<RID>" is rejected rather than treated as a bare ID. Radicle
+// repositories have no owner, so the OWNER/REPO rules do not apply.
+func splitRadicleRepo(flagRepo string) (host string, hasHost bool, rid string, ok bool) {
+	i := strings.LastIndex(flagRepo, "/")
+	rid = flagRepo[i+1:]
+	if !strings.HasPrefix(rid, radicle.RIDPrefix) {
+		return "", false, "", false
+	}
+	if i >= 0 {
+		return flagRepo[:i], true, rid, true
+	}
+	return "", false, rid, true
+}
+
+// radicleRepoFromFlag builds a Radicle forge for -R rad:<RID> or
+// -R HOST/rad:<RID>. The rad: prefix already identifies the forge type, so
+// no detection runs. Without a host in the flag, the node comes from --host,
+// FORGE_HOST or a config section with type = radicle. There is deliberately
+// no default node, so a repository ID is never sent to a seed the user did
+// not choose.
+func radicleRepoFromFlag(host string, hasHost bool, rid, flagForgeType string) (forges.Forge, string, string, string, error) {
+	ft := flagForgeType
+	if ft == "" {
+		ft = forgeTypeOverride
+	}
+	if ft != "" && ft != string(forges.Radicle) {
+		return nil, "", "", "", fmt.Errorf("repository %q is a Radicle ID but --forge-type is %q", rid, ft)
+	}
+	if rid == radicle.RIDPrefix {
+		return nil, "", "", "", fmt.Errorf("invalid repo format %q: missing Radicle repository ID", rid)
+	}
+
+	var scheme, domain string
+	if hasHost {
+		rest := host
+		if _, after, found := strings.Cut(host, "://"); found {
+			rest = after
+		}
+		scheme, domain = splitScheme(host)
+		if rest == "" || strings.ContainsAny(rest, "/?#@") || (scheme == "" && rest != host) {
+			return nil, "", "", "", fmt.Errorf("invalid repo format %q, expected rad:<RID> or HOST/rad:<RID>", host+"/"+rid)
+		}
+	} else {
+		var err error
+		domain, err = radicleDomain()
+		if err != nil {
+			return nil, "", "", "", err
+		}
+	}
+
+	baseURL := baseURLFor(domain)
+	if scheme != "" {
+		baseURL = scheme + "://" + domain
+	}
+	f := radicle.New(baseURL, TokenForDomain(domain), HTTPClient())
+	return f, "", rid, domain, nil
+}
+
+// radicleDomain picks the Radicle node for a rad:<RID> given without a host.
+func radicleDomain() (string, error) {
+	if hostOverride != "" {
+		return hostOverride, nil
+	}
+	if _, d := splitScheme(os.Getenv("FORGE_HOST")); d != "" {
+		return d, nil
+	}
+
+	var nodes []string
+	if cfg, err := config.Load(); err == nil && cfg != nil {
+		for name, ds := range cfg.Domains {
+			if ds.Type == string(forges.Radicle) {
+				nodes = append(nodes, name)
+			}
+		}
+	}
+	switch len(nodes) {
+	case 1:
+		return nodes[0], nil
+	case 0:
+		return "", fmt.Errorf("no Radicle node configured: pass --host (for example --host seed.radicle.dev), use -R HOST/rad:<RID> or add a config section with type = radicle")
+	default:
+		sort.Strings(nodes)
+		return "", fmt.Errorf("several Radicle nodes are configured (%s): pick one with --host or -R HOST/rad:<RID>", strings.Join(nodes, ", "))
+	}
 }
 
 func repoFromGitRemote(_ string) (forges.Forge, string, string, string, error) {
@@ -364,6 +460,8 @@ func forgeForType(forgeType, baseURL, token string, hc *http.Client) forges.Forg
 		return gerrit.New(baseURL, token, hc)
 	case "tangled":
 		return tangled.New(baseURL, token, hc)
+	case "radicle":
+		return radicle.New(baseURL, token, hc)
 	}
 	return nil
 }
@@ -512,6 +610,10 @@ func defaultDomainForType(forgeType string) string {
 		return ""
 	case "tangled":
 		return "tangled.org"
+	case "radicle":
+		// Radicle has no canonical host, and silently picking a public seed
+		// would leak which repositories the user looks at.
+		return ""
 	default:
 		return "github.com"
 	}

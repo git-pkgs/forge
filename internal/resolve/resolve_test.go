@@ -892,3 +892,182 @@ func TestRepoFromFlag(t *testing.T) {
 		})
 	}
 }
+
+func writeTestConfig(t *testing.T, contents string) {
+	t.Helper()
+	dir := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", dir)
+	cfgDir := filepath.Join(dir, "forge")
+	if err := os.MkdirAll(cfgDir, 0700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(cfgDir, "config"), []byte(contents), 0600); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestRepoFromFlagRadicle(t *testing.T) {
+	const rid = "rad:z3gqcJUoA1n9HaHKufZs5FCSGazv5"
+
+	tests := []struct {
+		name        string
+		flagRepo    string
+		host        string
+		forgeHost   string
+		forgeType   string
+		config      string
+		wantDomain  string
+		wantBaseURL string
+		wantErr     string
+	}{
+		{
+			name:        "host in flag",
+			flagRepo:    "seed.radicle.dev/" + rid,
+			wantDomain:  "seed.radicle.dev",
+			wantBaseURL: "https://seed.radicle.dev/api/v1",
+		},
+		{
+			name:        "host with scheme and port in flag",
+			flagRepo:    "http://127.0.0.1:8080/" + rid,
+			wantDomain:  "127.0.0.1:8080",
+			wantBaseURL: "http://127.0.0.1:8080/api/v1",
+		},
+		{
+			name:        "host flag",
+			flagRepo:    rid,
+			host:        "http://localhost:8080",
+			wantDomain:  "localhost:8080",
+			wantBaseURL: "http://localhost:8080/api/v1",
+		},
+		{
+			name:        "FORGE_HOST",
+			flagRepo:    rid,
+			forgeHost:   "seed.example.org",
+			wantDomain:  "seed.example.org",
+			wantBaseURL: "https://seed.example.org/api/v1",
+		},
+		{
+			name:        "single radicle node in config",
+			flagRepo:    rid,
+			config:      "[github.com]\ntype = github\n\n[node.example:8080]\ntype = radicle\nscheme = http\n",
+			wantDomain:  "node.example:8080",
+			wantBaseURL: "http://node.example:8080/api/v1",
+		},
+		{
+			name:        "explicit radicle forge type",
+			flagRepo:    "seed.radicle.dev/" + rid,
+			forgeType:   "radicle",
+			wantDomain:  "seed.radicle.dev",
+			wantBaseURL: "https://seed.radicle.dev/api/v1",
+		},
+		{
+			name:     "no node configured",
+			flagRepo: rid,
+			wantErr:  "no Radicle node configured",
+		},
+		{
+			name:     "several nodes in config",
+			flagRepo: rid,
+			config:   "[b.example]\ntype = radicle\n\n[a.example]\ntype = radicle\n",
+			wantErr:  "several Radicle nodes are configured (a.example, b.example)",
+		},
+		{
+			name:      "conflicting forge type",
+			flagRepo:  "seed.radicle.dev/" + rid,
+			forgeType: "github",
+			wantErr:   "is a Radicle ID",
+		},
+		{
+			name:     "missing ID",
+			flagRepo: "seed.radicle.dev/rad:",
+			wantErr:  "missing Radicle repository ID",
+		},
+		{
+			name:     "owner before ID",
+			flagRepo: "seed.radicle.dev/someone/" + rid,
+			wantErr:  "invalid repo format",
+		},
+		{
+			name:     "path after host URL",
+			flagRepo: "https://seed.radicle.dev/sub/" + rid,
+			wantErr:  "invalid repo format",
+		},
+		{
+			name:     "userinfo in host",
+			flagRepo: "user@seed.radicle.dev/" + rid,
+			wantErr:  "invalid repo format",
+		},
+		{
+			name:     "unsupported scheme",
+			flagRepo: "ftp://seed.radicle.dev/" + rid,
+			wantErr:  "invalid repo format",
+		},
+		{
+			name:     "empty host",
+			flagRepo: "/" + rid,
+			wantErr:  "invalid repo format",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			config.ResetCache()
+			t.Cleanup(config.ResetCache)
+			writeTestConfig(t, tt.config)
+			t.Setenv("FORGE_HOST", tt.forgeHost)
+			t.Chdir(t.TempDir())
+
+			oldH, oldS, oldT := hostOverride, schemeOverride, forgeTypeOverride
+			t.Cleanup(func() { hostOverride, schemeOverride, forgeTypeOverride = oldH, oldS, oldT })
+			hostOverride, schemeOverride, forgeTypeOverride = "", "", ""
+			SetHost(tt.host)
+
+			f, owner, repo, domain, err := repoFromFlag(tt.flagRepo, tt.forgeType)
+			if tt.wantErr != "" {
+				if err == nil || !strings.Contains(err.Error(), tt.wantErr) {
+					t.Fatalf("error = %v, want it to contain %q", err, tt.wantErr)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if owner != "" || repo != rid {
+				t.Errorf("owner/repo = %q/%q, want empty owner and %q", owner, repo, rid)
+			}
+			if domain != tt.wantDomain {
+				t.Errorf("domain = %q, want %q", domain, tt.wantDomain)
+			}
+			p, ok := f.(forges.APIBaseURLProvider)
+			if !ok {
+				t.Fatal("forge does not implement APIBaseURLProvider")
+			}
+			if got := p.APIBaseURL(); got != tt.wantBaseURL {
+				t.Errorf("APIBaseURL = %q, want %q", got, tt.wantBaseURL)
+			}
+		})
+	}
+}
+
+func TestRepoFromFlagRadicleUsesForgeTypeOverride(t *testing.T) {
+	config.ResetCache()
+	t.Cleanup(config.ResetCache)
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+
+	old := forgeTypeOverride
+	t.Cleanup(func() { forgeTypeOverride = old })
+	SetForgeType("gitlab")
+
+	_, _, _, _, err := repoFromFlag("seed.radicle.dev/rad:z3gqcJUoA1n9HaHKufZs5FCSGazv5", "")
+	if err == nil || !strings.Contains(err.Error(), "is a Radicle ID") {
+		t.Fatalf("error = %v, want forge type conflict", err)
+	}
+}
+
+func TestDomainRadicleHasNoDefault(t *testing.T) {
+	t.Chdir(t.TempDir())
+	t.Setenv("FORGE_HOST", "")
+	if got := Domain("radicle"); got != "" {
+		t.Errorf("Domain(radicle) = %q, want empty", got)
+	}
+}

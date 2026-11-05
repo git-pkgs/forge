@@ -411,7 +411,7 @@ func issueDeleteCmd() *cobra.Command {
 			}
 
 			if !flagYes {
-				if err := confirm(fmt.Sprintf("Delete issue #%d in %s/%s? [y/N] ", number, owner, repoName)); err != nil {
+				if err := confirm(fmt.Sprintf("Delete issue #%d in %s? [y/N] ", number, repoDisplayName(owner, repoName))); err != nil {
 					return err
 				}
 			}

@@ -142,7 +142,7 @@ func deployKeyDeleteCmd() *cobra.Command {
 			}
 
 			if !flagYes {
-				if err := confirm(fmt.Sprintf("Delete deploy key %d in %s/%s? [y/N] ", id, owner, repoName)); err != nil {
+				if err := confirm(fmt.Sprintf("Delete deploy key %d in %s? [y/N] ", id, repoDisplayName(owner, repoName))); err != nil {
 					return err
 				}
 			}
