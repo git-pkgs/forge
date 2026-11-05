@@ -172,6 +172,29 @@ func TestRepoGetHTTPError(t *testing.T) {
 	}
 }
 
+func TestUnfollowedRedirectIsAnError(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasPrefix(r.URL.Path, "/raw/") {
+			// A 3xx without Location is returned by http.Client as is.
+			w.WriteHeader(http.StatusFound)
+			_, _ = fmt.Fprint(w, "<html>moved</html>")
+			return
+		}
+		if strings.Contains(r.URL.Path, "/blob/") {
+			_, _ = fmt.Fprint(w, `{"binary":true,"name":"logo.png","path":"logo.png"}`)
+			return
+		}
+		_, _ = fmt.Fprint(w, testRepoJSON)
+	}))
+	t.Cleanup(srv.Close)
+
+	file, err := New(srv.URL, "", srv.Client()).Files().Get(context.Background(), "", testRID, "logo.png", "")
+	var httpErr *forges.HTTPError
+	if !errors.As(err, &httpErr) || httpErr.StatusCode != http.StatusFound {
+		t.Fatalf("Get = %+v, %v, want HTTPError 302", file, err)
+	}
+}
+
 func TestNeverSendsToken(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if got := r.Header.Get("Authorization"); got != "" {

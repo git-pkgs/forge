@@ -128,7 +128,10 @@ func (f *radicleForge) get(ctx context.Context, u, accept string) (io.ReadCloser
 		_ = resp.Body.Close()
 		return nil, forges.ErrNotFound
 	}
-	if resp.StatusCode >= http.StatusBadRequest {
+	// Anything outside 2xx is an error. That includes a 3xx the client did
+	// not follow (no Location header), whose body must not be returned as
+	// JSON or file content.
+	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
 		body, _ := io.ReadAll(io.LimitReader(resp.Body, maxErrorBodyBytes))
 		_ = resp.Body.Close()
 		return nil, &forges.HTTPError{StatusCode: resp.StatusCode, URL: u, Body: string(body)}
