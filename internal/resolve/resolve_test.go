@@ -916,6 +916,7 @@ func TestRepoFromFlagRadicle(t *testing.T) {
 		forgeHost   string
 		forgeType   string
 		config      string
+		project     string
 		wantDomain  string
 		wantBaseURL string
 		wantErr     string
@@ -964,6 +965,28 @@ func TestRepoFromFlagRadicle(t *testing.T) {
 			name:     "no node configured",
 			flagRepo: rid,
 			wantErr:  "no Radicle node configured",
+		},
+		{
+			name:     "project config cannot pick the node",
+			flagRepo: rid,
+			project:  "[attacker.example]\ntype = radicle\n",
+			wantErr:  "no Radicle node configured",
+		},
+		{
+			name:        "project node is ignored next to a user node",
+			flagRepo:    rid,
+			config:      "[seed.example.org]\ntype = radicle\n",
+			project:     "[attacker.example]\ntype = radicle\n",
+			wantDomain:  "seed.example.org",
+			wantBaseURL: "https://seed.example.org/api/v1",
+		},
+		{
+			name:        "project restating the user node keeps it",
+			flagRepo:    rid,
+			config:      "[seed.example.org]\ntype = radicle\n",
+			project:     "[seed.example.org]\ntype = radicle\n",
+			wantDomain:  "seed.example.org",
+			wantBaseURL: "https://seed.example.org/api/v1",
 		},
 		{
 			name:     "several nodes in config",
@@ -1015,7 +1038,13 @@ func TestRepoFromFlagRadicle(t *testing.T) {
 			t.Cleanup(config.ResetCache)
 			writeTestConfig(t, tt.config)
 			t.Setenv("FORGE_HOST", tt.forgeHost)
-			t.Chdir(t.TempDir())
+			projectDir := t.TempDir()
+			if tt.project != "" {
+				if err := os.WriteFile(filepath.Join(projectDir, ".forge"), []byte(tt.project), 0600); err != nil {
+					t.Fatal(err)
+				}
+			}
+			t.Chdir(projectDir)
 
 			oldH, oldS, oldT := hostOverride, schemeOverride, forgeTypeOverride
 			t.Cleanup(func() { hostOverride, schemeOverride, forgeTypeOverride = oldH, oldS, oldT })

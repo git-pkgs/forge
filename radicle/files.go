@@ -3,6 +3,7 @@ package radicle
 import (
 	"context"
 	"errors"
+	"path"
 	"strings"
 
 	forges "github.com/git-pkgs/forge"
@@ -27,15 +28,15 @@ type treeResponse struct {
 	} `json:"entries"`
 }
 
-// pathSegments splits a repository file path into its non-empty segments.
+// pathSegments splits a repository file path into its segments. The path is
+// cleaned against the repository root first, so empty, "." and ".." segments
+// are resolved and can never climb out of the tree or blob endpoint.
 func pathSegments(filePath string) []string {
-	var out []string
-	for _, s := range strings.Split(filePath, "/") {
-		if s != "" {
-			out = append(out, s)
-		}
+	clean := path.Clean("/" + filePath)
+	if clean == "/" {
+		return nil
 	}
-	return out
+	return strings.Split(clean[1:], "/")
 }
 
 func (s *fileService) Get(ctx context.Context, owner, repo, filePath, ref string) (*forges.FileContent, error) {

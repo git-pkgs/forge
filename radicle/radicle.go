@@ -93,7 +93,9 @@ func rid(owner, repo string) (string, error) {
 }
 
 // repoPath returns the API path for a repository, with any extra path
-// segments escaped individually so they cannot change the request path.
+// segments escaped individually. Callers pass segments from pathSegments,
+// which has already resolved "." and "..", so escaping is enough to keep each
+// one inside its own path element.
 func (f *radicleForge) repoPath(id string, segments ...string) string {
 	var b strings.Builder
 	b.WriteString(f.APIBaseURL())

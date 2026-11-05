@@ -330,10 +330,49 @@ func TestFileGetBinaryUsesRawEndpoint(t *testing.T) {
 	}
 }
 
+func TestPathSegments(t *testing.T) {
+	tests := []struct {
+		in   string
+		want string
+	}{
+		{"", ""},
+		{"/", ""},
+		{"README.md", "README.md"},
+		{"/crates//radicle/", "crates/radicle"},
+		{"./docs/./file", "docs/file"},
+		{"docs/../README.md", "README.md"},
+		{"../../../nodes", "nodes"},
+		{"..", ""},
+	}
+	for _, tt := range tests {
+		if got := strings.Join(pathSegments(tt.in), "/"); got != tt.want {
+			t.Errorf("pathSegments(%q) = %q, want %q", tt.in, got, tt.want)
+		}
+	}
+}
+
+func TestFileGetDotSegmentsStayInBlobEndpoint(t *testing.T) {
+	srv := newTestServer(t)
+	f := New(srv.URL, "", srv.Client())
+
+	// Without cleaning, this would request /api/v1/repos/<rid>/blob/<sha>/../../../nodes
+	// and could reach another endpoint. The server fails the test on any
+	// request outside the handlers it registers.
+	file, err := f.Files().Get(context.Background(), "", testRID, "../../docs/../README.md", "releases/1.0.0")
+	if err != nil {
+		t.Fatalf("Get: %v", err)
+	}
+	if string(file.Content) != "# heartwood\n" {
+		t.Errorf("content = %q", file.Content)
+	}
+}
+
 func TestFileGetRequiresPath(t *testing.T) {
 	f := New("http://radicle.invalid", "", nil)
-	if _, err := f.Files().Get(context.Background(), "", testRID, "/", ""); err == nil {
-		t.Fatal("expected error for empty file path")
+	for _, p := range []string{"", "/", "..", "./"} {
+		if _, err := f.Files().Get(context.Background(), "", testRID, p, ""); err == nil {
+			t.Errorf("Get(%q) succeeded, want error for empty file path", p)
+		}
 	}
 }
 

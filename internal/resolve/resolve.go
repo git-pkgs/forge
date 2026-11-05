@@ -179,7 +179,7 @@ func splitRadicleRepo(flagRepo string) (host string, hasHost bool, rid string, o
 // radicleRepoFromFlag builds a Radicle forge for -R rad:<RID> or
 // -R HOST/rad:<RID>. The rad: prefix already identifies the forge type, so
 // no detection runs. Without a host in the flag, the node comes from --host,
-// FORGE_HOST or a config section with type = radicle. There is deliberately
+// FORGE_HOST or a user config section with type = radicle. There is deliberately
 // no default node, so a repository ID is never sent to a seed the user did
 // not choose.
 func radicleRepoFromFlag(host string, hasHost bool, rid, flagForgeType string) (forges.Forge, string, string, string, error) {
@@ -221,6 +221,7 @@ func radicleRepoFromFlag(host string, hasHost bool, rid, flagForgeType string) (
 }
 
 // radicleDomain picks the Radicle node for a rad:<RID> given without a host.
+// Config sections only count when the user config declares type = radicle.
 func radicleDomain() (string, error) {
 	if hostOverride != "" {
 		return hostOverride, nil
@@ -232,7 +233,10 @@ func radicleDomain() (string, error) {
 	var nodes []string
 	if cfg, err := config.Load(); err == nil && cfg != nil {
 		for name, ds := range cfg.Domains {
-			if ds.Type == string(forges.Radicle) {
+			// Only the user's own config may pick the node. A project .forge
+			// file comes with the repository, so trusting it would let a
+			// cloned repo send the RID and any FORGE_TOKEN to its own host.
+			if ds.UserType == string(forges.Radicle) {
 				nodes = append(nodes, name)
 			}
 		}
@@ -241,7 +245,7 @@ func radicleDomain() (string, error) {
 	case 1:
 		return nodes[0], nil
 	case 0:
-		return "", fmt.Errorf("no Radicle node configured: pass --host (for example --host seed.radicle.dev), use -R HOST/rad:<RID> or add a config section with type = radicle")
+		return "", fmt.Errorf("no Radicle node configured: pass --host (for example --host seed.radicle.dev), use -R HOST/rad:<RID> or add a section with type = radicle to your user config")
 	default:
 		sort.Strings(nodes)
 		return "", fmt.Errorf("several Radicle nodes are configured (%s): pick one with --host or -R HOST/rad:<RID>", strings.Join(nodes, ", "))
