@@ -172,19 +172,35 @@ func TestRepoGetHTTPError(t *testing.T) {
 	}
 }
 
-func TestSendsTokenWhenSet(t *testing.T) {
-	var got string
+func TestNeverSendsToken(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		got = r.Header.Get("Authorization")
-		_, _ = fmt.Fprint(w, testRepoJSON)
+		if got := r.Header.Get("Authorization"); got != "" {
+			t.Errorf("%s sent Authorization = %q, want none", r.URL.Path, got)
+		}
+		switch {
+		case strings.Contains(r.URL.Path, "/tree/"):
+			_, _ = fmt.Fprint(w, `{"entries":[]}`)
+		case strings.Contains(r.URL.Path, "/blob/"):
+			_, _ = fmt.Fprint(w, `{"binary":true,"name":"logo.png","path":"logo.png"}`)
+		case strings.HasPrefix(r.URL.Path, "/raw/"):
+			_, _ = w.Write([]byte("png"))
+		default:
+			_, _ = fmt.Fprint(w, testRepoJSON)
+		}
 	}))
 	t.Cleanup(srv.Close)
 
-	if _, err := New(srv.URL, "sess", srv.Client()).Repos().Get(context.Background(), "", testRID); err != nil {
-		t.Fatalf("Get: %v", err)
+	ctx := context.Background()
+	f := New(srv.URL, "ghp_unrelated", srv.Client())
+	if _, err := f.Repos().Get(ctx, "", testRID); err != nil {
+		t.Fatalf("Repos().Get: %v", err)
 	}
-	if got != "Bearer sess" {
-		t.Errorf("Authorization = %q, want Bearer sess", got)
+	if _, err := f.Files().List(ctx, "", testRID, "", ""); err != nil {
+		t.Fatalf("Files().List: %v", err)
+	}
+	// A binary blob also exercises the raw endpoint.
+	if _, err := f.Files().Get(ctx, "", testRID, "logo.png", ""); err != nil {
+		t.Fatalf("Files().Get: %v", err)
 	}
 }
 

@@ -25,18 +25,21 @@ const maxErrorBodyBytes = 1 << 16
 
 type radicleForge struct {
 	baseURL    string
-	token      string
 	httpClient *http.Client
 }
 
 // New creates a Radicle forge backend for the radicle-httpd node at baseURL.
-func New(baseURL, token string, hc *http.Client) forges.Forge {
+//
+// The token is ignored. Every endpoint the backend uses is public and
+// read-only, and the token passed in is often the generic FORGE_TOKEN
+// fallback meant for another forge, so sending it would only leak it to the
+// node. The parameter is kept so New matches the ForgeBuilders signature.
+func New(baseURL, _ string, hc *http.Client) forges.Forge {
 	if hc == nil {
 		hc = http.DefaultClient
 	}
 	return &radicleForge{
 		baseURL:    strings.TrimRight(baseURL, "/"),
-		token:      token,
 		httpClient: hc,
 	}
 }
@@ -116,9 +119,6 @@ func (f *radicleForge) get(ctx context.Context, u, accept string) (io.ReadCloser
 		return nil, err
 	}
 	req.Header.Set("Accept", accept)
-	if f.token != "" {
-		req.Header.Set("Authorization", "Bearer "+f.token)
-	}
 
 	resp, err := f.httpClient.Do(req)
 	if err != nil {

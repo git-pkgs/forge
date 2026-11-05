@@ -216,7 +216,9 @@ func radicleRepoFromFlag(host string, hasHost bool, rid, flagForgeType string) (
 	if scheme != "" {
 		baseURL = scheme + "://" + domain
 	}
-	f := radicle.New(baseURL, TokenForDomain(domain), HTTPClient())
+	// No token: the backend never sends one, and looking it up could run a
+	// token-cmd or pick up FORGE_TOKEN for no reason.
+	f := radicle.New(baseURL, "", HTTPClient())
 	return f, "", rid, domain, nil
 }
 
