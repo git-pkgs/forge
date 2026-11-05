@@ -210,6 +210,11 @@ func radicleRepoFromFlag(host string, hasHost bool, rid, flagForgeType string) (
 		if err != nil {
 			return nil, "", "", "", err
 		}
+		// --host, FORGE_HOST and config section names reach here unchecked,
+		// so apply the same rule as HOST/rad:<RID>: a bare host[:port] only.
+		if domain == "" || strings.ContainsAny(domain, "/?#@") {
+			return nil, "", "", "", fmt.Errorf("invalid Radicle node %q, expected HOST or HOST:PORT", domain)
+		}
 	}
 
 	baseURL := baseURLFor(domain)

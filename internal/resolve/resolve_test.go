@@ -1030,6 +1030,36 @@ func TestRepoFromFlagRadicle(t *testing.T) {
 			flagRepo: "/" + rid,
 			wantErr:  "invalid repo format",
 		},
+		{
+			name:     "path in host flag",
+			flagRepo: rid,
+			host:     "node.example/path",
+			wantErr:  `invalid Radicle node "node.example/path"`,
+		},
+		{
+			name:      "path in FORGE_HOST",
+			flagRepo:  rid,
+			forgeHost: "node.example/path",
+			wantErr:   `invalid Radicle node "node.example/path"`,
+		},
+		{
+			name:     "userinfo in host flag",
+			flagRepo: rid,
+			host:     "user@node.example",
+			wantErr:  "invalid Radicle node",
+		},
+		{
+			name:      "query in FORGE_HOST",
+			flagRepo:  rid,
+			forgeHost: "node.example?x=1",
+			wantErr:   "invalid Radicle node",
+		},
+		{
+			name:     "path in config section name",
+			flagRepo: rid,
+			config:   "[node.example/path]\ntype = radicle\n",
+			wantErr:  "invalid Radicle node",
+		},
 	}
 
 	for _, tt := range tests {
