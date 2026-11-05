@@ -1,6 +1,13 @@
 package resolve
 
-import "net/http"
+import (
+	"errors"
+	"fmt"
+	"net/http"
+)
+
+// maxRedirects matches the limit net/http applies when CheckRedirect is nil.
+const maxRedirects = 10
 
 var userAgent = "forge/dev"
 
@@ -12,9 +19,26 @@ func SetUserAgent(ua string) {
 
 // HTTPClient returns an http.Client whose transport sets the User-Agent
 // header on outbound requests. Used for all forge API traffic so requests
-// are identifiable in server logs.
+// are identifiable in server logs. It refuses redirects from HTTPS to HTTP,
+// since net/http would otherwise resend headers such as Authorization in
+// cleartext when the redirect stays on the same host.
 func HTTPClient() *http.Client {
-	return &http.Client{Transport: &userAgentTransport{base: http.DefaultTransport}}
+	return &http.Client{
+		Transport:     &userAgentTransport{base: http.DefaultTransport},
+		CheckRedirect: checkRedirect,
+	}
+}
+
+// checkRedirect keeps the default redirect limit and rejects any hop that
+// downgrades from HTTPS to HTTP.
+func checkRedirect(req *http.Request, via []*http.Request) error {
+	if len(via) >= maxRedirects {
+		return errors.New("stopped after 10 redirects")
+	}
+	if len(via) > 0 && via[len(via)-1].URL.Scheme == "https" && req.URL.Scheme == "http" {
+		return fmt.Errorf("refusing redirect from %s to insecure %s", via[len(via)-1].URL.Redacted(), req.URL.Redacted())
+	}
+	return nil
 }
 
 type userAgentTransport struct {

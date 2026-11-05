@@ -3,6 +3,7 @@ package resolve
 import (
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 )
 
@@ -90,5 +91,125 @@ func TestUserAgentTransportDoesNotMutateRequest(t *testing.T) {
 
 	if req.Header.Get("User-Agent") != "" {
 		t.Errorf("transport mutated the original request: User-Agent=%q", req.Header.Get("User-Agent"))
+	}
+}
+
+// tlsHTTPClient returns HTTPClient with its transport trusting srv's
+// self-signed certificate, keeping the redirect policy under test.
+func tlsHTTPClient(srv *httptest.Server) *http.Client {
+	c := HTTPClient()
+	c.Transport = &userAgentTransport{base: srv.Client().Transport}
+	return c
+}
+
+func TestHTTPClientRejectsHTTPSToHTTPRedirect(t *testing.T) {
+	var plainHits int
+	plain := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		plainHits++
+		if r.Header.Get("Authorization") != "" {
+			t.Errorf("Authorization header sent over plain HTTP")
+		}
+	}))
+	defer plain.Close()
+
+	secure := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, plain.URL+"/target", http.StatusFound)
+	}))
+	defer secure.Close()
+
+	req, _ := http.NewRequest(http.MethodGet, secure.URL, nil)
+	req.Header.Set("Authorization", "Bearer secret")
+	resp, err := tlsHTTPClient(secure).Do(req)
+	if err == nil {
+		_ = resp.Body.Close()
+		t.Fatal("expected HTTPS to HTTP redirect to be refused")
+	}
+	if !strings.Contains(err.Error(), "refusing redirect") {
+		t.Errorf("unexpected error: %v", err)
+	}
+	if plainHits != 0 {
+		t.Errorf("plain HTTP server was contacted %d times", plainHits)
+	}
+}
+
+func TestHTTPClientFollowsSafeRedirects(t *testing.T) {
+	t.Run("https to https", func(t *testing.T) {
+		var srv *httptest.Server
+		srv = httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.URL.Path == "/start" {
+				http.Redirect(w, r, srv.URL+"/end", http.StatusFound)
+				return
+			}
+			_, _ = w.Write([]byte("ok"))
+		}))
+		defer srv.Close()
+
+		resp, err := tlsHTTPClient(srv).Get(srv.URL + "/start")
+		if err != nil {
+			t.Fatalf("redirect within HTTPS failed: %v", err)
+		}
+		_ = resp.Body.Close()
+		if resp.Request.URL.Path != "/end" {
+			t.Errorf("final path = %q, want /end", resp.Request.URL.Path)
+		}
+	})
+
+	t.Run("http to https", func(t *testing.T) {
+		secure := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+		defer secure.Close()
+		plain := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			http.Redirect(w, r, secure.URL+"/end", http.StatusFound)
+		}))
+		defer plain.Close()
+
+		resp, err := tlsHTTPClient(secure).Get(plain.URL)
+		if err != nil {
+			t.Fatalf("upgrade redirect failed: %v", err)
+		}
+		_ = resp.Body.Close()
+		if resp.Request.URL.Scheme != "https" {
+			t.Errorf("final scheme = %q, want https", resp.Request.URL.Scheme)
+		}
+	})
+
+	t.Run("http to http", func(t *testing.T) {
+		var srv *httptest.Server
+		srv = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.URL.Path == "/start" {
+				http.Redirect(w, r, srv.URL+"/end", http.StatusFound)
+			}
+		}))
+		defer srv.Close()
+
+		resp, err := HTTPClient().Get(srv.URL + "/start")
+		if err != nil {
+			t.Fatalf("redirect within HTTP failed: %v", err)
+		}
+		_ = resp.Body.Close()
+		if resp.Request.URL.Path != "/end" {
+			t.Errorf("final path = %q, want /end", resp.Request.URL.Path)
+		}
+	})
+}
+
+func TestHTTPClientKeepsRedirectLimit(t *testing.T) {
+	var hits int
+	var srv *httptest.Server
+	srv = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		hits++
+		http.Redirect(w, r, srv.URL+"/loop", http.StatusFound)
+	}))
+	defer srv.Close()
+
+	resp, err := HTTPClient().Get(srv.URL)
+	if err == nil {
+		_ = resp.Body.Close()
+		t.Fatal("expected redirect loop to stop")
+	}
+	if !strings.Contains(err.Error(), "stopped after 10 redirects") {
+		t.Errorf("unexpected error: %v", err)
+	}
+	if hits != maxRedirects {
+		t.Errorf("server hit %d times, want %d", hits, maxRedirects)
 	}
 }
