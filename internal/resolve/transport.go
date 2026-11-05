@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"net/url"
 )
 
 // maxRedirects matches the limit net/http applies when CheckRedirect is nil.
@@ -30,29 +29,21 @@ func HTTPClient() *http.Client {
 	}
 }
 
+// errInsecureRedirect is returned when a redirect would downgrade from
+// HTTPS to HTTP. The message names no URL, because net/http already wraps
+// it in a *url.Error that carries the redirect target.
+var errInsecureRedirect = errors.New("refusing redirect from https to insecure http")
+
 // checkRedirect keeps the default redirect limit and rejects any hop that
 // downgrades from HTTPS to HTTP.
 func checkRedirect(req *http.Request, via []*http.Request) error {
 	if len(via) >= maxRedirects {
-		return errors.New("stopped after 10 redirects")
+		return fmt.Errorf("stopped after %d redirects", maxRedirects)
 	}
 	if len(via) > 0 && via[len(via)-1].URL.Scheme == "https" && req.URL.Scheme == "http" {
-		return fmt.Errorf("refusing redirect from %s to insecure %s", urlForError(via[len(via)-1].URL), urlForError(req.URL))
+		return errInsecureRedirect
 	}
 	return nil
-}
-
-// urlForError formats u for an error message without userinfo, query or
-// fragment, any of which can carry credentials such as an access_token
-// parameter or a signed URL.
-func urlForError(u *url.URL) string {
-	c := *u
-	c.User = nil
-	c.RawQuery = ""
-	c.ForceQuery = false
-	c.Fragment = ""
-	c.RawFragment = ""
-	return c.String()
 }
 
 type userAgentTransport struct {

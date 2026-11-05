@@ -1,12 +1,16 @@
 package resolve
 
 import (
+	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"net/url"
 	"strings"
+	"sync"
 	"testing"
+
+	"github.com/git-pkgs/forge/internal/config"
 )
 
 func TestHTTPClientSetsUserAgent(t *testing.T) {
@@ -126,8 +130,8 @@ func TestHTTPClientRejectsHTTPSToHTTPRedirect(t *testing.T) {
 		_ = resp.Body.Close()
 		t.Fatal("expected HTTPS to HTTP redirect to be refused")
 	}
-	if !strings.Contains(err.Error(), "refusing redirect") {
-		t.Errorf("unexpected error: %v", err)
+	if !errors.Is(err, errInsecureRedirect) {
+		t.Errorf("error = %v, want errInsecureRedirect", err)
 	}
 	if plainHits != 0 {
 		t.Errorf("plain HTTP server was contacted %d times", plainHits)
@@ -208,7 +212,7 @@ func TestHTTPClientKeepsRedirectLimit(t *testing.T) {
 		_ = resp.Body.Close()
 		t.Fatal("expected redirect loop to stop")
 	}
-	if !strings.Contains(err.Error(), "stopped after 10 redirects") {
+	if !strings.Contains(err.Error(), fmt.Sprintf("stopped after %d redirects", maxRedirects)) {
 		t.Errorf("unexpected error: %v", err)
 	}
 	if hits != maxRedirects {
@@ -216,60 +220,74 @@ func TestHTTPClientKeepsRedirectLimit(t *testing.T) {
 	}
 }
 
-func TestHTTPClientRedirectErrorOmitsCredentials(t *testing.T) {
+// TestDetectedForgeUsesSharedHTTPClient covers a self-hosted forge with no
+// type in config, so the client is built by RegisterDomain after probing.
+// Both the probes and the backend must use HTTPClient, which means they get
+// the User-Agent and refuse the HTTPS to HTTP redirect.
+func TestDetectedForgeUsesSharedHTTPClient(t *testing.T) {
+	config.ResetCache()
+	t.Cleanup(config.ResetCache)
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	t.Setenv("FORGE_HOST", "")
+	t.Setenv("FORGE_TOKEN", "detected-secret")
+	t.Chdir(t.TempDir())
+
+	oldH, oldS, oldT := hostOverride, schemeOverride, forgeTypeOverride
+	t.Cleanup(func() { hostOverride, schemeOverride, forgeTypeOverride = oldH, oldS, oldT })
+	hostOverride, schemeOverride, forgeTypeOverride = "", "", ""
+
+	var plainHits int
 	plain := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		t.Error("plain HTTP server should not be contacted")
+		plainHits++
+		if r.Header.Get("Authorization") != "" {
+			t.Errorf("token sent over plain HTTP")
+		}
 	}))
 	defer plain.Close()
 
+	var mu sync.Mutex
+	var agents []string
 	secure := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		http.Redirect(w, r, plain.URL+"/target?sig=locsecret#frag", http.StatusFound)
+		mu.Lock()
+		agents = append(agents, r.URL.Path+" "+r.Header.Get("User-Agent"))
+		mu.Unlock()
+		if r.URL.Path == "/" {
+			w.Header().Set("X-Gitea-Version", "1.22.0")
+			return
+		}
+		http.Redirect(w, r, plain.URL+r.URL.Path, http.StatusFound)
 	}))
 	defer secure.Close()
 
-	start, _ := url.Parse(secure.URL + "/start?access_token=reqsecret")
-	start.User = url.UserPassword("user", "pwsecret")
-	resp, err := tlsHTTPClient(secure).Get(start.String())
-	if err == nil {
-		_ = resp.Body.Close()
-		t.Fatal("expected HTTPS to HTTP redirect to be refused")
+	// HTTPClient wraps http.DefaultTransport, so point that at a transport
+	// trusting the test server's certificate. This also lets a nil client
+	// (http.DefaultClient) reach the server, which is the regression.
+	oldTransport := http.DefaultTransport
+	http.DefaultTransport = secure.Client().Transport
+	t.Cleanup(func() { http.DefaultTransport = oldTransport })
+
+	domain := strings.TrimPrefix(secure.URL, "https://")
+	f, err := ForgeForDomain(domain)
+	if err != nil {
+		t.Fatalf("ForgeForDomain: %v", err)
 	}
 
-	// net/http wraps the CheckRedirect error in a *url.Error naming the
-	// redirect target, as it does for every request error. Only the message
-	// built by checkRedirect is under test here.
-	var uerr *url.Error
-	if !errors.As(err, &uerr) {
-		t.Fatalf("error %T is not a *url.Error: %v", err, err)
+	_, err = f.Repos().Get(context.Background(), "owner", "repo")
+	if !errors.Is(err, errInsecureRedirect) {
+		t.Errorf("Repos().Get error = %v, want errInsecureRedirect", err)
 	}
-	msg := uerr.Err.Error()
-	for _, secret := range []string{"reqsecret", "locsecret", "pwsecret", "frag", "user"} {
-		if strings.Contains(msg, secret) {
-			t.Errorf("redirect error %q contains %q", msg, secret)
-		}
+	if plainHits != 0 {
+		t.Errorf("plain HTTP server was contacted %d times", plainHits)
 	}
-	if !strings.Contains(msg, secure.URL+"/start") || !strings.Contains(msg, plain.URL+"/target") {
-		t.Errorf("redirect error %q should still name both URLs without their query", msg)
-	}
-	if strings.Contains(err.Error(), "reqsecret") {
-		t.Errorf("full error %q contains the original request query", err)
-	}
-}
 
-func TestURLForError(t *testing.T) {
-	tests := map[string]string{
-		"https://forge.example/api/v1/repos?token=abc": "https://forge.example/api/v1/repos",
-		"https://user:pw@forge.example:8443/a/b#L1":    "https://forge.example:8443/a/b",
-		"http://forge.example/path%20with%20space?":    "http://forge.example/path%20with%20space",
-		"https://forge.example":                        "https://forge.example",
+	mu.Lock()
+	defer mu.Unlock()
+	if len(agents) == 0 {
+		t.Fatal("no requests reached the forge")
 	}
-	for in, want := range tests {
-		u, err := url.Parse(in)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if got := urlForError(u); got != want {
-			t.Errorf("urlForError(%q) = %q, want %q", in, got, want)
+	for _, a := range agents {
+		if !strings.HasSuffix(a, " "+userAgent) {
+			t.Errorf("request %q did not use the shared User-Agent %q", a, userAgent)
 		}
 	}
 }
