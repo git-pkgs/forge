@@ -89,7 +89,6 @@ func detectFromAPI(ctx context.Context, client *http.Client, baseURL string) (Fo
 		return Tangled, nil
 	}
 
-	// Try the radicle-httpd API root.
 	if ok, err := probeRadicleAPI(ctx, client, baseURL); err == nil && ok {
 		return Radicle, nil
 	}

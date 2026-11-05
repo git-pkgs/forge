@@ -23,17 +23,18 @@ const RIDPrefix = "rad:"
 
 const maxErrorBodyBytes = 1 << 16
 
+// maxResponseBytes caps how much of a successful response is read, since the
+// node can be any seed the user points at. Blob JSON and raw files carry
+// whole file contents, so the cap is sized for large files. It is a variable
+// so tests can lower it.
+var maxResponseBytes int64 = 32 << 20
+
 type radicleForge struct {
 	baseURL    string
 	httpClient *http.Client
 }
 
-// New creates a Radicle forge backend for the radicle-httpd node at baseURL.
-//
-// The token is ignored. Every endpoint the backend uses is public and
-// read-only, and the token passed in is often the generic FORGE_TOKEN
-// fallback meant for another forge, so sending it would only leak it to the
-// node. The parameter is kept so New matches the ForgeBuilders signature.
+// New creates a Radicle forge backend. The token is ignored because every endpoint it uses is public.
 func New(baseURL, _ string, hc *http.Client) forges.Forge {
 	if hc == nil {
 		hc = http.DefaultClient
@@ -140,21 +141,32 @@ func (f *radicleForge) get(ctx context.Context, u, accept string) (io.ReadCloser
 }
 
 func (f *radicleForge) getJSON(ctx context.Context, u string, v any) error {
-	body, err := f.get(ctx, u, "application/json")
+	data, err := f.getRaw(ctx, u, "application/json")
 	if err != nil {
 		return err
 	}
-	defer func() { _ = body.Close() }()
-	return json.NewDecoder(body).Decode(v)
+	return json.Unmarshal(data, v)
 }
 
-func (f *radicleForge) getRaw(ctx context.Context, u string) ([]byte, error) {
-	body, err := f.get(ctx, u, "*/*")
+func (f *radicleForge) getRaw(ctx context.Context, u, accept string) ([]byte, error) {
+	body, err := f.get(ctx, u, accept)
 	if err != nil {
 		return nil, err
 	}
 	defer func() { _ = body.Close() }()
-	return io.ReadAll(body)
+	return readLimited(body, u, maxResponseBytes)
+}
+
+// readLimited reads at most limit bytes from r and fails if there is more.
+func readLimited(r io.Reader, u string, limit int64) ([]byte, error) {
+	data, err := io.ReadAll(io.LimitReader(r, limit+1))
+	if err != nil {
+		return nil, err
+	}
+	if int64(len(data)) > limit {
+		return nil, fmt.Errorf("radicle response from %s exceeds %d bytes", u, limit)
+	}
+	return data, nil
 }
 
 // rawPath returns the URL radicle-httpd serves a file's raw bytes at. Unlike

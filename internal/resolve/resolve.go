@@ -159,11 +159,8 @@ func repoFromFlag(flagRepo, flagForgeType string) (forges.Forge, string, string,
 	return f, owner, repo, domain, nil
 }
 
-// splitRadicleRepo reports whether flagRepo names a Radicle repository, given
-// as rad:<RID> or HOST/rad:<RID>, and splits off the host when there is one.
 // hasHost is true whenever a host part was given, even an empty one, so that
-// "/rad:<RID>" is rejected rather than treated as a bare ID. Radicle
-// repositories have no owner, so the OWNER/REPO rules do not apply.
+// "/rad:<RID>" is rejected rather than treated as a bare ID.
 func splitRadicleRepo(flagRepo string) (host string, hasHost bool, rid string, ok bool) {
 	i := strings.LastIndex(flagRepo, "/")
 	rid = flagRepo[i+1:]
@@ -176,12 +173,7 @@ func splitRadicleRepo(flagRepo string) (host string, hasHost bool, rid string, o
 	return "", false, rid, true
 }
 
-// radicleRepoFromFlag builds a Radicle forge for -R rad:<RID> or
-// -R HOST/rad:<RID>. The rad: prefix already identifies the forge type, so
-// no detection runs. Without a host in the flag, the node comes from --host,
-// FORGE_HOST or a user config section with type = radicle. There is deliberately
-// no default node, so a repository ID is never sent to a seed the user did
-// not choose.
+// There is deliberately no default node, so a RID never goes to a seed the user did not choose.
 func radicleRepoFromFlag(host string, hasHost bool, rid, flagForgeType string) (forges.Forge, string, string, string, error) {
 	ft := flagForgeType
 	if ft == "" {

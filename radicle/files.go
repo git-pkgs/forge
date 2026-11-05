@@ -61,7 +61,7 @@ func (s *fileService) Get(ctx context.Context, owner, repo, filePath, ref string
 	content := []byte(blob.Content)
 	if blob.Binary {
 		// The JSON API leaves out the content of binary files.
-		content, err = s.f.getRaw(ctx, s.f.rawPath(info.RID, sha, segments))
+		content, err = s.f.getRaw(ctx, s.f.rawPath(info.RID, sha, segments), "*/*")
 		if err != nil {
 			return nil, err
 		}

@@ -172,6 +172,54 @@ func TestRepoGetHTTPError(t *testing.T) {
 	}
 }
 
+// setMaxResponseBytes lowers the response cap for one test.
+func setMaxResponseBytes(t *testing.T, n int64) {
+	t.Helper()
+	old := maxResponseBytes
+	maxResponseBytes = n
+	t.Cleanup(func() { maxResponseBytes = old })
+}
+
+func TestOversizedJSONResponseIsRejected(t *testing.T) {
+	srv := newTestServer(t)
+	setMaxResponseBytes(t, int64(len(testRepoJSON)-1))
+
+	_, err := New(srv.URL, "", srv.Client()).Repos().Get(context.Background(), "", testRID)
+	if err == nil || !strings.Contains(err.Error(), "exceeds") {
+		t.Fatalf("error = %v, want size limit error", err)
+	}
+}
+
+func TestOversizedRawResponseIsRejected(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case strings.HasPrefix(r.URL.Path, "/raw/"):
+			_, _ = w.Write([]byte(strings.Repeat("x", 4096)))
+		case strings.Contains(r.URL.Path, "/blob/"):
+			_, _ = fmt.Fprint(w, `{"binary":true,"name":"big.bin","path":"big.bin"}`)
+		default:
+			_, _ = fmt.Fprint(w, testRepoJSON)
+		}
+	}))
+	t.Cleanup(srv.Close)
+	setMaxResponseBytes(t, 4095)
+
+	_, err := New(srv.URL, "", srv.Client()).Files().Get(context.Background(), "", testRID, "big.bin", "")
+	if err == nil || !strings.Contains(err.Error(), "exceeds 4095 bytes") {
+		t.Fatalf("error = %v, want size limit error", err)
+	}
+}
+
+func TestResponseAtLimitIsAccepted(t *testing.T) {
+	data, err := readLimited(strings.NewReader("abcd"), "http://node.example", 4)
+	if err != nil || string(data) != "abcd" {
+		t.Fatalf("readLimited at the limit = %q, %v", data, err)
+	}
+	if _, err := readLimited(strings.NewReader("abcde"), "http://node.example", 4); err == nil {
+		t.Fatal("readLimited over the limit succeeded")
+	}
+}
+
 func TestUnfollowedRedirectIsAnError(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if strings.HasPrefix(r.URL.Path, "/raw/") {
