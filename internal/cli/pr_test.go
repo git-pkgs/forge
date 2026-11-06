@@ -3,6 +3,7 @@ package cli
 import (
 	"bytes"
 	"context"
+	"errors"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -164,6 +165,276 @@ func TestPRCreatePushesHeadBranch(t *testing.T) {
 	base := gitOutput(t, dir, "config", "--local", "--get", "branch.feature.forge-merge-base")
 	if base != "main" {
 		t.Fatalf("cached base branch = %q, want %q", base, "main")
+	}
+}
+
+// fillRepo creates a repository with a main branch mirrored at origin/main and
+// a checked out feature branch holding the commits given as -m argument lists.
+func fillRepo(t *testing.T, commits ...[]string) string {
+	t.Helper()
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not installed")
+	}
+
+	dir := t.TempDir()
+	remoteDir := filepath.Join(t.TempDir(), "remote.git")
+	t.Chdir(dir)
+	mustGit(t, "", "init", "--bare", "-q", remoteDir)
+	mustGit(t, dir, "init", "-q", "-b", "main")
+	mustGit(t, dir, "config", "user.email", "test@test.com")
+	mustGit(t, dir, "config", "user.name", "Test")
+	mustGit(t, dir, "commit", "-q", "--allow-empty", "-m", "initial commit")
+	mustGit(t, dir, "remote", "add", "origin", remoteDir)
+	mustGit(t, dir, "push", "-q", "origin", "main")
+	mustGit(t, dir, "checkout", "-q", "-b", "add-new_feature")
+	for _, message := range commits {
+		args := []string{"commit", "-q", "--allow-empty"}
+		for _, paragraph := range message {
+			args = append(args, "-m", paragraph)
+		}
+		mustGit(t, dir, args...)
+	}
+	return dir
+}
+
+type mockDefaultBranchRepoService struct {
+	forges.RepoService
+	defaultBranch string
+	err           error
+}
+
+func (m *mockDefaultBranchRepoService) Get(_ context.Context, _, _ string) (*forges.Repository, error) {
+	if m.err != nil {
+		return nil, m.err
+	}
+	return &forges.Repository{DefaultBranch: m.defaultBranch}, nil
+}
+
+func setFillForge(t *testing.T, repos forges.RepoService) *mockPRService {
+	t.Helper()
+	prs := &mockPRService{createResult: &forges.PullRequest{Number: 1, HTMLURL: "https://example.com/pulls/1"}}
+	resolve.SetTestForge(&mockForge{prService: prs, repoService: repos}, "owner", "repo", "example.com")
+	t.Cleanup(resolve.ResetTestForge)
+	resolve.SetRemote("origin")
+	return prs
+}
+
+func TestPRCreateFill(t *testing.T) {
+	tests := []struct {
+		name      string
+		commits   [][]string
+		args      []string
+		wantTitle string
+		wantBody  string
+	}{
+		{
+			name:      "single commit supplies title and body",
+			commits:   [][]string{{"Add the thing", "Explains why.\n\nIn detail."}},
+			wantTitle: "Add the thing",
+			wantBody:  "Explains why.\n\nIn detail.",
+		},
+		{
+			name:      "single commit without a body",
+			commits:   [][]string{{"Add the thing"}},
+			wantTitle: "Add the thing",
+		},
+		{
+			name:      "several commits use the branch name and list subjects oldest first",
+			commits:   [][]string{{"First change", "Ignored body"}, {"Second change"}},
+			wantTitle: "add new feature",
+			wantBody:  "- First change\n- Second change",
+		},
+		{
+			name:      "explicit title wins",
+			commits:   [][]string{{"Add the thing", "Commit body"}},
+			args:      []string{"--title", "Explicit title"},
+			wantTitle: "Explicit title",
+			wantBody:  "Commit body",
+		},
+		{
+			name:      "explicit body wins",
+			commits:   [][]string{{"Add the thing", "Commit body"}},
+			args:      []string{"--body", "Explicit body"},
+			wantTitle: "Add the thing",
+			wantBody:  "Explicit body",
+		},
+		{
+			name:      "explicitly empty body wins",
+			commits:   [][]string{{"Add the thing", "Commit body"}},
+			args:      []string{"--body", ""},
+			wantTitle: "Add the thing",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fillRepo(t, tt.commits...)
+			prs := setFillForge(t, &mockDefaultBranchRepoService{defaultBranch: "main"})
+
+			cmd := prCreateCmd()
+			cmd.SetArgs(append([]string{"--fill"}, tt.args...))
+			if err := cmd.Execute(); err != nil {
+				t.Fatalf("pr create --fill: %v", err)
+			}
+
+			if prs.createCalls != 1 {
+				t.Fatalf("Create calls = %d, want 1", prs.createCalls)
+			}
+			if prs.createOpts.Title != tt.wantTitle {
+				t.Errorf("title = %q, want %q", prs.createOpts.Title, tt.wantTitle)
+			}
+			if prs.createOpts.Body != tt.wantBody {
+				t.Errorf("body = %q, want %q", prs.createOpts.Body, tt.wantBody)
+			}
+			if prs.createOpts.Head != "add-new_feature" {
+				t.Errorf("head = %q, want the current branch", prs.createOpts.Head)
+			}
+			if prs.createOpts.Base != "main" {
+				t.Errorf("base = %q, want the default branch", prs.createOpts.Base)
+			}
+		})
+	}
+}
+
+func TestPRCreateFillPrefersRemoteBase(t *testing.T) {
+	dir := fillRepo(t, []string{"Feature change"})
+	// origin/main has moved past the local main and the feature branch is built
+	// on it, so only the newest commit is part of the pull request.
+	mustGit(t, dir, "commit", "-q", "--allow-empty", "-m", "Second feature change")
+	mustGit(t, dir, "update-ref", "refs/remotes/origin/main", gitOutput(t, dir, "rev-parse", "HEAD~1"))
+	prs := setFillForge(t, &mockDefaultBranchRepoService{defaultBranch: "main"})
+
+	cmd := prCreateCmd()
+	cmd.SetArgs([]string{"--fill"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("pr create --fill: %v", err)
+	}
+	if prs.createOpts.Title != "Second feature change" {
+		t.Errorf("title = %q, want only the commit missing from origin/main", prs.createOpts.Title)
+	}
+}
+
+func TestPRCreateFillFallsBackToLocalBase(t *testing.T) {
+	dir := fillRepo(t, []string{"Feature change"})
+	mustGit(t, dir, "branch", "develop", "main")
+	prs := setFillForge(t, &mockDefaultBranchRepoService{defaultBranch: "main"})
+
+	cmd := prCreateCmd()
+	cmd.SetArgs([]string{"--fill", "--base", "develop"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("pr create --fill: %v", err)
+	}
+	if prs.createOpts.Base != "develop" {
+		t.Errorf("base = %q, want %q", prs.createOpts.Base, "develop")
+	}
+	if prs.createOpts.Title != "Feature change" {
+		t.Errorf("title = %q, want %q", prs.createOpts.Title, "Feature change")
+	}
+}
+
+func TestPRCreateFillExplicitHead(t *testing.T) {
+	dir := fillRepo(t, []string{"Feature change"})
+	mustGit(t, dir, "checkout", "-q", "main")
+	prs := setFillForge(t, &mockDefaultBranchRepoService{defaultBranch: "main"})
+	prs.qualifiedHeads = true
+
+	cmd := prCreateCmd()
+	cmd.SetArgs([]string{"--fill", "--head", "forkowner:add-new_feature"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("pr create --fill: %v", err)
+	}
+	if prs.createOpts.Head != "forkowner:add-new_feature" {
+		t.Errorf("head = %q, want the qualified head", prs.createOpts.Head)
+	}
+	if prs.createOpts.Title != "Feature change" {
+		t.Errorf("title = %q, want %q", prs.createOpts.Title, "Feature change")
+	}
+}
+
+func TestPRCreateFillDoesNotPushOnFailure(t *testing.T) {
+	dir := fillRepo(t)
+	prs := setFillForge(t, &mockDefaultBranchRepoService{defaultBranch: "main"})
+
+	cmd := prCreateCmd()
+	cmd.SetArgs([]string{"--fill", "--push"})
+	err := cmd.Execute()
+	if err == nil || !strings.Contains(err.Error(), "no commits") {
+		t.Fatalf("pr create --fill error = %v, want no-commits error", err)
+	}
+	if prs.createCalls != 0 {
+		t.Errorf("Create calls = %d, want 0", prs.createCalls)
+	}
+	remoteURL := gitOutput(t, dir, "remote", "get-url", "origin")
+	if out := gitOutput(t, "", "--git-dir", remoteURL, "branch", "--list", "add-new_feature"); out != "" {
+		t.Errorf("head branch was pushed: %q", out)
+	}
+}
+
+func TestPRCreateFillErrors(t *testing.T) {
+	lookupErr := errors.New("lookup failed")
+	tests := []struct {
+		name  string
+		repos forges.RepoService
+		setup func(t *testing.T, dir string)
+		args  []string
+		want  string
+	}{
+		{
+			name:  "default branch lookup fails",
+			repos: &mockDefaultBranchRepoService{err: lookupErr},
+			want:  "looking up default branch: lookup failed",
+		},
+		{
+			name:  "repository has no default branch",
+			repos: &mockDefaultBranchRepoService{},
+			want:  "use --base",
+		},
+		{
+			name: "base branch missing locally",
+			args: []string{"--base", "missing"},
+			want: `base branch "missing" not found locally`,
+		},
+		{
+			name: "head branch missing locally",
+			args: []string{"--head", "missing"},
+			want: `head branch "missing" not found locally`,
+		},
+		{
+			name: "invalid qualified head",
+			args: []string{"--head", ":feature"},
+			want: "invalid qualified head",
+		},
+		{
+			name: "detached HEAD",
+			setup: func(t *testing.T, dir string) {
+				mustGit(t, dir, "checkout", "-q", "--detach")
+			},
+			want: "--head is required when not on a branch",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dir := fillRepo(t, []string{"Feature change"})
+			if tt.setup != nil {
+				tt.setup(t, dir)
+			}
+			repos := tt.repos
+			if repos == nil {
+				repos = &mockDefaultBranchRepoService{defaultBranch: "main"}
+			}
+			prs := setFillForge(t, repos)
+
+			cmd := prCreateCmd()
+			cmd.SetArgs(append([]string{"--fill"}, tt.args...))
+			err := cmd.Execute()
+			if err == nil || !strings.Contains(err.Error(), tt.want) {
+				t.Fatalf("pr create --fill error = %v, want %q", err, tt.want)
+			}
+			if prs.createCalls != 0 {
+				t.Errorf("Create calls = %d, want 0", prs.createCalls)
+			}
+		})
 	}
 }
 

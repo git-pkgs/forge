@@ -131,6 +131,37 @@ func CurrentBranch(ctx context.Context, dir string) (string, error) {
 	return branch, nil
 }
 
+// Commit holds the message of a single commit.
+type Commit struct {
+	Subject string
+	Body    string
+}
+
+// CommitsBetween returns the non-merge commits reachable from headRef but not
+// from baseRef, oldest first.
+func CommitsBetween(ctx context.Context, dir, baseRef, headRef string) ([]Commit, error) {
+	out, err := runGit(ctx, dir, "-c", "log.showSignature=false", "log", "--no-merges", "--reverse",
+		"--format=%s%x00%b%x00", baseRef+".."+headRef)
+	if err != nil {
+		return nil, err
+	}
+	fields := strings.Split(out, "\x00")
+	commits := make([]Commit, 0, len(fields)/2)
+	for i := 0; i+1 < len(fields); i += 2 {
+		commits = append(commits, Commit{
+			Subject: strings.TrimSpace(fields[i]),
+			Body:    strings.TrimSpace(fields[i+1]),
+		})
+	}
+	return commits, nil
+}
+
+// RefExists reports whether the fully qualified ref exists.
+func RefExists(ctx context.Context, dir, ref string) bool {
+	_, err := runGit(ctx, dir, "show-ref", "--verify", "--quiet", ref)
+	return err == nil
+}
+
 // PushBranch pushes a local branch to the same branch name on a remote. It
 // configures upstream tracking only when the remote fetches from and pushes to
 // the same repository, so a fork push URL cannot replace existing tracking for

@@ -20,6 +20,7 @@ The CLI detects which forge to use from your git remote, or you can set it with 
 forge repo view
 forge issue list --state open
 forge pr create --title "Fix bug" --head fix-branch
+forge pr create --fill
 forge pr review approve 42
 forge pr reviewer request 42 alice bob
 forge release list
