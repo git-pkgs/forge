@@ -657,6 +657,133 @@ func (t rewriteHostTransport) RoundTrip(req *http.Request) (*http.Response, erro
 	return http.DefaultTransport.RoundTrip(clone)
 }
 
+// detectionTransport identifies every host as Gitea and records the requested
+// URLs. It lets tests exercise https and scp-like URLs without a real server.
+type detectionTransport struct {
+	urls []string
+}
+
+func (rt *detectionTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	rt.urls = append(rt.urls, req.URL.String())
+	return &http.Response{
+		StatusCode: http.StatusOK,
+		Header:     http.Header{"X-Gitea-Version": []string{"1.22.0"}},
+		Body:       http.NoBody,
+		Request:    req,
+	}, nil
+}
+
+func TestForgeForURLWithoutDetectionDoesNotProbe(t *testing.T) {
+	rt := &detectionTransport{}
+	c := NewClient(WithHTTPClient(&http.Client{Transport: rt}))
+
+	_, _, _, err := c.ForgeForURL(context.Background(), "https://git.example.com/owner/repo")
+	if err == nil || !strings.Contains(err.Error(), "no forge registered") {
+		t.Fatalf("ForgeForURL error = %v, want no forge registered", err)
+	}
+	if len(rt.urls) != 0 {
+		t.Errorf("probed %v, want no requests", rt.urls)
+	}
+}
+
+func TestForgeForURLDetection(t *testing.T) {
+	tests := []struct {
+		name        string
+		repoURL     string
+		wantDomain  string
+		wantBaseURL string
+	}{
+		{"https", "https://git.example.com/owner/repo.git", "git.example.com", "https://git.example.com"},
+		{"http with port", "http://git.example.com:3000/owner/repo", "git.example.com:3000", "http://git.example.com:3000"},
+		{"uppercase http scheme", "HTTP://git.example.com/owner/repo", "git.example.com", "http://git.example.com"},
+		{"bare host", "git.example.com/owner/repo", "git.example.com", "https://git.example.com"},
+		{"scp-like", "git@git.example.com:owner/repo.git", "git.example.com", "https://git.example.com"},
+		{"ssh with port", "ssh://git@git.example.com:2222/owner/repo.git", "git.example.com", "https://git.example.com"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var gotBaseURL, gotToken string
+			want := &mockForge{}
+			c := NewClient(
+				WithHTTPClient(&http.Client{Transport: &detectionTransport{}}),
+				WithToken(tt.wantDomain, "tok"),
+				WithDetection(ForgeBuilders{
+					Gitea: func(baseURL, token string, _ *http.Client) Forge {
+						gotBaseURL, gotToken = baseURL, token
+						return want
+					},
+				}),
+			)
+
+			f, owner, repo, err := c.ForgeForURL(context.Background(), tt.repoURL)
+			if err != nil {
+				t.Fatalf("ForgeForURL: %v", err)
+			}
+			if f != Forge(want) {
+				t.Errorf("forge = %T, want the built forge", f)
+			}
+			assertEqual(t, "owner", "owner", owner)
+			assertEqual(t, "repo", "repo", repo)
+			assertEqual(t, "baseURL", tt.wantBaseURL, gotBaseURL)
+			assertEqual(t, "token", "tok", gotToken)
+			if _, err := c.ForgeFor(tt.wantDomain); err != nil {
+				t.Errorf("ForgeFor(%q): %v", tt.wantDomain, err)
+			}
+		})
+	}
+}
+
+func TestForgeForURLInvalidURL(t *testing.T) {
+	rt := &detectionTransport{}
+	c := NewClient(WithHTTPClient(&http.Client{Transport: rt}), WithDetection(ForgeBuilders{}))
+	if _, _, _, err := c.ForgeForURL(context.Background(), "https://git.example.com/owner"); err == nil {
+		t.Fatal("expected error for URL without a repo")
+	}
+	if len(rt.urls) != 0 {
+		t.Errorf("probed %v, want no requests", rt.urls)
+	}
+}
+
+func TestClientMethodsDetectOnFirstUse(t *testing.T) {
+	builders := ForgeBuilders{
+		Gitea: func(string, string, *http.Client) Forge {
+			return &mockForge{
+				repoService: &mockRepoService{
+					repos: []Repository{{FullName: "owner/repo"}},
+					tags:  []Tag{{Name: "v1"}},
+					repo:  &Repository{FullName: "owner/repo"},
+				},
+				commitService: &mockCommitService{sha: "abc"},
+			}
+		},
+	}
+	newClient := func() *Client {
+		return NewClient(WithHTTPClient(&http.Client{Transport: &detectionTransport{}}), WithDetection(builders))
+	}
+	ctx := context.Background()
+	repoURL := "https://git.example.com/owner/repo"
+
+	if r, err := newClient().FetchRepository(ctx, repoURL); err != nil || r.FullName != "owner/repo" {
+		t.Errorf("FetchRepository = %+v, %v", r, err)
+	}
+	if tags, err := newClient().FetchTags(ctx, repoURL); err != nil || len(tags) != 1 {
+		t.Errorf("FetchTags = %+v, %v", tags, err)
+	}
+	if repos, err := newClient().ListRepositories(ctx, "git.example.com", "owner", ListRepoOpts{}); err != nil || len(repos) != 1 {
+		t.Errorf("ListRepositories = %+v, %v", repos, err)
+	}
+	if sha, err := newClient().ResolveCommit(ctx, repoURL, "main"); err != nil || sha != "abc" {
+		t.Errorf("ResolveCommit = %q, %v", sha, err)
+	}
+}
+
+func TestTokensReturnsCopy(t *testing.T) {
+	c := NewClient(WithToken("github.com", "tok"))
+	c.Tokens()["github.com"] = "changed"
+	assertEqual(t, "token", "tok", c.Tokens()["github.com"])
+}
+
 func TestClientListRepositoriesRoutes(t *testing.T) {
 	mock := &mockForge{
 		repoService: &mockRepoService{
