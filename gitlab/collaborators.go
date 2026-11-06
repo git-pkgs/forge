@@ -87,7 +87,7 @@ func (s *gitLabCollaboratorService) List(ctx context.Context, owner, repo string
 			if resp != nil && resp.StatusCode == http.StatusNotFound {
 				return nil, forge.ErrNotFound
 			}
-			return nil, err
+			return nil, wrapErr(err)
 		}
 		for _, m := range members {
 			all = append(all, convertGitLabMember(m))
@@ -113,7 +113,7 @@ func (s *gitLabCollaboratorService) Add(ctx context.Context, owner, repo, userna
 		Username: gitlab.Ptr(username),
 	})
 	if err != nil {
-		return err
+		return wrapErr(err)
 	}
 	if len(users) == 0 {
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
@@ -132,7 +132,7 @@ func (s *gitLabCollaboratorService) Add(ctx context.Context, owner, repo, userna
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return forge.ErrNotFound
 		}
-		return err
+		return wrapErr(err)
 	}
 	return nil
 }
@@ -146,7 +146,7 @@ func (s *gitLabCollaboratorService) Remove(ctx context.Context, owner, repo, use
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return forge.ErrNotFound
 		}
-		return err
+		return wrapErr(err)
 	}
 
 	var userID int64
@@ -167,7 +167,7 @@ func (s *gitLabCollaboratorService) Remove(ctx context.Context, owner, repo, use
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return forge.ErrNotFound
 		}
-		return err
+		return wrapErr(err)
 	}
 	return nil
 }

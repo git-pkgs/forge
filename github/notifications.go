@@ -148,7 +148,7 @@ func (s *gitHubNotificationService) listRepoNotifications(ctx context.Context, o
 			if resp != nil && resp.StatusCode == http.StatusNotFound {
 				return nil, forge.ErrNotFound
 			}
-			return nil, err
+			return nil, wrapErr(err)
 		}
 		for _, n := range notifications {
 			all = append(all, convertGitHubNotification(n))
@@ -166,7 +166,7 @@ func (s *gitHubNotificationService) listAllNotifications(ctx context.Context, gh
 	for {
 		notifications, resp, err := s.client.Activity.ListNotifications(ctx, ghOpts)
 		if err != nil {
-			return nil, err
+			return nil, wrapErr(err)
 		}
 		for _, n := range notifications {
 			all = append(all, convertGitHubNotification(n))
@@ -186,7 +186,7 @@ func (s *gitHubNotificationService) MarkRead(ctx context.Context, opts forge.Mar
 			if resp != nil && resp.StatusCode == http.StatusNotFound {
 				return forge.ErrNotFound
 			}
-			return err
+			return wrapErr(err)
 		}
 		return nil
 	}
@@ -198,7 +198,7 @@ func (s *gitHubNotificationService) MarkRead(ctx context.Context, opts forge.Mar
 				if resp != nil && resp.StatusCode == http.StatusNotFound {
 					return forge.ErrNotFound
 				}
-				return err
+				return wrapErr(err)
 			}
 			return nil
 		}
@@ -209,7 +209,7 @@ func (s *gitHubNotificationService) MarkRead(ctx context.Context, opts forge.Mar
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return forge.ErrNotFound
 		}
-		return err
+		return wrapErr(err)
 	}
 	return nil
 }
@@ -220,7 +220,7 @@ func (s *gitHubNotificationService) Get(ctx context.Context, id string) (*forge.
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return nil, forge.ErrNotFound
 		}
-		return nil, err
+		return nil, wrapErr(err)
 	}
 	result := convertGitHubNotification(n)
 	return &result, nil

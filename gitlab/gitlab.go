@@ -94,7 +94,7 @@ func (s *gitLabRepoService) Get(ctx context.Context, owner, repo string) (*forge
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return nil, forge.ErrNotFound
 		}
-		return nil, err
+		return nil, wrapErr(err)
 	}
 
 	result := convertGitLabProject(p)
@@ -134,7 +134,7 @@ func (s *gitLabRepoService) listGroupProjects(_ context.Context, group string, p
 			if resp != nil && resp.StatusCode == http.StatusNotFound {
 				return nil, forge.ErrOwnerNotFound
 			}
-			return nil, err
+			return nil, wrapErr(err)
 		}
 		for _, p := range projects {
 			repo := convertGitLabProject(p)
@@ -166,7 +166,7 @@ func (s *gitLabRepoService) listUserProjects(_ context.Context, user string, per
 			if resp != nil && resp.StatusCode == http.StatusNotFound {
 				return nil, forge.ErrOwnerNotFound
 			}
-			return nil, err
+			return nil, wrapErr(err)
 		}
 		for _, p := range projects {
 			repo := convertGitLabProject(p)
@@ -228,7 +228,7 @@ func (s *gitLabRepoService) Create(ctx context.Context, opts forge.CreateRepoOpt
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return nil, forge.ErrOwnerNotFound
 		}
-		return nil, err
+		return nil, wrapErr(err)
 	}
 
 	result := convertGitLabProject(p)
@@ -270,7 +270,7 @@ func (s *gitLabRepoService) Edit(ctx context.Context, owner, repo string, opts f
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return nil, forge.ErrNotFound
 		}
-		return nil, err
+		return nil, wrapErr(err)
 	}
 
 	result := convertGitLabProject(p)
@@ -284,7 +284,7 @@ func (s *gitLabRepoService) Delete(ctx context.Context, owner, repo string) erro
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return forge.ErrNotFound
 		}
-		return err
+		return wrapErr(err)
 	}
 	return nil
 }
@@ -305,7 +305,7 @@ func (s *gitLabRepoService) Fork(ctx context.Context, owner, repo string, opts f
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return nil, forge.ErrNotFound
 		}
-		return nil, err
+		return nil, wrapErr(err)
 	}
 
 	result := convertGitLabProject(p)
@@ -337,7 +337,7 @@ func (s *gitLabRepoService) ListForks(ctx context.Context, owner, repo string, o
 			if resp != nil && resp.StatusCode == http.StatusNotFound {
 				return nil, forge.ErrNotFound
 			}
-			return nil, err
+			return nil, wrapErr(err)
 		}
 		for _, p := range projects {
 			all = append(all, convertGitLabProject(p))
@@ -367,7 +367,7 @@ func (s *gitLabRepoService) ListTags(ctx context.Context, owner, repo string) ([
 			if resp != nil && resp.StatusCode == http.StatusNotFound {
 				return nil, forge.ErrNotFound
 			}
-			return nil, err
+			return nil, wrapErr(err)
 		}
 		for _, t := range tags {
 			tag := forge.Tag{Name: t.Name}
@@ -396,7 +396,7 @@ func (s *gitLabRepoService) ListContributors(ctx context.Context, owner, repo st
 			if resp != nil && resp.StatusCode == http.StatusNotFound {
 				return nil, forge.ErrNotFound
 			}
-			return nil, err
+			return nil, wrapErr(err)
 		}
 		for _, c := range contributors {
 			all = append(all, forge.Contributor{
@@ -435,7 +435,7 @@ func (s *gitLabRepoService) Search(ctx context.Context, opts forge.SearchRepoOpt
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return nil, nil
 		}
-		return nil, err
+		return nil, wrapErr(err)
 	}
 
 	var repos []forge.Repository

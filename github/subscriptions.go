@@ -31,7 +31,7 @@ func gitHubSubscriptionRequest(opts forge.SetSubscriptionOpts) *github.Subscript
 func (s *gitHubNotificationService) GetRepoSubscription(ctx context.Context, owner, repo string) (*forge.Subscription, error) {
 	sub, _, err := s.client.Activity.GetRepositorySubscription(ctx, owner, repo)
 	if err != nil {
-		return nil, err
+		return nil, wrapErr(err)
 	}
 	return convertGitHubSubscription(sub), nil
 }
@@ -42,7 +42,7 @@ func (s *gitHubNotificationService) SetRepoSubscription(ctx context.Context, own
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return nil, forge.ErrNotFound
 		}
-		return nil, err
+		return nil, wrapErr(err)
 	}
 	return convertGitHubSubscription(sub), nil
 }
@@ -53,7 +53,7 @@ func (s *gitHubNotificationService) DeleteRepoSubscription(ctx context.Context, 
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return forge.ErrNotFound
 		}
-		return err
+		return wrapErr(err)
 	}
 	return nil
 }
@@ -64,7 +64,7 @@ func (s *gitHubNotificationService) GetThreadSubscription(ctx context.Context, i
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return nil, forge.ErrNotFound
 		}
-		return nil, err
+		return nil, wrapErr(err)
 	}
 	return convertGitHubSubscription(sub), nil
 }
@@ -75,7 +75,7 @@ func (s *gitHubNotificationService) SetThreadSubscription(ctx context.Context, i
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return nil, forge.ErrNotFound
 		}
-		return nil, err
+		return nil, wrapErr(err)
 	}
 	return convertGitHubSubscription(sub), nil
 }
@@ -86,7 +86,7 @@ func (s *gitHubNotificationService) DeleteThreadSubscription(ctx context.Context
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return forge.ErrNotFound
 		}
-		return err
+		return wrapErr(err)
 	}
 	return nil
 }

@@ -77,7 +77,7 @@ func (s *gitHubReviewService) List(ctx context.Context, owner, repo string, numb
 			if resp != nil && resp.StatusCode == http.StatusNotFound {
 				return nil, forge.ErrNotFound
 			}
-			return nil, err
+			return nil, wrapErr(err)
 		}
 		for _, r := range reviews {
 			all = append(all, convertGitHubReview(r))
@@ -118,7 +118,7 @@ func (s *gitHubReviewService) Submit(ctx context.Context, owner, repo string, nu
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return nil, forge.ErrNotFound
 		}
-		return nil, err
+		return nil, wrapErr(err)
 	}
 	result := convertGitHubReview(review)
 	return &result, nil
@@ -132,7 +132,7 @@ func (s *gitHubReviewService) RequestReviewers(ctx context.Context, owner, repo 
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return forge.ErrNotFound
 		}
-		return err
+		return wrapErr(err)
 	}
 	return nil
 }
@@ -145,7 +145,7 @@ func (s *gitHubReviewService) RemoveReviewers(ctx context.Context, owner, repo s
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return forge.ErrNotFound
 		}
-		return err
+		return wrapErr(err)
 	}
 	return nil
 }

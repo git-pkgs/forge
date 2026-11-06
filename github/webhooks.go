@@ -49,7 +49,7 @@ func (s *gitHubWebhookService) List(ctx context.Context, owner, repo string, opt
 			if resp != nil && resp.StatusCode == http.StatusNotFound {
 				return nil, forge.ErrNotFound
 			}
-			return nil, err
+			return nil, wrapErr(err)
 		}
 		for _, h := range hooks {
 			all = append(all, convertGitHubHook(h))
@@ -73,7 +73,7 @@ func (s *gitHubWebhookService) Get(ctx context.Context, owner, repo string, id i
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return nil, forge.ErrNotFound
 		}
-		return nil, err
+		return nil, wrapErr(err)
 	}
 
 	result := convertGitHubHook(h)
@@ -108,7 +108,7 @@ func (s *gitHubWebhookService) Create(ctx context.Context, owner, repo string, o
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return nil, forge.ErrNotFound
 		}
-		return nil, err
+		return nil, wrapErr(err)
 	}
 
 	result := convertGitHubHook(h)
@@ -121,7 +121,7 @@ func (s *gitHubWebhookService) Delete(ctx context.Context, owner, repo string, i
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return forge.ErrNotFound
 		}
-		return err
+		return wrapErr(err)
 	}
 	return nil
 }

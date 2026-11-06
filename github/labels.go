@@ -43,7 +43,7 @@ func (s *gitHubLabelService) List(ctx context.Context, owner, repo string, opts 
 			if resp != nil && resp.StatusCode == http.StatusNotFound {
 				return nil, forge.ErrNotFound
 			}
-			return nil, err
+			return nil, wrapErr(err)
 		}
 		for _, l := range labels {
 			all = append(all, convertGitHubLabel(l))
@@ -67,7 +67,7 @@ func (s *gitHubLabelService) Get(ctx context.Context, owner, repo, name string) 
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return nil, forge.ErrNotFound
 		}
-		return nil, err
+		return nil, wrapErr(err)
 	}
 	result := convertGitHubLabel(l)
 	return &result, nil
@@ -90,7 +90,7 @@ func (s *gitHubLabelService) Create(ctx context.Context, owner, repo string, opt
 				return nil, forge.ErrLabelExists
 			}
 		}
-		return nil, err
+		return nil, wrapErr(err)
 	}
 	result := convertGitHubLabel(l)
 	return &result, nil
@@ -122,7 +122,7 @@ func (s *gitHubLabelService) Update(ctx context.Context, owner, repo, name strin
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return nil, forge.ErrNotFound
 		}
-		return nil, err
+		return nil, wrapErr(err)
 	}
 	result := convertGitHubLabel(l)
 	return &result, nil
@@ -134,7 +134,7 @@ func (s *gitHubLabelService) Delete(ctx context.Context, owner, repo, name strin
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return forge.ErrNotFound
 		}
-		return err
+		return wrapErr(err)
 	}
 	return nil
 }

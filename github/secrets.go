@@ -41,7 +41,7 @@ func (s *gitHubSecretService) List(ctx context.Context, owner, repo string, opts
 			if resp != nil && resp.StatusCode == http.StatusNotFound {
 				return nil, forge.ErrNotFound
 			}
-			return nil, err
+			return nil, wrapErr(err)
 		}
 		for _, sec := range secrets.Secrets {
 			all = append(all, forge.Secret{
@@ -70,7 +70,7 @@ func (s *gitHubSecretService) Set(ctx context.Context, owner, repo string, opts 
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return forge.ErrNotFound
 		}
-		return err
+		return wrapErr(err)
 	}
 
 	encrypted, err := encryptSecret(pubKey.GetKey(), opts.Value)
@@ -84,7 +84,7 @@ func (s *gitHubSecretService) Set(ctx context.Context, owner, repo string, opts 
 		EncryptedValue: encrypted,
 	})
 	if err != nil {
-		return err
+		return wrapErr(err)
 	}
 	return nil
 }
@@ -95,7 +95,7 @@ func (s *gitHubSecretService) Delete(ctx context.Context, owner, repo, name stri
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return forge.ErrNotFound
 		}
-		return err
+		return wrapErr(err)
 	}
 	return nil
 }

@@ -27,7 +27,7 @@ func (s *gitLabReviewService) List(ctx context.Context, owner, repo string, numb
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return nil, forge.ErrNotFound
 		}
-		return nil, err
+		return nil, wrapErr(err)
 	}
 
 	var reviews []forge.Review
@@ -59,7 +59,7 @@ func (s *gitLabReviewService) Submit(ctx context.Context, owner, repo string, nu
 			if resp != nil && resp.StatusCode == http.StatusNotFound {
 				return nil, forge.ErrNotFound
 			}
-			return nil, err
+			return nil, wrapErr(err)
 		}
 		result := &forge.Review{State: forge.ReviewApproved}
 		return result, nil
@@ -76,7 +76,7 @@ func (s *gitLabReviewService) Submit(ctx context.Context, owner, repo string, nu
 			if resp != nil && resp.StatusCode == http.StatusNotFound {
 				return nil, forge.ErrNotFound
 			}
-			return nil, err
+			return nil, wrapErr(err)
 		}
 		result := &forge.Review{
 			ID:    int64(n.ID),
@@ -112,7 +112,7 @@ func (s *gitLabReviewService) RequestReviewers(ctx context.Context, owner, repo 
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return forge.ErrNotFound
 		}
-		return err
+		return wrapErr(err)
 	}
 	return nil
 }
@@ -126,7 +126,7 @@ func (s *gitLabReviewService) RemoveReviewers(ctx context.Context, owner, repo s
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return forge.ErrNotFound
 		}
-		return err
+		return wrapErr(err)
 	}
 
 	removeSet := make(map[string]bool)
@@ -148,7 +148,7 @@ func (s *gitLabReviewService) RemoveReviewers(ctx context.Context, owner, repo s
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return forge.ErrNotFound
 		}
-		return err
+		return wrapErr(err)
 	}
 	return nil
 }
