@@ -35,7 +35,7 @@ func (s *gitHubDeployKeyService) List(ctx context.Context, owner, repo string, o
 			if resp != nil && resp.StatusCode == http.StatusNotFound {
 				return nil, forge.ErrNotFound
 			}
-			return nil, err
+			return nil, wrapErr(err)
 		}
 		for _, k := range keys {
 			all = append(all, forge.DeployKey{
@@ -64,7 +64,7 @@ func (s *gitHubDeployKeyService) Get(ctx context.Context, owner, repo string, id
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return nil, forge.ErrNotFound
 		}
-		return nil, err
+		return nil, wrapErr(err)
 	}
 
 	return &forge.DeployKey{
@@ -85,7 +85,7 @@ func (s *gitHubDeployKeyService) Create(ctx context.Context, owner, repo string,
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return nil, forge.ErrNotFound
 		}
-		return nil, err
+		return nil, wrapErr(err)
 	}
 
 	return &forge.DeployKey{
@@ -102,7 +102,7 @@ func (s *gitHubDeployKeyService) Delete(ctx context.Context, owner, repo string,
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return forge.ErrNotFound
 		}
-		return err
+		return wrapErr(err)
 	}
 	return nil
 }

@@ -15,7 +15,7 @@ func resolveUserIDs(client *gitlab.Client, usernames []string) ([]int64, error) 
 			Username: gitlab.Ptr(username),
 		})
 		if err != nil {
-			return nil, fmt.Errorf("looking up user %q: %w", username, err)
+			return nil, fmt.Errorf("looking up user %q: %w", username, wrapErr(err))
 		}
 		if len(users) == 0 {
 			return nil, fmt.Errorf("user %q not found", username)

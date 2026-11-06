@@ -38,8 +38,9 @@ func wrapErr(op string, resp *gitea.Response, err error) error {
 		return forge.ErrNotFound
 	}
 	e := &apiError{op: op, msg: strings.TrimSpace(err.Error()), err: err}
-	if resp != nil {
-		e.status = resp.Status
+	if resp == nil {
+		return e
 	}
-	return e
+	e.status = resp.Status
+	return forge.ClassifyStatus(resp.StatusCode, e)
 }

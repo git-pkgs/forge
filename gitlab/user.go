@@ -12,7 +12,7 @@ import (
 func (f *gitLabForge) GetAuthenticatedUser(ctx context.Context) (*forge.User, error) {
 	u, _, err := f.client.Users.CurrentUser(gitlab.WithContext(ctx))
 	if err != nil {
-		return nil, err
+		return nil, wrapErr(err)
 	}
 
 	return &forge.User{

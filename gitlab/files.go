@@ -31,7 +31,7 @@ func (s *gitLabFileService) Get(ctx context.Context, owner, repo, path, ref stri
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return nil, forge.ErrNotFound
 		}
-		return nil, err
+		return nil, wrapErr(err)
 	}
 
 	var content []byte
@@ -66,7 +66,7 @@ func (s *gitLabFileService) List(ctx context.Context, owner, repo, path, ref str
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return nil, forge.ErrNotFound
 		}
-		return nil, err
+		return nil, wrapErr(err)
 	}
 
 	entries := make([]forge.FileEntry, len(nodes))
