@@ -15,7 +15,7 @@ func (f *gitLabForge) GetRateLimit(ctx context.Context) (*forge.RateLimit, error
 	// from response headers on any API call, so we make a lightweight request.
 	_, resp, err := f.client.Version.GetVersion()
 	if err != nil {
-		return nil, err
+		return nil, wrapErr(err)
 	}
 
 	limit, _ := strconv.Atoi(resp.Header.Get("RateLimit-Limit"))

@@ -1,10 +1,12 @@
 package gitea
 
 import (
+	"context"
 	"errors"
 	forge "github.com/git-pkgs/forge"
 	"net"
 	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"code.gitea.io/sdk/gitea"
@@ -60,5 +62,73 @@ func TestWrapErrUnwrapsTransportError(t *testing.T) {
 	}
 	if !errors.Is(got, inner) {
 		t.Errorf("want the innermost error in the chain, got %v", got)
+	}
+}
+
+func assertSentinel(t *testing.T, err, want error) {
+	t.Helper()
+	for _, sentinel := range []error{forge.ErrUnauthorized, forge.ErrRateLimited, forge.ErrServerError} {
+		if got := errors.Is(err, sentinel); got != (sentinel == want) {
+			t.Errorf("errors.Is(%v, %v) = %v", err, sentinel, got)
+		}
+	}
+}
+
+func TestGiteaErrorsAreClassified(t *testing.T) {
+	tests := []struct {
+		name   string
+		status int
+		want   error
+	}{
+		{"unauthorized", http.StatusUnauthorized, forge.ErrUnauthorized},
+		{"forbidden", http.StatusForbidden, forge.ErrUnauthorized},
+		{"too many requests", http.StatusTooManyRequests, forge.ErrRateLimited},
+		{"server error", http.StatusInternalServerError, forge.ErrServerError},
+		{"validation failure", http.StatusUnprocessableEntity, nil},
+	}
+	ctx := context.Background()
+	calls := map[string]func(f forge.Forge) error{
+		"repos": func(f forge.Forge) error {
+			_, err := f.Repos().Get(ctx, "owner", "repo")
+			return err
+		},
+		"issues": func(f forge.Forge) error {
+			_, err := f.Issues().Get(ctx, "owner", "repo", 1)
+			return err
+		},
+		"pull requests": func(f forge.Forge) error {
+			_, err := f.PullRequests().Get(ctx, "owner", "repo", 1)
+			return err
+		},
+		"releases": func(f forge.Forge) error {
+			_, err := f.Releases().List(ctx, "owner", "repo", forge.ListReleaseOpts{})
+			return err
+		},
+		"labels resolved with context": func(f forge.Forge) error {
+			_, err := f.Issues().Create(ctx, "owner", "repo", forge.CreateIssueOpts{Title: "t", Labels: []string{"bug"}})
+			return err
+		},
+		"rate limit": func(f forge.Forge) error {
+			_, err := f.GetRateLimit(ctx)
+			return err
+		},
+	}
+
+	for _, tt := range tests {
+		for name, call := range calls {
+			t.Run(tt.name+"/"+name, func(t *testing.T) {
+				srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					w.WriteHeader(tt.status)
+					_, _ = w.Write([]byte(`{"message":"failure"}`))
+				}))
+				defer srv.Close()
+
+				err := call(New(srv.URL, "token", srv.Client()))
+				if err == nil {
+					t.Fatal("expected an error")
+				}
+				assertSentinel(t, err, tt.want)
+			})
+		}
 	}
 }

@@ -40,7 +40,7 @@ func (s *gitLabSecretService) List(ctx context.Context, owner, repo string, opts
 			if resp != nil && resp.StatusCode == http.StatusNotFound {
 				return nil, forge.ErrNotFound
 			}
-			return nil, err
+			return nil, wrapErr(err)
 		}
 		for _, v := range vars {
 			all = append(all, forge.Secret{
@@ -78,9 +78,9 @@ func (s *gitLabSecretService) Set(ctx context.Context, owner, repo string, opts 
 				Masked:    gitlab.Ptr(true),
 				Protected: gitlab.Ptr(false),
 			})
-			return createErr
+			return wrapErr(createErr)
 		}
-		return err
+		return wrapErr(err)
 	}
 	return nil
 }
@@ -92,7 +92,7 @@ func (s *gitLabSecretService) Delete(ctx context.Context, owner, repo, name stri
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return forge.ErrNotFound
 		}
-		return err
+		return wrapErr(err)
 	}
 	return nil
 }

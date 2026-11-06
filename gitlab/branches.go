@@ -40,7 +40,7 @@ func (s *gitLabBranchService) List(ctx context.Context, owner, repo string, opts
 			if resp != nil && resp.StatusCode == http.StatusNotFound {
 				return nil, forge.ErrNotFound
 			}
-			return nil, err
+			return nil, wrapErr(err)
 		}
 		for _, b := range branches {
 			branch := forge.Branch{
@@ -78,7 +78,7 @@ func (s *gitLabBranchService) Create(ctx context.Context, owner, repo, name, fro
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return nil, forge.ErrNotFound
 		}
-		return nil, err
+		return nil, wrapErr(err)
 	}
 
 	result := forge.Branch{
@@ -98,7 +98,7 @@ func (s *gitLabBranchService) Delete(ctx context.Context, owner, repo, name stri
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return forge.ErrNotFound
 		}
-		return err
+		return wrapErr(err)
 	}
 	return nil
 }

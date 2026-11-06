@@ -108,7 +108,7 @@ func (s *gitLabNotificationService) List(ctx context.Context, opts forge.ListNot
 	for {
 		todos, resp, err := s.client.Todos.ListTodos(glOpts)
 		if err != nil {
-			return nil, err
+			return nil, wrapErr(err)
 		}
 		for _, t := range todos {
 			all = append(all, convertGitLabTodo(t))
@@ -137,7 +137,7 @@ func (s *gitLabNotificationService) MarkRead(ctx context.Context, opts forge.Mar
 			if resp != nil && resp.StatusCode == http.StatusNotFound {
 				return forge.ErrNotFound
 			}
-			return err
+			return wrapErr(err)
 		}
 		return nil
 	}
@@ -145,7 +145,7 @@ func (s *gitLabNotificationService) MarkRead(ctx context.Context, opts forge.Mar
 	// GitLab's mark-all-done endpoint doesn't support filtering by project,
 	// so for both repo-filtered and unfiltered we mark all.
 	_, err := s.client.Todos.MarkAllTodosAsDone()
-	return err
+	return wrapErr(err)
 }
 
 func (s *gitLabNotificationService) Get(ctx context.Context, id string) (*forge.Notification, error) {
@@ -159,7 +159,7 @@ func (s *gitLabNotificationService) Get(ctx context.Context, id string) (*forge.
 		ListOptions: gitlab.ListOptions{PerPage: defaultPageSize},
 	})
 	if err != nil {
-		return nil, err
+		return nil, wrapErr(err)
 	}
 
 	for _, t := range todos {

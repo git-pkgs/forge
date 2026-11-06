@@ -9,7 +9,7 @@ import (
 func (f *gitHubForge) GetRateLimit(ctx context.Context) (*forge.RateLimit, error) {
 	limits, _, err := f.client.RateLimit.Get(ctx)
 	if err != nil {
-		return nil, err
+		return nil, wrapErr(err)
 	}
 
 	if limits == nil || limits.Core == nil {

@@ -113,7 +113,7 @@ func (s *gitHubIssueService) Get(ctx context.Context, owner, repo string, number
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return nil, forge.ErrNotFound
 		}
-		return nil, err
+		return nil, wrapErr(err)
 	}
 	result := convertGitHubIssue(i)
 	return &result, nil
@@ -148,7 +148,7 @@ func (s *gitHubIssueService) List(ctx context.Context, owner, repo string, opts 
 			if resp != nil && resp.StatusCode == http.StatusNotFound {
 				return nil, forge.ErrNotFound
 			}
-			return nil, err
+			return nil, wrapErr(err)
 		}
 		for _, i := range issues {
 			// GitHub's issue list includes pull requests; skip them
@@ -195,7 +195,7 @@ func (s *gitHubIssueService) Create(ctx context.Context, owner, repo string, opt
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return nil, forge.ErrNotFound
 		}
-		return nil, err
+		return nil, wrapErr(err)
 	}
 	result := convertGitHubIssue(i)
 	return &result, nil
@@ -238,7 +238,7 @@ func (s *gitHubIssueService) Update(ctx context.Context, owner, repo string, num
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return nil, forge.ErrNotFound
 		}
-		return nil, err
+		return nil, wrapErr(err)
 	}
 	result := convertGitHubIssue(i)
 	return &result, nil
@@ -252,7 +252,7 @@ func (s *gitHubIssueService) Close(ctx context.Context, owner, repo string, numb
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return forge.ErrNotFound
 		}
-		return err
+		return wrapErr(err)
 	}
 	return nil
 }
@@ -265,7 +265,7 @@ func (s *gitHubIssueService) Reopen(ctx context.Context, owner, repo string, num
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return forge.ErrNotFound
 		}
-		return err
+		return wrapErr(err)
 	}
 	return nil
 }
@@ -283,7 +283,7 @@ func (s *gitHubIssueService) CreateComment(ctx context.Context, owner, repo stri
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return nil, forge.ErrNotFound
 		}
-		return nil, err
+		return nil, wrapErr(err)
 	}
 	result := convertGitHubComment(c)
 	return &result, nil
@@ -300,7 +300,7 @@ func (s *gitHubIssueService) ListComments(ctx context.Context, owner, repo strin
 			if resp != nil && resp.StatusCode == http.StatusNotFound {
 				return nil, forge.ErrNotFound
 			}
-			return nil, err
+			return nil, wrapErr(err)
 		}
 		for _, c := range comments {
 			all = append(all, convertGitHubComment(c))

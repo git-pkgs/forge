@@ -10,7 +10,7 @@ func (f *gitHubForge) GetAuthenticatedUser(ctx context.Context) (*forge.User, er
 	// An empty username asks GitHub for the authenticated user (GET /user).
 	u, _, err := f.client.Users.Get(ctx, "")
 	if err != nil {
-		return nil, err
+		return nil, wrapErr(err)
 	}
 
 	return &forge.User{

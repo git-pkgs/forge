@@ -174,6 +174,18 @@ issues, _ := f.Issues().List(ctx, "octocat", "hello-world", forges.ListIssueOpts
 pr, _ := f.PullRequests().Get(ctx, "octocat", "hello-world", 42)
 ```
 
+Failures map to common errors on every forge, so callers can check the kind of failure without knowing which forge they're using. The original error stays in the chain for callers that need forge-specific details:
+
+```go
+_, err := f.Repos().Get(ctx, "octocat", "hello-world")
+switch {
+case errors.Is(err, forges.ErrNotFound):      // 404
+case errors.Is(err, forges.ErrUnauthorized):  // 401 or 403
+case errors.Is(err, forges.ErrRateLimited):   // 429, or GitHub's 403 rate limit responses
+case errors.Is(err, forges.ErrServerError):   // 5xx
+}
+```
+
 Incoming webhook deliveries from GitHub, GitLab and Gitea/Forgejo can be verified and parsed into a normalized `WebhookEvent`. Event types use the same names as `Webhook.Events`. Push, pull request, issue, comment and release deliveries carry typed fields. The raw JSON is always available in `Payload`.
 
 An empty secret skips verification, so read the secret once at startup and refuse to run without it:

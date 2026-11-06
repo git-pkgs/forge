@@ -30,7 +30,7 @@ func (s *gitHubIssueService) ListReactions(ctx context.Context, owner, repo stri
 			if resp != nil && resp.StatusCode == http.StatusNotFound {
 				return nil, forge.ErrNotFound
 			}
-			return nil, err
+			return nil, wrapErr(err)
 		}
 		for _, r := range reactions {
 			all = append(all, convertGitHubReaction(r))
@@ -49,7 +49,7 @@ func (s *gitHubIssueService) AddReaction(ctx context.Context, owner, repo string
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return nil, forge.ErrNotFound
 		}
-		return nil, err
+		return nil, wrapErr(err)
 	}
 	result := convertGitHubReaction(r)
 	return &result, nil
@@ -67,7 +67,7 @@ func (s *gitHubPRService) ListReactions(ctx context.Context, owner, repo string,
 			if resp != nil && resp.StatusCode == http.StatusNotFound {
 				return nil, forge.ErrNotFound
 			}
-			return nil, err
+			return nil, wrapErr(err)
 		}
 		for _, r := range reactions {
 			all = append(all, convertGitHubReaction(r))
@@ -86,7 +86,7 @@ func (s *gitHubPRService) AddReaction(ctx context.Context, owner, repo string, n
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return nil, forge.ErrNotFound
 		}
-		return nil, err
+		return nil, wrapErr(err)
 	}
 	result := convertGitHubReaction(r)
 	return &result, nil

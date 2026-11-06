@@ -175,14 +175,14 @@ func (s *gitLabPRService) Get(ctx context.Context, owner, repo string, number in
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return nil, forge.ErrNotFound
 		}
-		return nil, err
+		return nil, wrapErr(err)
 	}
 	result := convertGitLabMR(mr)
 
 	if mr.SourceProjectID != mr.TargetProjectID {
 		sourceProject, _, err := s.client.Projects.GetProject(mr.SourceProjectID, nil)
 		if err != nil {
-			return nil, fmt.Errorf("getting source project: %w", err)
+			return nil, fmt.Errorf("getting source project: %w", wrapErr(err))
 		}
 		if sourceProject != nil {
 			result.Head.Fork = &forge.ForkInfo{
@@ -248,7 +248,7 @@ func (s *gitLabPRService) List(ctx context.Context, owner, repo string, opts for
 			if resp != nil && resp.StatusCode == http.StatusNotFound {
 				return nil, forge.ErrNotFound
 			}
-			return nil, err
+			return nil, wrapErr(err)
 		}
 		for _, mr := range mrs {
 			all = append(all, convertBasicGitLabMR(mr))
@@ -305,7 +305,7 @@ func (s *gitLabPRService) Create(ctx context.Context, owner, repo string, opts f
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return nil, forge.ErrNotFound
 		}
-		return nil, err
+		return nil, wrapErr(err)
 	}
 	result := convertGitLabMR(mr)
 	return &result, nil
@@ -369,7 +369,7 @@ func (s *gitLabPRService) Update(ctx context.Context, owner, repo string, number
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return nil, forge.ErrNotFound
 		}
-		return nil, err
+		return nil, wrapErr(err)
 	}
 	result := convertGitLabMR(mr)
 	return &result, nil
@@ -385,7 +385,7 @@ func (s *gitLabPRService) Close(ctx context.Context, owner, repo string, number 
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return forge.ErrNotFound
 		}
-		return err
+		return wrapErr(err)
 	}
 	return nil
 }
@@ -400,7 +400,7 @@ func (s *gitLabPRService) Reopen(ctx context.Context, owner, repo string, number
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return forge.ErrNotFound
 		}
-		return err
+		return wrapErr(err)
 	}
 	return nil
 }
@@ -427,7 +427,7 @@ func (s *gitLabPRService) Merge(ctx context.Context, owner, repo string, number 
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return forge.ErrNotFound
 		}
-		return err
+		return wrapErr(err)
 	}
 	return nil
 }
@@ -439,7 +439,7 @@ func (s *gitLabPRService) Diff(ctx context.Context, owner, repo string, number i
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return "", forge.ErrNotFound
 		}
-		return "", err
+		return "", wrapErr(err)
 	}
 	return string(raw), nil
 }
@@ -453,7 +453,7 @@ func (s *gitLabPRService) CreateComment(ctx context.Context, owner, repo string,
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return nil, forge.ErrNotFound
 		}
-		return nil, err
+		return nil, wrapErr(err)
 	}
 	result := convertGitLabNote(n)
 	return &result, nil
@@ -471,7 +471,7 @@ func (s *gitLabPRService) ListComments(ctx context.Context, owner, repo string, 
 			if resp != nil && resp.StatusCode == http.StatusNotFound {
 				return nil, forge.ErrNotFound
 			}
-			return nil, err
+			return nil, wrapErr(err)
 		}
 		for _, n := range notes {
 			if n.System {

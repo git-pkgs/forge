@@ -142,7 +142,7 @@ func (s *gitHubPRService) Get(ctx context.Context, owner, repo string, number in
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return nil, forge.ErrNotFound
 		}
-		return nil, err
+		return nil, wrapErr(err)
 	}
 	result := convertGitHubPR(pr)
 	return &result, nil
@@ -177,7 +177,7 @@ func (s *gitHubPRService) List(ctx context.Context, owner, repo string, opts for
 			if resp != nil && resp.StatusCode == http.StatusNotFound {
 				return nil, forge.ErrNotFound
 			}
-			return nil, err
+			return nil, wrapErr(err)
 		}
 		for _, pr := range prs {
 			all = append(all, convertGitHubPR(pr))
@@ -211,7 +211,7 @@ func (s *gitHubPRService) Create(ctx context.Context, owner, repo string, opts f
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return nil, forge.ErrNotFound
 		}
-		return nil, err
+		return nil, wrapErr(err)
 	}
 
 	// Add reviewers if requested
@@ -219,7 +219,7 @@ func (s *gitHubPRService) Create(ctx context.Context, owner, repo string, opts f
 		if _, _, err := s.client.PullRequests.RequestReviewers(ctx, owner, repo, pr.GetNumber(), github.ReviewersRequest{
 			Reviewers: opts.Reviewers,
 		}); err != nil {
-			return nil, fmt.Errorf("PR created but failed to add reviewers: %w", err)
+			return nil, fmt.Errorf("PR created but failed to add reviewers: %w", wrapErr(err))
 		}
 	}
 
@@ -243,7 +243,7 @@ func (s *gitHubPRService) Create(ctx context.Context, owner, repo string, opts f
 	}
 	if needsEdit {
 		if _, _, err := s.client.Issues.Edit(ctx, owner, repo, pr.GetNumber(), issueReq); err != nil {
-			return nil, fmt.Errorf("PR created but failed to set assignees/labels/milestone: %w", err)
+			return nil, fmt.Errorf("PR created but failed to set assignees/labels/milestone: %w", wrapErr(err))
 		}
 	}
 
@@ -274,7 +274,7 @@ func (s *gitHubPRService) Update(ctx context.Context, owner, repo string, number
 			if resp != nil && resp.StatusCode == http.StatusNotFound {
 				return nil, forge.ErrNotFound
 			}
-			return nil, err
+			return nil, wrapErr(err)
 		}
 		result := convertGitHubPR(pr)
 		return &result, nil
@@ -292,7 +292,7 @@ func (s *gitHubPRService) Close(ctx context.Context, owner, repo string, number 
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return forge.ErrNotFound
 		}
-		return err
+		return wrapErr(err)
 	}
 	return nil
 }
@@ -306,7 +306,7 @@ func (s *gitHubPRService) Reopen(ctx context.Context, owner, repo string, number
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return forge.ErrNotFound
 		}
-		return err
+		return wrapErr(err)
 	}
 	return nil
 }
@@ -334,12 +334,12 @@ func (s *gitHubPRService) Merge(ctx context.Context, owner, repo string, number 
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return forge.ErrNotFound
 		}
-		return err
+		return wrapErr(err)
 	}
 
 	if opts.Delete && headRef != "" {
 		if _, err := s.client.Git.DeleteRef(ctx, owner, repo, "heads/"+headRef); err != nil {
-			return fmt.Errorf("merged successfully but failed to delete branch %q: %w", headRef, err)
+			return fmt.Errorf("merged successfully but failed to delete branch %q: %w", headRef, wrapErr(err))
 		}
 	}
 
@@ -352,7 +352,7 @@ func (s *gitHubPRService) Diff(ctx context.Context, owner, repo string, number i
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return "", forge.ErrNotFound
 		}
-		return "", err
+		return "", wrapErr(err)
 	}
 	return raw, nil
 }
@@ -365,7 +365,7 @@ func (s *gitHubPRService) CreateComment(ctx context.Context, owner, repo string,
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return nil, forge.ErrNotFound
 		}
-		return nil, err
+		return nil, wrapErr(err)
 	}
 	result := convertGitHubComment(c)
 	return &result, nil
@@ -382,7 +382,7 @@ func (s *gitHubPRService) ListComments(ctx context.Context, owner, repo string, 
 			if resp != nil && resp.StatusCode == http.StatusNotFound {
 				return nil, forge.ErrNotFound
 			}
-			return nil, err
+			return nil, wrapErr(err)
 		}
 		for _, c := range comments {
 			all = append(all, convertGitHubComment(c))

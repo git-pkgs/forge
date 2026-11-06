@@ -101,7 +101,7 @@ func (s *gitLabCIService) ListRuns(ctx context.Context, owner, repo string, opts
 			if resp != nil && resp.StatusCode == http.StatusNotFound {
 				return nil, forge.ErrNotFound
 			}
-			return nil, err
+			return nil, wrapErr(err)
 		}
 		for _, p := range pipelines {
 			all = append(all, convertGitLabPipeline(p))
@@ -126,7 +126,7 @@ func (s *gitLabCIService) GetRun(ctx context.Context, owner, repo string, runID 
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return nil, forge.ErrNotFound
 		}
-		return nil, err
+		return nil, wrapErr(err)
 	}
 	result := convertGitLabPipelineDetail(p)
 
@@ -177,7 +177,7 @@ func (s *gitLabCIService) TriggerRun(ctx context.Context, owner, repo string, op
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return forge.ErrNotFound
 		}
-		return err
+		return wrapErr(err)
 	}
 	return nil
 }
@@ -189,7 +189,7 @@ func (s *gitLabCIService) CancelRun(ctx context.Context, owner, repo string, run
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return forge.ErrNotFound
 		}
-		return err
+		return wrapErr(err)
 	}
 	return nil
 }
@@ -201,7 +201,7 @@ func (s *gitLabCIService) RetryRun(ctx context.Context, owner, repo string, runI
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return forge.ErrNotFound
 		}
-		return err
+		return wrapErr(err)
 	}
 	return nil
 }
@@ -213,7 +213,7 @@ func (s *gitLabCIService) GetJobLog(ctx context.Context, owner, repo string, job
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return nil, forge.ErrNotFound
 		}
-		return nil, err
+		return nil, wrapErr(err)
 	}
 	return io.NopCloser(reader), nil
 }

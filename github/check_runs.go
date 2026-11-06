@@ -28,7 +28,7 @@ func (s *gitHubCheckRunService) List(ctx context.Context, owner, repo, sha strin
 			if resp != nil && resp.StatusCode == http.StatusNotFound {
 				return nil, forge.ErrNotFound
 			}
-			return nil, err
+			return nil, wrapErr(err)
 		}
 		for _, r := range result.CheckRuns {
 			cr := forge.CheckRun{
