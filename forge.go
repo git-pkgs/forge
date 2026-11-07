@@ -4,10 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/git-pkgs/purl"
 )
@@ -91,9 +93,11 @@ type Forge interface {
 
 // Client routes requests to the appropriate Forge based on the URL domain.
 type Client struct {
+	mu         sync.RWMutex // guards forges and tokens once the Client is in use
 	forges     map[string]Forge
 	tokens     map[string]string
 	httpClient *http.Client
+	detection  *ForgeBuilders
 }
 
 // Option configures a Client.
@@ -120,6 +124,18 @@ func WithForge(domain string, f Forge) Option {
 	}
 }
 
+// WithDetection makes the Client detect and register domains it hasn't seen,
+// using the given builders, the first time a repository URL on that domain is
+// used. Detection always uses https, whatever the scheme of the URL, so a
+// plain-HTTP instance has to be registered explicitly with RegisterDomain.
+// Detection sends unauthenticated requests to the domain, so callers handling
+// untrusted URLs should validate them first. Detection failures are not cached.
+func WithDetection(builders ForgeBuilders) Option {
+	return func(c *Client) {
+		c.detection = &builders
+	}
+}
+
 // NewClient creates a Client and applies the given options.
 func NewClient(opts ...Option) *Client {
 	c := &Client{
@@ -132,9 +148,12 @@ func NewClient(opts ...Option) *Client {
 	return c
 }
 
-// Tokens returns the token map so callers can read tokens set via WithToken.
+// Tokens returns a copy of the token map so callers can read tokens set via
+// WithToken.
 func (c *Client) Tokens() map[string]string {
-	return c.tokens
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return maps.Clone(c.tokens)
 }
 
 // HTTPClient returns the HTTP client configured on this Client, or nil.
@@ -185,6 +204,8 @@ func (c *Client) RegisterDomain(ctx context.Context, domain, token string, build
 	if err != nil {
 		return fmt.Errorf("detecting forge type for %s: %w", domain, err)
 	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	c.tokens[domain] = token
 	switch ft {
 	case GitHub:
@@ -226,6 +247,8 @@ type ForgeBuilders struct {
 }
 
 func (c *Client) forgeFor(domain string) (Forge, error) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
 	f, ok := c.forges[domain]
 	if !ok {
 		return nil, fmt.Errorf("no forge registered for domain %q", domain)
@@ -233,18 +256,47 @@ func (c *Client) forgeFor(domain string) (Forge, error) {
 	return f, nil
 }
 
+// forgeOrDetect returns the Forge registered for domain. If there is none and
+// detection is enabled, it probes the domain over https and registers what it
+// finds.
+func (c *Client) forgeOrDetect(ctx context.Context, domain string) (Forge, error) {
+	f, err := c.forgeFor(domain)
+	if err == nil || c.detection == nil || strings.Contains(domain, "://") {
+		return f, err
+	}
+	c.mu.RLock()
+	token := c.tokens[domain]
+	c.mu.RUnlock()
+	if err := c.RegisterDomain(ctx, "https://"+domain, token, *c.detection); err != nil {
+		return nil, err
+	}
+	return c.forgeFor(domain)
+}
+
 // ForgeFor returns the Forge implementation registered for the given domain.
 func (c *Client) ForgeFor(domain string) (Forge, error) {
 	return c.forgeFor(domain)
 }
 
-// FetchRepository fetches normalized repository metadata from a URL string.
-func (c *Client) FetchRepository(ctx context.Context, repoURL string) (*Repository, error) {
+// ForgeForURL returns the Forge for a repository URL along with the owner and
+// repo parsed from it. Without WithDetection, a domain that has not been
+// registered is an error. With it, the domain is detected and registered on
+// first use over https, even if the URL itself is http://.
+func (c *Client) ForgeForURL(ctx context.Context, repoURL string) (f Forge, owner, repo string, err error) {
 	domain, owner, repo, err := ParseRepoURL(repoURL)
 	if err != nil {
-		return nil, err
+		return nil, "", "", err
 	}
-	f, err := c.forgeFor(domain)
+	f, err = c.forgeOrDetect(ctx, domain)
+	if err != nil {
+		return nil, "", "", err
+	}
+	return f, owner, repo, nil
+}
+
+// FetchRepository fetches normalized repository metadata from a URL string.
+func (c *Client) FetchRepository(ctx context.Context, repoURL string) (*Repository, error) {
+	f, owner, repo, err := c.ForgeForURL(ctx, repoURL)
 	if err != nil {
 		return nil, err
 	}
@@ -263,11 +315,7 @@ func (c *Client) FetchRepositoryFromPURL(ctx context.Context, p *purl.PURL) (*Re
 
 // FetchTags fetches git tags from a URL string.
 func (c *Client) FetchTags(ctx context.Context, repoURL string) ([]Tag, error) {
-	domain, owner, repo, err := ParseRepoURL(repoURL)
-	if err != nil {
-		return nil, err
-	}
-	f, err := c.forgeFor(domain)
+	f, owner, repo, err := c.ForgeForURL(ctx, repoURL)
 	if err != nil {
 		return nil, err
 	}
@@ -276,7 +324,7 @@ func (c *Client) FetchTags(ctx context.Context, repoURL string) ([]Tag, error) {
 
 // ListRepositories lists all repositories for an owner on the given domain.
 func (c *Client) ListRepositories(ctx context.Context, domain, owner string, opts ListRepoOpts) ([]Repository, error) {
-	f, err := c.forgeFor(domain)
+	f, err := c.forgeOrDetect(ctx, domain)
 	if err != nil {
 		return nil, err
 	}

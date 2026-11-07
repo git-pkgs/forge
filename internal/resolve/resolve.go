@@ -12,7 +12,7 @@ import (
 	"strings"
 
 	"github.com/git-pkgs/forge"
-	"github.com/git-pkgs/forge/bitbucket"
+	"github.com/git-pkgs/forge/factory"
 	"github.com/git-pkgs/forge/gerrit"
 	"github.com/git-pkgs/forge/gitea"
 	ghforge "github.com/git-pkgs/forge/github"
@@ -104,15 +104,6 @@ func ResetTestForge() {
 	testOwner = ""
 	testRepo = ""
 	testDomain = ""
-}
-
-var builders = forges.ForgeBuilders{
-	GitHub:  ghforge.NewWithBase,
-	GitLab:  glforge.New,
-	Gitea:   gitea.New,
-	Gerrit:  gerrit.New,
-	Tangled: tangled.New,
-	Radicle: radicle.New,
 }
 
 // Repo figures out the forge, owner, and repo name from flags or a git remote.
@@ -411,14 +402,7 @@ func newClientForBaseURL(domain, baseURL string) *forges.Client {
 
 	// Register default forges first, so config-based registrations override them.
 	hc := HTTPClient()
-	defaults := map[string]forges.Forge{
-		"github.com":    ghforge.New(TokenForDomain("github.com"), hc),
-		"gitlab.com":    glforge.New("https://gitlab.com", TokenForDomain("gitlab.com"), hc),
-		"codeberg.org":  gitea.New("https://codeberg.org", TokenForDomain("codeberg.org"), hc),
-		"bitbucket.org": bitbucket.New(TokenForDomain("bitbucket.org"), hc),
-		"tangled.org":   tangled.New("https://tangled.org", TokenForDomain("tangled.org"), hc),
-	}
-	for d, f := range defaults {
+	for d, f := range factory.DefaultForges(TokenForDomain, hc) {
 		opts = append(opts, forges.WithForge(d, f))
 	}
 
@@ -482,7 +466,7 @@ func forgeForDomainAtBaseURL(ctx context.Context, client *forges.Client, domain,
 		return f, nil
 	}
 	token := TokenForDomain(domain)
-	if regErr := client.RegisterDomain(ctx, baseURL, token, builders); regErr != nil {
+	if regErr := client.RegisterDomain(ctx, baseURL, token, factory.Builders()); regErr != nil {
 		return nil, fmt.Errorf("unknown forge at %s: %w (use --forge-type, or set type under [%s] in config, to skip detection)", domain, regErr, domain)
 	}
 	return client.ForgeFor(domain)

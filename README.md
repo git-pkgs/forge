@@ -176,6 +176,17 @@ issues, _ := f.Issues().List(ctx, "octocat", "hello-world", forges.ListIssueOpts
 pr, _ := f.PullRequests().Get(ctx, "octocat", "hello-world", 42)
 ```
 
+The `factory` package imports every provider and returns a `Client` that already knows github.com, gitlab.com, codeberg.org, bitbucket.org and tangled.org. It detects and registers any other domain over https the first time a repository URL on it is used, which sends requests to that domain. A plain-HTTP instance has to be registered with `RegisterDomain`:
+
+```go
+import "github.com/git-pkgs/forge/factory"
+
+client := factory.NewClient(forges.WithToken("git.example.com", token))
+
+f, owner, repo, err := client.ForgeForURL(ctx, "https://git.example.com/octocat/hello-world")
+issues, err := f.Issues().List(ctx, owner, repo, forges.ListIssueOpts{State: "open"})
+```
+
 Incoming webhook deliveries from GitHub, GitLab and Gitea/Forgejo can be verified and parsed into a normalized `WebhookEvent`. Event types use the same names as `Webhook.Events`. Push, pull request, issue, comment and release deliveries carry typed fields. The raw JSON is always available in `Payload`.
 
 An empty secret skips verification, so read the secret once at startup and refuse to run without it:
