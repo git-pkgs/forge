@@ -120,7 +120,7 @@ func collaboratorRemoveCmd() *cobra.Command {
 			}
 
 			if !flagYes {
-				if err := confirm(fmt.Sprintf("Remove collaborator %q from %s/%s? [y/N] ", username, owner, repoName)); err != nil {
+				if err := confirm(fmt.Sprintf("Remove collaborator %q from %s? [y/N] ", username, repoDisplayName(owner, repoName))); err != nil {
 					return err
 				}
 			}

@@ -89,6 +89,10 @@ func detectFromAPI(ctx context.Context, client *http.Client, baseURL string) (Fo
 		return Tangled, nil
 	}
 
+	if ok, err := probeRadicleAPI(ctx, client, baseURL); err == nil && ok {
+		return Radicle, nil
+	}
+
 	return Unknown, fmt.Errorf("could not detect forge type for %s", baseURL)
 }
 
@@ -145,6 +149,33 @@ func probeGerritAPI(ctx context.Context, client *http.Client, baseURL string) (b
 
 	var version string
 	return json.Unmarshal(body, &version) == nil && version != "", nil
+}
+
+// probeRadicleAPI reports whether baseURL serves the radicle-httpd API, whose
+// root identifies itself with a service field.
+func probeRadicleAPI(ctx context.Context, client *http.Client, baseURL string) (bool, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, baseURL+"/api/v1", nil)
+	if err != nil {
+		return false, err
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return false, err
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	if resp.StatusCode != http.StatusOK {
+		return false, fmt.Errorf("status %d", resp.StatusCode)
+	}
+
+	var root struct {
+		Service string `json:"service"`
+	}
+	if err := json.NewDecoder(io.LimitReader(resp.Body, 1<<16)).Decode(&root); err != nil {
+		return false, err
+	}
+	return root.Service == "radicle-httpd", nil
 }
 
 func probeURL(ctx context.Context, client *http.Client, url string) (bool, error) {

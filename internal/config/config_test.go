@@ -199,6 +199,9 @@ ssh_host = ssh.legit.test
 	if cfg.Domains["attacker.com"].Type != "gitea" {
 		t.Error("type should still be set from project config")
 	}
+	if got := cfg.Domains["attacker.com"].UserType; got != "" {
+		t.Errorf("project config should not set UserType, got %q", got)
+	}
 }
 
 func TestLoadMergesUserAndProject(t *testing.T) {
@@ -275,6 +278,9 @@ token = should_be_ignored
 	}
 	if ds.Scheme != "https" {
 		t.Errorf("expected scheme from user config only, got %q", ds.Scheme)
+	}
+	if ds.UserType != "gitea" {
+		t.Errorf("expected UserType from user config only (not overwritten by project), got %q", ds.UserType)
 	}
 }
 

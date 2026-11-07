@@ -52,8 +52,8 @@ func Execute() error {
 }
 
 func init() {
-	rootCmd.PersistentFlags().StringVarP(&flagRepo, "repo", "R", "", "Select a repository (OWNER/REPO or HOST/OWNER/REPO)")
-	rootCmd.PersistentFlags().StringVar(&flagForgeType, "forge-type", "", "Force forge type: github, gitlab, gitea, forgejo, bitbucket, gerrit, tangled")
+	rootCmd.PersistentFlags().StringVarP(&flagRepo, "repo", "R", "", "Select a repository (OWNER/REPO, HOST/OWNER/REPO or rad:<RID>)")
+	rootCmd.PersistentFlags().StringVar(&flagForgeType, "forge-type", "", "Force forge type: github, gitlab, gitea, forgejo, bitbucket, gerrit, tangled, radicle")
 	rootCmd.PersistentFlags().StringVar(&flagHost, "host", "", "Force forge host (e.g. gitea.com, http://forgejo.local:3000); overrides FORGE_HOST and remote detection")
 	rootCmd.PersistentFlags().StringVarP(&flagOutput, "output", "o", "table", "Output format: table, json, plain")
 	rootCmd.PersistentFlags().StringVar(&flagRemote, "remote", "", "Git remote to use when --repo (-R) is not specified (default from config, otherwise origin)")
@@ -66,6 +66,15 @@ func notSupported(err error, feature string) error {
 		return fmt.Errorf("%s is not supported by this forge", feature)
 	}
 	return err
+}
+
+// repoDisplayName formats a repository for prompts and messages. Forges
+// without owners, such as Radicle, show just the repository ID.
+func repoDisplayName(owner, repo string) string {
+	if owner == "" {
+		return repo
+	}
+	return owner + "/" + repo
 }
 
 func printer() *output.Printer {

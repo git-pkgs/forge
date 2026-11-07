@@ -478,6 +478,86 @@ func TestDetectForgeTypeTangledAPI(t *testing.T) {
 	}
 }
 
+func radicleDetectMux() *http.ServeMux {
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+	for _, p := range []string{"/api/v1/version", "/api/v4/version", "/api/v3/meta", "/config/server/version", "/xrpc/sh.tangled.knot.version"} {
+		mux.HandleFunc("GET "+p, func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusNotFound)
+		})
+	}
+	mux.HandleFunc("GET /api/v1", func(w http.ResponseWriter, r *http.Request) {
+		_, _ = fmt.Fprint(w, `{"message":"Welcome!","service":"radicle-httpd","version":"0.28.0","apiVersion":"6.2.0","path":"/api/v1"}`)
+	})
+	return mux
+}
+
+func TestDetectForgeTypeRadicleAPI(t *testing.T) {
+	srv := httptest.NewServer(radicleDetectMux())
+	defer srv.Close()
+
+	ft, err := detectFromAPI(context.Background(), http.DefaultClient, srv.URL)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if ft != Radicle {
+		t.Errorf("want Radicle, got %s", ft)
+	}
+}
+
+func TestDetectForgeTypeIgnoresOtherAPIRoot(t *testing.T) {
+	mux := radicleDetectMux()
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/api/v1" {
+			_, _ = fmt.Fprint(w, `{"service":"something-else"}`)
+			return
+		}
+		mux.ServeHTTP(w, r)
+	}))
+	defer srv.Close()
+
+	if ft, err := detectFromAPI(context.Background(), http.DefaultClient, srv.URL); err == nil {
+		t.Fatalf("want detection error, got %s", ft)
+	}
+}
+
+func TestRegisterDomainRadicle(t *testing.T) {
+	srv := httptest.NewServer(radicleDetectMux())
+	defer srv.Close()
+
+	base, err := url.Parse(srv.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	client := NewClient(WithHTTPClient(&http.Client{
+		Transport: rewriteHostTransport{base: base},
+	}))
+
+	var gotBaseURL string
+	builders := ForgeBuilders{
+		GitHub: func(baseURL, token string, hc *http.Client) Forge { return &mockForge{} },
+		GitLab: func(baseURL, token string, hc *http.Client) Forge { return &mockForge{} },
+		Gitea:  func(baseURL, token string, hc *http.Client) Forge { return &mockForge{} },
+	}
+	err = client.RegisterDomain(context.Background(), "radicle.example", "", builders)
+	if err == nil || !strings.Contains(err.Error(), "no builder registered") || !strings.Contains(err.Error(), "radicle") {
+		t.Fatalf("expected missing Radicle builder error, got %v", err)
+	}
+
+	builders.Radicle = func(baseURL, token string, hc *http.Client) Forge {
+		gotBaseURL = baseURL
+		return &mockForge{}
+	}
+	if err := client.RegisterDomain(context.Background(), "radicle.example", "", builders); err != nil {
+		t.Fatalf("RegisterDomain: %v", err)
+	}
+	if gotBaseURL != "https://radicle.example" {
+		t.Errorf("Radicle builder baseURL = %q, want https://radicle.example", gotBaseURL)
+	}
+}
+
 func TestRegisterDomainGerritMissingBuilderReturnsError(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/v1/version", func(w http.ResponseWriter, r *http.Request) {

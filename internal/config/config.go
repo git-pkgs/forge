@@ -31,7 +31,8 @@ type DefaultSection struct {
 }
 
 type DomainSection struct {
-	Type        string // github, gitlab, gitea, forgejo, bitbucket, gerrit, tangled
+	Type        string // github, gitlab, gitea, forgejo, bitbucket, gerrit, tangled, radicle
+	UserType    string // type from user config only; project config never sets it
 	Scheme      string // http or https; only from user config (empty = https)
 	Token       string // resolved token value; only from user config, never .forge
 	TokenExec   string // non-empty when token is retrieved via a shell command (from "token-cmd" config key)
@@ -220,6 +221,9 @@ func loadFile(cfg *Config, path string, userConfig bool) error {
 		ds := cfg.Domains[name]
 		if v, ok := kv["type"]; ok {
 			ds.Type = v
+			if userConfig {
+				ds.UserType = v
+			}
 		}
 		if userConfig {
 			if v, ok := kv["scheme"]; ok {

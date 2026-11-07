@@ -297,7 +297,7 @@ func releaseDeleteCmd() *cobra.Command {
 			}
 
 			if !flagYes {
-				if err := confirm(fmt.Sprintf("Delete release %q in %s/%s? [y/N] ", tag, owner, repoName)); err != nil {
+				if err := confirm(fmt.Sprintf("Delete release %q in %s? [y/N] ", tag, repoDisplayName(owner, repoName))); err != nil {
 					return err
 				}
 			}

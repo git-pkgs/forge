@@ -86,7 +86,7 @@ func repoViewCmd() *cobra.Command {
 
 			r, err := forge.Repos().Get(cmd.Context(), owner, repoName)
 			if err != nil {
-				return fmt.Errorf("getting repo %s/%s: %w", owner, repoName, err)
+				return fmt.Errorf("getting repo %s: %w", repoDisplayName(owner, repoName), err)
 			}
 
 			p := printer()
@@ -410,16 +410,16 @@ func repoDeleteCmd() *cobra.Command {
 			}
 
 			if !flagYes {
-				if err := confirm(fmt.Sprintf("Delete %s/%s? This cannot be undone. [y/N] ", owner, repoName)); err != nil {
+				if err := confirm(fmt.Sprintf("Delete %s? This cannot be undone. [y/N] ", repoDisplayName(owner, repoName))); err != nil {
 					return err
 				}
 			}
 
 			if err := forge.Repos().Delete(cmd.Context(), owner, repoName); err != nil {
-				return fmt.Errorf("deleting repo %s/%s: %w", owner, repoName, err)
+				return fmt.Errorf("deleting repo %s: %w", repoDisplayName(owner, repoName), err)
 			}
 
-			_, _ = fmt.Fprintf(os.Stdout, "Deleted %s/%s\n", owner, repoName)
+			_, _ = fmt.Fprintf(os.Stdout, "Deleted %s\n", repoDisplayName(owner, repoName))
 			return nil
 		},
 	}
