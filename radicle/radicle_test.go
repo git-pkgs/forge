@@ -172,7 +172,6 @@ func TestRepoGetHTTPError(t *testing.T) {
 	}
 }
 
-// setMaxResponseBytes lowers the response cap for one test.
 func setMaxResponseBytes(t *testing.T, n int64) {
 	t.Helper()
 	old := maxResponseBytes

@@ -23,10 +23,7 @@ const RIDPrefix = "rad:"
 
 const maxErrorBodyBytes = 1 << 16
 
-// maxResponseBytes caps how much of a successful response is read, since the
-// node can be any seed the user points at. Blob JSON and raw files carry
-// whole file contents, so the cap is sized for large files. It is a variable
-// so tests can lower it.
+// Sized for whole file contents, since the node can be any seed the user points at.
 var maxResponseBytes int64 = 32 << 20
 
 type radicleForge struct {
@@ -157,7 +154,6 @@ func (f *radicleForge) getRaw(ctx context.Context, u, accept string) ([]byte, er
 	return readLimited(body, u, maxResponseBytes)
 }
 
-// readLimited reads at most limit bytes from r and fails if there is more.
 func readLimited(r io.Reader, u string, limit int64) ([]byte, error) {
 	data, err := io.ReadAll(io.LimitReader(r, limit+1))
 	if err != nil {
