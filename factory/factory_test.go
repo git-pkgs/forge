@@ -3,6 +3,7 @@ package factory
 import (
 	"context"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -36,6 +37,34 @@ func (rt *recordingTransport) RoundTrip(req *http.Request) (*http.Response, erro
 		Header:     make(http.Header),
 		Body:       http.NoBody,
 		Request:    req,
+	}, nil
+}
+
+// giteaTransport answers like a Gitea instance on every host and records each
+// request's URL and Authorization header.
+type giteaTransport struct {
+	mu   sync.Mutex
+	reqs []recordedRequest
+}
+
+type recordedRequest struct {
+	url  string
+	auth string
+}
+
+func (rt *giteaTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	rt.mu.Lock()
+	rt.reqs = append(rt.reqs, recordedRequest{url: req.URL.String(), auth: req.Header.Get("Authorization")})
+	rt.mu.Unlock()
+	body := `{"full_name":"owner/repo","name":"repo","owner":{"login":"owner"}}`
+	return &http.Response{
+		StatusCode: http.StatusOK,
+		Header: http.Header{
+			"X-Gitea-Version": []string{"1.22.0"},
+			"Content-Type":    []string{"application/json"},
+		},
+		Body:    io.NopCloser(strings.NewReader(body)),
+		Request: req,
 	}, nil
 }
 
@@ -117,7 +146,7 @@ func TestDefaultForgesAskForEachToken(t *testing.T) {
 func TestForgeForURLDetectsUnknownDomainOnce(t *testing.T) {
 	var probes, apiCalls atomic.Int32
 	var gotAuth atomic.Value
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/" {
 			probes.Add(1)
 			w.Header().Set("X-Forgejo-Version", "7.0.0")
@@ -133,9 +162,9 @@ func TestForgeForURLDetectsUnknownDomainOnce(t *testing.T) {
 		})
 	}))
 	defer srv.Close()
-	host := strings.TrimPrefix(srv.URL, "http://")
+	host := strings.TrimPrefix(srv.URL, "https://")
 
-	c := NewClient(forges.WithToken(host, "secret"))
+	c := NewClient(forges.WithHTTPClient(srv.Client()), forges.WithToken(host, "secret"))
 	ctx := context.Background()
 	repoURL := srv.URL + "/owner/repo"
 
@@ -164,10 +193,10 @@ func TestForgeForURLDetectsUnknownDomainOnce(t *testing.T) {
 }
 
 func TestForgeForURLReportsUndetectedDomain(t *testing.T) {
-	srv := httptest.NewServer(http.NotFoundHandler())
+	srv := httptest.NewTLSServer(http.NotFoundHandler())
 	defer srv.Close()
 
-	c := NewClient()
+	c := NewClient(forges.WithHTTPClient(srv.Client()))
 	_, _, _, err := c.ForgeForURL(context.Background(), srv.URL+"/owner/repo")
 	if err == nil || !strings.Contains(err.Error(), "could not detect forge type") {
 		t.Fatalf("ForgeForURL error = %v, want a detection failure", err)
@@ -175,12 +204,12 @@ func TestForgeForURLReportsUndetectedDomain(t *testing.T) {
 }
 
 func TestForgeForURLDetectsConcurrently(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("X-Gitea-Version", "1.22.0")
 	}))
 	defer srv.Close()
 
-	c := NewClient()
+	c := NewClient(forges.WithHTTPClient(srv.Client()))
 	var wg sync.WaitGroup
 	for range 8 {
 		wg.Go(func() {
@@ -191,4 +220,45 @@ func TestForgeForURLDetectsConcurrently(t *testing.T) {
 		})
 	}
 	wg.Wait()
+}
+
+func TestForgeForURLDetectsHTTPURLOverHTTPS(t *testing.T) {
+	rt := &giteaTransport{}
+	c := NewClient(
+		forges.WithHTTPClient(&http.Client{Transport: rt}),
+		forges.WithToken("git.example.com", "secret"),
+	)
+	ctx := context.Background()
+
+	if _, err := c.FetchRepository(ctx, "http://git.example.com/owner/repo"); err != nil {
+		t.Fatalf("FetchRepository over http URL: %v", err)
+	}
+	if _, err := c.FetchRepository(ctx, "https://git.example.com/owner/repo"); err != nil {
+		t.Fatalf("FetchRepository over https URL: %v", err)
+	}
+
+	var sawToken bool
+	for _, r := range rt.reqs {
+		if !strings.HasPrefix(r.url, "https://") {
+			t.Errorf("request to %q, want https", r.url)
+		}
+		if r.auth == "token secret" {
+			sawToken = true
+		}
+	}
+	if !sawToken {
+		t.Error("expected the configured token on the https API requests")
+	}
+
+	f, err := c.ForgeFor("git.example.com")
+	if err != nil {
+		t.Fatalf("ForgeFor: %v", err)
+	}
+	provider, ok := f.(forges.APIBaseURLProvider)
+	if !ok {
+		t.Fatal("detected forge does not expose its API URL")
+	}
+	if got, want := provider.APIBaseURL(), "https://git.example.com/api/v1"; got != want {
+		t.Errorf("API URL = %q, want %q", got, want)
+	}
 }
