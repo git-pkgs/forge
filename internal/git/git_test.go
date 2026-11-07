@@ -217,6 +217,28 @@ func TestCommitsBetween(t *testing.T) {
 	}
 }
 
+func TestRemotes(t *testing.T) {
+	dir := initGitRepo(t)
+	ctx := context.Background()
+	remotes, err := Remotes(ctx, dir)
+	if err != nil {
+		t.Fatalf("Remotes: %v", err)
+	}
+	if len(remotes) != 0 {
+		t.Errorf("remotes = %q, want none", remotes)
+	}
+
+	mustGit(t, dir, "remote", "add", "origin", "https://github.com/forkowner/repo.git")
+	mustGit(t, dir, "remote", "add", "upstream", "https://github.com/upstream/repo.git")
+	remotes, err = Remotes(ctx, dir)
+	if err != nil {
+		t.Fatalf("Remotes: %v", err)
+	}
+	if want := []string{"origin", "upstream"}; !slices.Equal(remotes, want) {
+		t.Errorf("remotes = %q, want %q", remotes, want)
+	}
+}
+
 func TestRefExists(t *testing.T) {
 	dir := initGitRepo(t)
 	ctx := context.Background()

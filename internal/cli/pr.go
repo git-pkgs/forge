@@ -323,7 +323,7 @@ func prCreateCmd() *cobra.Command {
 						return err
 					}
 				}
-				title, body, err := fillFromCommits(cmd.Context(), resolve.RemoteName(), flagBase, flagHead)
+				title, body, err := fillFromCommits(cmd.Context(), baseRemote(cmd.Context(), domain, owner, repoName), flagBase, flagHead)
 				if err != nil {
 					return err
 				}
@@ -411,9 +411,21 @@ func defaultBranch(ctx context.Context, forge forges.Forge, owner, repo string) 
 	return r.DefaultBranch, nil
 }
 
-// fillFromCommits builds a pull request title and body from the commits on head
-// that are not on base. A single commit supplies both directly. Several commits
-// get a title derived from the branch name and a body listing their subjects.
+// baseRemote returns the first remote pointing at the target repository, so a
+// fork checkout compares against upstream rather than a fork that may be behind.
+func baseRemote(ctx context.Context, domain, owner, repo string) string {
+	remotes, err := git.Remotes(ctx, "")
+	if err == nil {
+		for _, name := range remotes {
+			d, o, r, err := resolve.PushRemoteRepo(ctx, name)
+			if err == nil && strings.EqualFold(d, domain) && strings.EqualFold(o, owner) && strings.EqualFold(r, repo) {
+				return name
+			}
+		}
+	}
+	return resolve.RemoteName()
+}
+
 // The remote's copy of base is preferred because the local branch is often stale.
 func fillFromCommits(ctx context.Context, remote, base, head string) (title, body string, err error) {
 	_, branch, err := splitPRHead(head)

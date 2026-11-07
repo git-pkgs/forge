@@ -314,6 +314,31 @@ func TestPRCreateFillPrefersRemoteBase(t *testing.T) {
 	}
 }
 
+func TestPRCreateFillUsesTargetRepositoryRemote(t *testing.T) {
+	dir := fillRepo(t, []string{"Upstream change"}, []string{"Feature change"})
+	// origin is a fork whose main is behind upstream, and the feature branch
+	// is built on upstream/main, so only the newest commit is part of the PR.
+	mustGit(t, dir, "remote", "set-url", "origin", "https://github.com/forkowner/repo.git")
+	mustGit(t, dir, "remote", "add", "upstream", "https://github.com/upstream/repo.git")
+	mustGit(t, dir, "update-ref", "refs/remotes/upstream/main", gitOutput(t, dir, "rev-parse", "HEAD~1"))
+	prs := &mockPRService{
+		qualifiedHeads: true,
+		createResult:   &forges.PullRequest{Number: 1, HTMLURL: "https://github.com/upstream/repo/pull/1"},
+	}
+	resolve.SetTestForge(&mockForge{prService: prs, repoService: &mockDefaultBranchRepoService{defaultBranch: "main"}}, "upstream", "repo", "github.com")
+	t.Cleanup(resolve.ResetTestForge)
+	resolve.SetRemote("origin")
+
+	cmd := prCreateCmd()
+	cmd.SetArgs([]string{"--fill", "--head", "forkowner:add-new_feature"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("pr create --fill: %v", err)
+	}
+	if prs.createOpts.Title != "Feature change" {
+		t.Errorf("title = %q, want only the commit missing from upstream/main", prs.createOpts.Title)
+	}
+}
+
 func TestPRCreateFillFallsBackToLocalBase(t *testing.T) {
 	dir := fillRepo(t, []string{"Feature change"})
 	mustGit(t, dir, "branch", "develop", "main")

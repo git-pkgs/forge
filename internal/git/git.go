@@ -162,6 +162,15 @@ func RefExists(ctx context.Context, dir, ref string) bool {
 	return err == nil
 }
 
+// Remotes returns the names of the configured remotes.
+func Remotes(ctx context.Context, dir string) ([]string, error) {
+	out, err := runGit(ctx, dir, "remote")
+	if err != nil {
+		return nil, err
+	}
+	return strings.Fields(out), nil
+}
+
 // PushBranch pushes a local branch to the same branch name on a remote. It
 // configures upstream tracking only when the remote fetches from and pushes to
 // the same repository, so a fork push URL cannot replace existing tracking for
