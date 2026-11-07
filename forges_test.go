@@ -694,8 +694,8 @@ func TestForgeForURLDetection(t *testing.T) {
 		wantBaseURL string
 	}{
 		{"https", "https://git.example.com/owner/repo.git", "git.example.com", "https://git.example.com"},
-		{"http with port", "http://git.example.com:3000/owner/repo", "git.example.com:3000", "http://git.example.com:3000"},
-		{"uppercase http scheme", "HTTP://git.example.com/owner/repo", "git.example.com", "http://git.example.com"},
+		{"http with port", "http://git.example.com:3000/owner/repo", "git.example.com:3000", "https://git.example.com:3000"},
+		{"uppercase http scheme", "HTTP://git.example.com/owner/repo", "git.example.com", "https://git.example.com"},
 		{"bare host", "git.example.com/owner/repo", "git.example.com", "https://git.example.com"},
 		{"scp-like", "git@git.example.com:owner/repo.git", "git.example.com", "https://git.example.com"},
 		{"ssh with port", "ssh://git@git.example.com:2222/owner/repo.git", "git.example.com", "https://git.example.com"},
@@ -705,8 +705,9 @@ func TestForgeForURLDetection(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			var gotBaseURL, gotToken string
 			want := &mockForge{}
+			rt := &detectionTransport{}
 			c := NewClient(
-				WithHTTPClient(&http.Client{Transport: &detectionTransport{}}),
+				WithHTTPClient(&http.Client{Transport: rt}),
 				WithToken(tt.wantDomain, "tok"),
 				WithDetection(ForgeBuilders{
 					Gitea: func(baseURL, token string, _ *http.Client) Forge {
@@ -730,7 +731,29 @@ func TestForgeForURLDetection(t *testing.T) {
 			if _, err := c.ForgeFor(tt.wantDomain); err != nil {
 				t.Errorf("ForgeFor(%q): %v", tt.wantDomain, err)
 			}
+			for _, u := range rt.urls {
+				if !strings.HasPrefix(u, "https://") {
+					t.Errorf("probed %q, want https", u)
+				}
+			}
 		})
+	}
+}
+
+func TestListRepositoriesDoesNotDetectSchemeDomain(t *testing.T) {
+	rt := &detectionTransport{}
+	c := NewClient(
+		WithHTTPClient(&http.Client{Transport: rt}),
+		WithDetection(ForgeBuilders{Gitea: func(string, string, *http.Client) Forge { return &mockForge{} }}),
+	)
+	if _, err := c.ListRepositories(context.Background(), "http://git.example.com", "owner", ListRepoOpts{}); err == nil {
+		t.Fatal("expected error for a domain with a scheme")
+	}
+	if len(rt.urls) != 0 {
+		t.Errorf("probed %v, want no requests", rt.urls)
+	}
+	if _, err := c.ForgeFor("git.example.com"); err == nil {
+		t.Error("git.example.com was registered, want no registration")
 	}
 }
 

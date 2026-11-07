@@ -176,7 +176,7 @@ issues, _ := f.Issues().List(ctx, "octocat", "hello-world", forges.ListIssueOpts
 pr, _ := f.PullRequests().Get(ctx, "octocat", "hello-world", 42)
 ```
 
-The `factory` package imports every provider and returns a `Client` that already knows github.com, gitlab.com, codeberg.org, bitbucket.org and tangled.org. It detects and registers any other domain the first time a repository URL on it is used, which sends requests to that domain:
+The `factory` package imports every provider and returns a `Client` that already knows github.com, gitlab.com, codeberg.org, bitbucket.org and tangled.org. It detects and registers any other domain over https the first time a repository URL on it is used, which sends requests to that domain. A plain-HTTP instance has to be registered with `RegisterDomain`:
 
 ```go
 import "github.com/git-pkgs/forge/factory"

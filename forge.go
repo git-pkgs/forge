@@ -126,9 +126,10 @@ func WithForge(domain string, f Forge) Option {
 
 // WithDetection makes the Client detect and register domains it hasn't seen,
 // using the given builders, the first time a repository URL on that domain is
-// used. Detection sends unauthenticated requests to the domain, so callers
-// handling untrusted URLs should validate them first. Detection failures are
-// not cached.
+// used. Detection always uses https, whatever the scheme of the URL, so a
+// plain-HTTP instance has to be registered explicitly with RegisterDomain.
+// Detection sends unauthenticated requests to the domain, so callers handling
+// untrusted URLs should validate them first. Detection failures are not cached.
 func WithDetection(builders ForgeBuilders) Option {
 	return func(c *Client) {
 		c.detection = &builders
@@ -256,16 +257,17 @@ func (c *Client) forgeFor(domain string) (Forge, error) {
 }
 
 // forgeOrDetect returns the Forge registered for domain. If there is none and
-// detection is enabled, it probes baseURL and registers what it finds.
-func (c *Client) forgeOrDetect(ctx context.Context, domain, baseURL string) (Forge, error) {
+// detection is enabled, it probes the domain over https and registers what it
+// finds.
+func (c *Client) forgeOrDetect(ctx context.Context, domain string) (Forge, error) {
 	f, err := c.forgeFor(domain)
-	if err == nil || c.detection == nil {
+	if err == nil || c.detection == nil || strings.Contains(domain, "://") {
 		return f, err
 	}
 	c.mu.RLock()
 	token := c.tokens[domain]
 	c.mu.RUnlock()
-	if err := c.RegisterDomain(ctx, baseURL, token, *c.detection); err != nil {
+	if err := c.RegisterDomain(ctx, "https://"+domain, token, *c.detection); err != nil {
 		return nil, err
 	}
 	return c.forgeFor(domain)
@@ -279,17 +281,13 @@ func (c *Client) ForgeFor(domain string) (Forge, error) {
 // ForgeForURL returns the Forge for a repository URL along with the owner and
 // repo parsed from it. Without WithDetection, a domain that has not been
 // registered is an error. With it, the domain is detected and registered on
-// first use, over plain HTTP only if the URL itself is http://.
+// first use over https, even if the URL itself is http://.
 func (c *Client) ForgeForURL(ctx context.Context, repoURL string) (f Forge, owner, repo string, err error) {
 	domain, owner, repo, err := ParseRepoURL(repoURL)
 	if err != nil {
 		return nil, "", "", err
 	}
-	baseURL := domain
-	if u, err := url.Parse(strings.TrimSpace(repoURL)); err == nil && strings.EqualFold(u.Scheme, "http") {
-		baseURL = "http://" + domain
-	}
-	f, err = c.forgeOrDetect(ctx, domain, baseURL)
+	f, err = c.forgeOrDetect(ctx, domain)
 	if err != nil {
 		return nil, "", "", err
 	}
@@ -326,7 +324,7 @@ func (c *Client) FetchTags(ctx context.Context, repoURL string) ([]Tag, error) {
 
 // ListRepositories lists all repositories for an owner on the given domain.
 func (c *Client) ListRepositories(ctx context.Context, domain, owner string, opts ListRepoOpts) ([]Repository, error) {
-	f, err := c.forgeOrDetect(ctx, domain, domain)
+	f, err := c.forgeOrDetect(ctx, domain)
 	if err != nil {
 		return nil, err
 	}
