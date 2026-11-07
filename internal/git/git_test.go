@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"testing"
 
 	"github.com/git-pkgs/forge"
@@ -172,6 +173,84 @@ func TestCurrentBranch(t *testing.T) {
 	}
 	if got != "feature" {
 		t.Fatalf("CurrentBranch = %q, want %q", got, "feature")
+	}
+}
+
+func TestCommitsBetween(t *testing.T) {
+	dir := initGitRepo(t)
+	ctx := context.Background()
+	mustGit(t, dir, "config", "user.email", "test@test.com")
+	mustGit(t, dir, "config", "user.name", "Test")
+	mustGit(t, dir, "commit", "-q", "--allow-empty", "-m", "initial commit")
+	mustGit(t, dir, "branch", "base")
+	mustGit(t, dir, "checkout", "-q", "-b", "feature")
+	mustGit(t, dir, "commit", "-q", "--allow-empty", "-m", "first subject", "-m", "first body\n\nsecond paragraph")
+	mustGit(t, dir, "commit", "-q", "--allow-empty", "-m", "second subject")
+	mustGit(t, dir, "checkout", "-q", "-b", "other", "base")
+	mustGit(t, dir, "commit", "-q", "--allow-empty", "-m", "commit from other")
+	mustGit(t, dir, "checkout", "-q", "feature")
+	mustGit(t, dir, "merge", "-q", "--no-ff", "--no-edit", "other")
+	mustGit(t, dir, "update-ref", "refs/heads/base", "refs/heads/other")
+
+	commits, err := CommitsBetween(ctx, dir, "refs/heads/base", "refs/heads/feature")
+	if err != nil {
+		t.Fatalf("CommitsBetween: %v", err)
+	}
+	want := []Commit{
+		{Subject: "first subject", Body: "first body\n\nsecond paragraph"},
+		{Subject: "second subject"},
+	}
+	if !slices.Equal(commits, want) {
+		t.Errorf("commits = %#v, want %#v", commits, want)
+	}
+
+	commits, err = CommitsBetween(ctx, dir, "refs/heads/feature", "refs/heads/feature")
+	if err != nil {
+		t.Fatalf("CommitsBetween with no delta: %v", err)
+	}
+	if len(commits) != 0 {
+		t.Errorf("commits = %#v, want none", commits)
+	}
+
+	if _, err := CommitsBetween(ctx, dir, "refs/heads/missing", "refs/heads/feature"); err == nil {
+		t.Error("expected error for missing base ref")
+	}
+}
+
+func TestRemotes(t *testing.T) {
+	dir := initGitRepo(t)
+	ctx := context.Background()
+	remotes, err := Remotes(ctx, dir)
+	if err != nil {
+		t.Fatalf("Remotes: %v", err)
+	}
+	if len(remotes) != 0 {
+		t.Errorf("remotes = %q, want none", remotes)
+	}
+
+	mustGit(t, dir, "remote", "add", "origin", "https://github.com/forkowner/repo.git")
+	mustGit(t, dir, "remote", "add", "upstream", "https://github.com/upstream/repo.git")
+	remotes, err = Remotes(ctx, dir)
+	if err != nil {
+		t.Fatalf("Remotes: %v", err)
+	}
+	if want := []string{"origin", "upstream"}; !slices.Equal(remotes, want) {
+		t.Errorf("remotes = %q, want %q", remotes, want)
+	}
+}
+
+func TestRefExists(t *testing.T) {
+	dir := initGitRepo(t)
+	ctx := context.Background()
+	mustGit(t, dir, "config", "user.email", "test@test.com")
+	mustGit(t, dir, "config", "user.name", "Test")
+	mustGit(t, dir, "commit", "-q", "--allow-empty", "-m", "initial commit")
+	mustGit(t, dir, "branch", "present")
+	if !RefExists(ctx, dir, "refs/heads/present") {
+		t.Error("expected refs/heads/present to exist")
+	}
+	if RefExists(ctx, dir, "refs/heads/missing") {
+		t.Error("expected refs/heads/missing not to exist")
 	}
 }
 
