@@ -278,6 +278,7 @@ func prCreateCmd() *cobra.Command {
 		flagHead      string
 		flagBase      string
 		flagDraft     bool
+		flagFill      bool
 		flagPush      bool
 		flagReviewers []string
 		flagAssignees []string
@@ -290,11 +291,21 @@ func prCreateCmd() *cobra.Command {
 		Aliases: []string{"new"},
 		Short:   "Create a pull request",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if flagTitle == "" {
+			if flagTitle == "" && !flagFill {
 				return fmt.Errorf("--title is required")
 			}
 			if flagHead == "" {
-				return fmt.Errorf("--head is required")
+				if !flagFill {
+					return fmt.Errorf("--head is required")
+				}
+				current, err := git.CurrentBranch(cmd.Context(), "")
+				if err != nil {
+					return err
+				}
+				if current == "" {
+					return fmt.Errorf("--head is required when not on a branch")
+				}
+				flagHead = current
 			}
 
 			forge, owner, repoName, domain, err := resolve.Repo(flagRepo, flagForgeType)
@@ -304,6 +315,25 @@ func prCreateCmd() *cobra.Command {
 			prService := forge.PullRequests()
 			qualifiedHeadProvider, ok := prService.(forges.QualifiedPRHeadProvider)
 			supportsQualifiedHeads := ok && qualifiedHeadProvider.SupportsQualifiedPRHeads()
+
+			if flagFill {
+				if flagBase == "" {
+					flagBase, err = defaultBranch(cmd.Context(), forge, owner, repoName)
+					if err != nil {
+						return err
+					}
+				}
+				title, body, err := fillFromCommits(cmd.Context(), baseRemote(cmd.Context(), domain, owner, repoName), flagBase, flagHead)
+				if err != nil {
+					return err
+				}
+				if flagTitle == "" {
+					flagTitle = title
+				}
+				if !cmd.Flags().Changed("body") {
+					flagBody = body
+				}
+			}
 
 			localHead := flagHead
 			if flagPush {
@@ -359,6 +389,7 @@ func prCreateCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&flagHead, "head", "H", "", "Head branch")
 	cmd.Flags().StringVarP(&flagBase, "base", "B", "", "Base branch")
 	cmd.Flags().BoolVarP(&flagDraft, "draft", "d", false, "Create as draft")
+	cmd.Flags().BoolVarP(&flagFill, "fill", "f", false, "Fill title and body from commits; head defaults to the current branch and base to the default branch")
 	cmd.Flags().BoolVar(&flagPush, "push", false, "Push the head branch before creating the PR")
 	cmd.Flags().StringSliceVarP(&flagReviewers, "reviewer", "r", nil, "Request a reviewer")
 	cmd.Flags().StringSliceVarP(&flagAssignees, "assignee", "a", nil, "Assign to a user")
@@ -367,6 +398,69 @@ func prCreateCmd() *cobra.Command {
 	_ = cmd.Flags().MarkHidden("labels")
 	cmd.Flags().StringVarP(&flagMilestone, "milestone", "m", "", "Assign to a milestone")
 	return cmd
+}
+
+func defaultBranch(ctx context.Context, forge forges.Forge, owner, repo string) (string, error) {
+	r, err := forge.Repos().Get(ctx, owner, repo)
+	if err != nil {
+		return "", fmt.Errorf("looking up default branch: %w", err)
+	}
+	if r.DefaultBranch == "" {
+		return "", fmt.Errorf("repository has no default branch; use --base")
+	}
+	return r.DefaultBranch, nil
+}
+
+// baseRemote returns the first remote pointing at the target repository, so a
+// fork checkout compares against upstream rather than a fork that may be behind.
+func baseRemote(ctx context.Context, domain, owner, repo string) string {
+	remotes, err := git.Remotes(ctx, "")
+	if err == nil {
+		for _, name := range remotes {
+			d, o, r, err := resolve.PushRemoteRepo(ctx, name)
+			if err == nil && strings.EqualFold(d, domain) && strings.EqualFold(o, owner) && strings.EqualFold(r, repo) {
+				return name
+			}
+		}
+	}
+	return resolve.RemoteName()
+}
+
+// The remote's copy of base is preferred because the local branch is often stale.
+func fillFromCommits(ctx context.Context, remote, base, head string) (title, body string, err error) {
+	_, branch, err := splitPRHead(head)
+	if err != nil {
+		return "", "", err
+	}
+
+	baseRef := "refs/remotes/" + remote + "/" + base
+	if !git.RefExists(ctx, "", baseRef) {
+		baseRef = "refs/heads/" + base
+		if !git.RefExists(ctx, "", baseRef) {
+			return "", "", fmt.Errorf("base branch %q not found locally; fetch it from %q or use --base", base, remote)
+		}
+	}
+	headRef := "refs/heads/" + branch
+	if !git.RefExists(ctx, "", headRef) {
+		return "", "", fmt.Errorf("head branch %q not found locally", branch)
+	}
+
+	commits, err := git.CommitsBetween(ctx, "", baseRef, headRef)
+	if err != nil {
+		return "", "", fmt.Errorf("reading commits: %w", err)
+	}
+	switch len(commits) {
+	case 0:
+		return "", "", fmt.Errorf("no commits on %q that are not on %q", branch, base)
+	case 1:
+		return commits[0].Subject, commits[0].Body, nil
+	}
+
+	subjects := make([]string, len(commits))
+	for i, c := range commits {
+		subjects[i] = "- " + c.Subject
+	}
+	return strings.NewReplacer("-", " ", "_", " ").Replace(branch), strings.Join(subjects, "\n"), nil
 }
 
 func splitPRHead(head string) (owner, branch string, err error) {
