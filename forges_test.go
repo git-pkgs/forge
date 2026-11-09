@@ -646,6 +646,48 @@ func TestRegisterDomainTangledMissingBuilderReturnsError(t *testing.T) {
 	}
 }
 
+func TestDetectionMissingBuilderReturnsError(t *testing.T) {
+	stub := func(string, string, *http.Client) Forge { return &mockForge{} }
+	tests := []struct {
+		name     string
+		header   string
+		value    string
+		builders ForgeBuilders
+	}{
+		{"github", "X-GitHub-Request-Id", "abc123", ForgeBuilders{GitLab: stub, Gitea: stub}},
+		{"gitlab", "X-Gitlab-Meta", `{"cors":"abc"}`, ForgeBuilders{GitHub: stub, Gitea: stub}},
+		{"gitea", "X-Gitea-Version", "1.21.0", ForgeBuilders{GitHub: stub, GitLab: stub}},
+		{"forgejo", "X-Forgejo-Version", "7.0.0", ForgeBuilders{GitHub: stub, GitLab: stub}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set(tt.header, tt.value)
+				w.WriteHeader(http.StatusOK)
+			}))
+			defer srv.Close()
+
+			base, err := url.Parse(srv.URL)
+			if err != nil {
+				t.Fatal(err)
+			}
+			c := NewClient(
+				WithHTTPClient(&http.Client{Transport: rewriteHostTransport{base: base}}),
+				WithDetection(tt.builders),
+			)
+
+			_, _, _, err = c.ForgeForURL(context.Background(), "https://git.example.com/owner/repo")
+			if err == nil || !strings.Contains(err.Error(), "no builder registered") || !strings.Contains(err.Error(), tt.name) {
+				t.Fatalf("ForgeForURL error = %v, want missing %s builder error", err, tt.name)
+			}
+			if _, err := c.ForgeFor("git.example.com"); err == nil {
+				t.Error("git.example.com was registered, want no registration")
+			}
+		})
+	}
+}
+
 type rewriteHostTransport struct {
 	base *url.URL
 }

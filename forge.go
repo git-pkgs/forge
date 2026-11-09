@@ -204,34 +204,30 @@ func (c *Client) RegisterDomain(ctx context.Context, domain, token string, build
 	if err != nil {
 		return fmt.Errorf("detecting forge type for %s: %w", domain, err)
 	}
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	c.tokens[domain] = token
+	var build func(baseURL, token string, hc *http.Client) Forge
 	switch ft {
 	case GitHub:
-		c.forges[domain] = builders.GitHub(baseURL, token, c.httpClient)
+		build = builders.GitHub
 	case GitLab:
-		c.forges[domain] = builders.GitLab(baseURL, token, c.httpClient)
+		build = builders.GitLab
 	case Gitea, Forgejo:
-		c.forges[domain] = builders.Gitea(baseURL, token, c.httpClient)
+		build = builders.Gitea
 	case Gerrit:
-		if builders.Gerrit == nil {
-			return fmt.Errorf("no builder registered for forge type %q at %s", ft, domain)
-		}
-		c.forges[domain] = builders.Gerrit(baseURL, token, c.httpClient)
+		build = builders.Gerrit
 	case Tangled:
-		if builders.Tangled == nil {
-			return fmt.Errorf("no builder registered for forge type %q at %s", ft, domain)
-		}
-		c.forges[domain] = builders.Tangled(baseURL, token, c.httpClient)
+		build = builders.Tangled
 	case Radicle:
-		if builders.Radicle == nil {
-			return fmt.Errorf("no builder registered for forge type %q at %s", ft, domain)
-		}
-		c.forges[domain] = builders.Radicle(baseURL, token, c.httpClient)
+		build = builders.Radicle
 	default:
 		return fmt.Errorf("unsupported forge type %q for %s", ft, domain)
 	}
+	if build == nil {
+		return fmt.Errorf("no builder registered for forge type %q at %s", ft, domain)
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.tokens[domain] = token
+	c.forges[domain] = build(baseURL, token, c.httpClient)
 	return nil
 }
 
