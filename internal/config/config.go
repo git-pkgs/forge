@@ -59,7 +59,7 @@ func (c *Config) DomainForSSHHost(sshHost string) string {
 		return ""
 	}
 	for name, ds := range c.Domains {
-		if ds.SSHHost == sshHost {
+		if strings.EqualFold(ds.SSHHost, sshHost) {
 			return name
 		}
 	}
@@ -88,7 +88,7 @@ func GitProtocolFor(domain string) string {
 	if err != nil || cfg == nil {
 		return "https"
 	}
-	if ds, ok := cfg.Domains[domain]; ok && ds.GitProtocol != "" {
+	if ds, ok := cfg.Domains[strings.ToLower(domain)]; ok && ds.GitProtocol != "" {
 		return ds.GitProtocol
 	}
 	if cfg.Default.GitProtocol != "" {
@@ -218,6 +218,8 @@ func loadFile(cfg *Config, path string, userConfig bool) error {
 		if name == "default" {
 			continue
 		}
+		// Domains are matched case-insensitively, so key them by lowercase.
+		name = strings.ToLower(name)
 		ds := cfg.Domains[name]
 		if v, ok := kv["type"]; ok {
 			ds.Type = v
@@ -374,6 +376,23 @@ func SetDomain(domain, token, tokenCmd, forgeType, scheme string) error {
 		}
 	}
 
+	domain = strings.ToLower(domain)
+	// Fold any existing section spelled with different case into the
+	// lowercase one so the file never holds two sections for one domain.
+	for name, kv := range sections {
+		if name == domain || !strings.EqualFold(name, domain) {
+			continue
+		}
+		if _, ok := sections[domain]; !ok {
+			sections[domain] = make(map[string]string)
+		}
+		for k, v := range kv {
+			if _, ok := sections[domain][k]; !ok {
+				sections[domain][k] = v
+			}
+		}
+		delete(sections, name)
+	}
 	if _, ok := sections[domain]; !ok {
 		sections[domain] = make(map[string]string)
 	}

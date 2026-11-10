@@ -228,10 +228,12 @@ func (c *Client) RegisterDomain(ctx context.Context, domain, token string, build
 	if build == nil {
 		return fmt.Errorf("no builder registered for forge type %q at %s", ft, domain)
 	}
+	// Build before locking so a builder can call back into the Client.
+	f := build(baseURL, token, c.httpClient)
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.tokens[domain] = token
-	c.forges[domain] = build(baseURL, token, c.httpClient)
+	c.forges[domain] = f
 	return nil
 }
 

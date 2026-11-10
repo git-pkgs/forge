@@ -780,3 +780,73 @@ git_protocol = typo
 		t.Errorf("expected error about invalid git_protocol, got: %v", loadErr)
 	}
 }
+
+func TestLoadFileLowercasesSectionNames(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "config")
+	_ = os.WriteFile(path, []byte(`[Git.Example.com]
+type = gitea
+scheme = http
+token = tok
+git_protocol = ssh
+`), 0600)
+
+	cfg := &Config{Domains: make(map[string]DomainSection)}
+	if err := loadFile(cfg, path, true); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, ok := cfg.Domains["Git.Example.com"]; ok {
+		t.Error("section name kept its original case")
+	}
+	ds, ok := cfg.Domains["git.example.com"]
+	if !ok {
+		t.Fatal("expected a git.example.com section")
+	}
+	if ds.Type != "gitea" || ds.Scheme != "http" || ds.Token != "tok" || ds.GitProtocol != "ssh" {
+		t.Errorf("unexpected section: %+v", ds)
+	}
+}
+
+func TestDomainForSSHHostIgnoresCase(t *testing.T) {
+	cfg := &Config{
+		Domains: map[string]DomainSection{
+			"gitlab.test": {SSHHost: "SSH.GitLab.test"},
+		},
+	}
+	if got := cfg.DomainForSSHHost("ssh.gitlab.test"); got != "gitlab.test" {
+		t.Errorf("DomainForSSHHost = %q, want gitlab.test", got)
+	}
+}
+
+func TestSetDomainLowercasesAndMergesSection(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", dir)
+
+	cfgDir := filepath.Join(dir, "forge")
+	_ = os.MkdirAll(cfgDir, 0700)
+	_ = os.WriteFile(filepath.Join(cfgDir, "config"), []byte(`[Git.Example.com]
+ssh_host = ssh.example.com
+`), 0600)
+
+	if err := SetDomain("GIT.example.com", "tok", "", "gitea", ""); err != nil {
+		t.Fatalf("SetDomain: %v", err)
+	}
+
+	f, err := os.Open(filepath.Join(cfgDir, "config"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = f.Close() }()
+	sections, err := parseINI(f)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(sections) != 1 {
+		t.Fatalf("expected one section, got %v", sections)
+	}
+	got := sections["git.example.com"]
+	if got["token"] != "tok" || got["type"] != "gitea" || got["ssh_host"] != "ssh.example.com" {
+		t.Errorf("unexpected section: %v", got)
+	}
+}

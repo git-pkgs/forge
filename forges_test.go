@@ -10,6 +10,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 )
 
 func assertEqual(t *testing.T, field, want, got string) {
@@ -1785,4 +1786,44 @@ func (m *mockReviewService) RemoveReviewers(_ context.Context, owner, repo strin
 	m.lastRepo = repo
 	m.lastNumber = number
 	return nil
+}
+
+func TestRegisterDomainBuilderMayUseClient(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("X-Gitea-Version", "1.21.0")
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
+
+	base, err := url.Parse(srv.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	c := NewClient(WithHTTPClient(&http.Client{Transport: rewriteHostTransport{base: base}}))
+
+	done := make(chan error, 1)
+	go func() {
+		done <- c.RegisterDomain(context.Background(), "git.example.com", "tok", ForgeBuilders{
+			Gitea: func(string, string, *http.Client) Forge {
+				_ = c.Tokens()
+				_, _ = c.ForgeFor("git.example.com")
+				return &mockForge{}
+			},
+		})
+	}()
+
+	select {
+	case err := <-done:
+		if err != nil {
+			t.Fatalf("RegisterDomain: %v", err)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("RegisterDomain deadlocked when the builder called back into the Client")
+	}
+	if _, err := c.ForgeFor("git.example.com"); err != nil {
+		t.Errorf("ForgeFor after RegisterDomain: %v", err)
+	}
+	if got := c.Tokens()["git.example.com"]; got != "tok" {
+		t.Errorf("token = %q, want tok", got)
+	}
 }

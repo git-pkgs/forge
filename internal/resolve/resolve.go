@@ -479,7 +479,7 @@ func configForgeType(domain string) string {
 	if err != nil || cfg == nil {
 		return ""
 	}
-	return cfg.Domains[domain].Type
+	return cfg.Domains[strings.ToLower(domain)].Type
 }
 
 // configScheme returns the API scheme for a domain from config files,
@@ -489,7 +489,7 @@ func configScheme(domain string) string {
 	if err != nil || cfg == nil {
 		return ""
 	}
-	return cfg.Domains[domain].Scheme
+	return cfg.Domains[strings.ToLower(domain)].Scheme
 }
 
 // TokenForDomain looks up an auth token. Checks environment variables first
@@ -503,7 +503,7 @@ func TokenForDomain(domain string) string {
 	if err != nil || cfg == nil {
 		return ""
 	}
-	token, err := cfg.Domains[domain].ResolveToken(domain)
+	token, err := cfg.Domains[strings.ToLower(domain)].ResolveToken(domain)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "forge: token command for %s failed: %v\n", domain, err)
 	}
