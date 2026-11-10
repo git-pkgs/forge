@@ -322,7 +322,7 @@ func (s *bitbucketPRService) Diff(ctx context.Context, owner, repo string, numbe
 		return "", forge.ErrNotFound
 	}
 	if resp.StatusCode >= http.StatusBadRequest {
-		respBody, _ := io.ReadAll(resp.Body)
+		respBody, _ := io.ReadAll(io.LimitReader(resp.Body, maxDiffSize))
 		return "", &forge.HTTPError{StatusCode: resp.StatusCode, URL: url, Body: string(respBody)}
 	}
 
