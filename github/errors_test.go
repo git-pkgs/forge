@@ -4,8 +4,10 @@ import (
 	"context"
 	"errors"
 	forge "github.com/git-pkgs/forge"
+	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/google/go-github/v82/github"
@@ -128,5 +130,70 @@ func TestGitHubWrapErrPassesOtherErrorsThrough(t *testing.T) {
 	original := errors.New("connection refused")
 	if err := wrapErr(original); err != original {
 		t.Errorf("wrapErr(%v) = %v, want it unchanged", original, err)
+	}
+}
+
+func TestGitHubGetJobLogChecksLogStatus(t *testing.T) {
+	tests := []struct {
+		name   string
+		status int
+		want   error
+	}{
+		{"forbidden", http.StatusForbidden, forge.ErrUnauthorized},
+		{"too many requests", http.StatusTooManyRequests, forge.ErrRateLimited},
+		{"server error", http.StatusInternalServerError, forge.ErrServerError},
+		{"not classified", http.StatusGone, nil},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mux := http.NewServeMux()
+			mux.HandleFunc("/api/v3/repos/owner/repo/actions/jobs/1/logs", func(w http.ResponseWriter, r *http.Request) {
+				http.Redirect(w, r, "http://"+r.Host+"/blob/secret-token", http.StatusFound)
+			})
+			mux.HandleFunc("/blob/", func(w http.ResponseWriter, _ *http.Request) {
+				w.WriteHeader(tt.status)
+				_, _ = w.Write([]byte("storage error"))
+			})
+			srv := httptest.NewServer(mux)
+			t.Cleanup(srv.Close)
+
+			f := NewWithBase(srv.URL, "", srv.Client())
+			rc, err := f.CI().GetJobLog(context.Background(), "owner", "repo", 1)
+			if err == nil {
+				_ = rc.Close()
+				t.Fatal("expected an error")
+			}
+			if rc != nil {
+				t.Errorf("reader = %v, want nil", rc)
+			}
+			assertSentinel(t, err, tt.want)
+			if strings.Contains(err.Error(), "secret-token") {
+				t.Errorf("error %q leaks the signed URL", err)
+			}
+		})
+	}
+}
+
+func TestGitHubGetJobLogReturnsLog(t *testing.T) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/api/v3/repos/owner/repo/actions/jobs/1/logs", func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "http://"+r.Host+"/blob/log", http.StatusFound)
+	})
+	mux.HandleFunc("/blob/log", func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte("log line"))
+	})
+	srv := httptest.NewServer(mux)
+	t.Cleanup(srv.Close)
+
+	f := NewWithBase(srv.URL, "", srv.Client())
+	rc, err := f.CI().GetJobLog(context.Background(), "owner", "repo", 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = rc.Close() }()
+	got, _ := io.ReadAll(rc)
+	if string(got) != "log line" {
+		t.Errorf("log = %q", got)
 	}
 }
