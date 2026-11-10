@@ -117,6 +117,18 @@ func TestParseRepoURL(t *testing.T) {
 			domain: "forge.example.com", owner: "owner", repo: "repo",
 		},
 		{
+			input:  "https://GitHub.com/Octocat/Hello-World",
+			domain: "github.com", owner: "Octocat", repo: "Hello-World",
+		},
+		{
+			input:  "git@GitLab.com:Group/Project.git",
+			domain: "gitlab.com", owner: "Group", repo: "Project",
+		},
+		{
+			input:  "ssh://git@Forge.Example.com:2222/owner/repo.git",
+			domain: "forge.example.com", owner: "owner", repo: "repo",
+		},
+		{
 			input:   "",
 			wantErr: true,
 		},
@@ -285,6 +297,15 @@ func TestRegisterDomainAcceptsHTTPURL(t *testing.T) {
 	if _, err := c.ForgeFor(host); err != nil {
 		t.Errorf("ForgeFor(%q) after RegisterDomain(%q): %v", host, inputURL, err)
 	}
+}
+
+func TestNormalizeBaseURLLowercasesHost(t *testing.T) {
+	baseURL, host, err := normalizeBaseURL("HTTPS://Git.Example.com:3000/Forge/")
+	if err != nil {
+		t.Fatalf("normalizeBaseURL: %v", err)
+	}
+	assertEqual(t, "baseURL", "https://git.example.com:3000/Forge", baseURL)
+	assertEqual(t, "host", "git.example.com:3000", host)
 }
 
 func TestNormalizeBaseURLRejectsUnsupportedURLParts(t *testing.T) {
@@ -847,6 +868,31 @@ func TestTokensReturnsCopy(t *testing.T) {
 	c := NewClient(WithToken("github.com", "tok"))
 	c.Tokens()["github.com"] = "changed"
 	assertEqual(t, "token", "tok", c.Tokens()["github.com"])
+}
+
+func TestClientMatchesDomainsCaseInsensitively(t *testing.T) {
+	mock := &mockForge{repoService: &mockRepoService{repos: []Repository{{FullName: "org/repo"}}}}
+	rt := &detectionTransport{}
+	c := NewClient(
+		WithHTTPClient(&http.Client{Transport: rt}),
+		WithForge("Example.com", mock),
+		WithToken("Example.com", "tok"),
+		WithDetection(ForgeBuilders{Gitea: func(string, string, *http.Client) Forge { return &mockForge{} }}),
+	)
+
+	if f, err := c.ForgeFor("EXAMPLE.COM"); err != nil || f != Forge(mock) {
+		t.Errorf("ForgeFor = %T, %v, want the registered forge", f, err)
+	}
+	if repos, err := c.ListRepositories(context.Background(), "EXAMPLE.com", "org", ListRepoOpts{}); err != nil || len(repos) != 1 {
+		t.Errorf("ListRepositories = %+v, %v", repos, err)
+	}
+	if f, _, _, err := c.ForgeForURL(context.Background(), "https://eXample.COM/org/repo"); err != nil || f != Forge(mock) {
+		t.Errorf("ForgeForURL = %T, %v, want the registered forge", f, err)
+	}
+	assertEqual(t, "token", "tok", c.Tokens()["example.com"])
+	if len(rt.urls) != 0 {
+		t.Errorf("probed %v, want no requests", rt.urls)
+	}
 }
 
 func TestClientListRepositoriesRoutes(t *testing.T) {

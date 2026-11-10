@@ -127,6 +127,29 @@ func TestNewClientKeepsRegisteredForge(t *testing.T) {
 	}
 }
 
+func TestForgeForURLMatchesDefaultForgeCaseInsensitively(t *testing.T) {
+	rt := &recordingTransport{}
+	c := NewClient(forges.WithHTTPClient(&http.Client{Transport: rt}))
+
+	f, owner, repo, err := c.ForgeForURL(context.Background(), "https://GitHub.com/owner/repo")
+	if err != nil {
+		t.Fatalf("ForgeForURL: %v", err)
+	}
+	if owner != "owner" || repo != "repo" {
+		t.Errorf("owner/repo = %q/%q", owner, repo)
+	}
+	want, err := c.ForgeFor("github.com")
+	if err != nil {
+		t.Fatalf("ForgeFor: %v", err)
+	}
+	if f != want {
+		t.Errorf("ForgeForURL returned %T, want the default github.com forge", f)
+	}
+	if len(rt.auth) != 0 {
+		t.Errorf("requests sent to %v, want no detection probe", rt.auth)
+	}
+}
+
 func TestDefaultForgesAskForEachToken(t *testing.T) {
 	var asked []string
 	defaults := DefaultForges(func(domain string) string {

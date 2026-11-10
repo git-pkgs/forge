@@ -103,10 +103,11 @@ type Client struct {
 // Option configures a Client.
 type Option func(*Client)
 
-// WithToken sets the API token for the given domain.
+// WithToken sets the API token for the given domain. Domains are matched
+// case-insensitively.
 func WithToken(domain, token string) Option {
 	return func(c *Client) {
-		c.tokens[domain] = token
+		c.tokens[strings.ToLower(domain)] = token
 	}
 }
 
@@ -117,10 +118,11 @@ func WithHTTPClient(hc *http.Client) Option {
 	}
 }
 
-// WithForge registers a Forge implementation for the given domain.
+// WithForge registers a Forge implementation for the given domain. Domains are
+// matched case-insensitively.
 func WithForge(domain string, f Forge) Option {
 	return func(c *Client) {
-		c.forges[domain] = f
+		c.forges[strings.ToLower(domain)] = f
 	}
 }
 
@@ -149,7 +151,7 @@ func NewClient(opts ...Option) *Client {
 }
 
 // Tokens returns a copy of the token map so callers can read tokens set via
-// WithToken.
+// WithToken. The map is keyed by lowercased domain.
 func (c *Client) Tokens() map[string]string {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
@@ -162,7 +164,8 @@ func (c *Client) HTTPClient() *http.Client {
 }
 
 // normalizeBaseURL accepts either a bare host[:port] or a full http(s) URL and
-// returns (baseURL, host). A bare host is assumed https.
+// returns (baseURL, host). A bare host is assumed https. The host is lowercased
+// in both return values.
 func normalizeBaseURL(s string) (baseURL, host string, err error) {
 	if !strings.Contains(s, "://") {
 		s = "https://" + s
@@ -186,6 +189,7 @@ func normalizeBaseURL(s string) (baseURL, host string, err error) {
 		return "", "", fmt.Errorf("invalid forge URL %q: query and fragment are not supported", s)
 	}
 
+	u.Host = strings.ToLower(u.Host)
 	u.Path = strings.TrimRight(u.Path, "/")
 	u.RawPath = strings.TrimRight(u.RawPath, "/")
 	return u.String(), u.Host, nil
@@ -194,7 +198,7 @@ func normalizeBaseURL(s string) (baseURL, host string, err error) {
 // RegisterDomain detects the forge type for a domain and registers the
 // appropriate Forge using the provided builder functions. The domain may
 // include an http:// or https:// prefix; without one, https is assumed.
-// The bare host[:port] is used as the registry key.
+// The lowercased bare host[:port] is used as the registry key.
 func (c *Client) RegisterDomain(ctx context.Context, domain, token string, builders ForgeBuilders) error {
 	baseURL, domain, err := normalizeBaseURL(domain)
 	if err != nil {
@@ -245,7 +249,7 @@ type ForgeBuilders struct {
 func (c *Client) forgeFor(domain string) (Forge, error) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-	f, ok := c.forges[domain]
+	f, ok := c.forges[strings.ToLower(domain)]
 	if !ok {
 		return nil, fmt.Errorf("no forge registered for domain %q", domain)
 	}
@@ -256,6 +260,7 @@ func (c *Client) forgeFor(domain string) (Forge, error) {
 // detection is enabled, it probes the domain over https and registers what it
 // finds.
 func (c *Client) forgeOrDetect(ctx context.Context, domain string) (Forge, error) {
+	domain = strings.ToLower(domain)
 	f, err := c.forgeFor(domain)
 	if err == nil || c.detection == nil || strings.Contains(domain, "://") {
 		return f, err
@@ -270,6 +275,7 @@ func (c *Client) forgeOrDetect(ctx context.Context, domain string) (Forge, error
 }
 
 // ForgeFor returns the Forge implementation registered for the given domain.
+// Domains are matched case-insensitively.
 func (c *Client) ForgeFor(domain string) (Forge, error) {
 	return c.forgeFor(domain)
 }
@@ -387,7 +393,8 @@ func (c *Client) FetchTagsFromPURL(ctx context.Context, p *purl.PURL) ([]Tag, er
 
 // ParseRepoURL extracts the domain, owner, and repo from a repository URL.
 // It handles https://, schemeless, and scp-like SSH URLs (sshuser@host:owner/repo
-// or host:owner/repo), and strips .git suffixes and extra path segments.
+// or host:owner/repo), and strips .git suffixes and extra path segments. The
+// domain is lowercased, so it can be used as a Client registry key.
 func ParseRepoURL(rawURL string) (domain, owner, repo string, err error) {
 	rawURL = strings.TrimSpace(rawURL)
 	if rawURL == "" {
@@ -397,7 +404,7 @@ func ParseRepoURL(rawURL string) (domain, owner, repo string, err error) {
 	// Handle scp-like syntax: user@host:owner/repo (e.g. git@github.com:user/repo).
 	if !strings.Contains(rawURL, "://") {
 		if domain, path, ok := splitSCPLike(rawURL); ok {
-			return splitOwnerRepo(domain, path)
+			return splitOwnerRepo(strings.ToLower(domain), path)
 		}
 		rawURL = "https://" + rawURL
 	}
@@ -410,7 +417,7 @@ func ParseRepoURL(rawURL string) (domain, owner, repo string, err error) {
 	if scheme := strings.ToLower(u.Scheme); scheme == "http" || scheme == "https" {
 		domain = u.Host
 	}
-	return splitOwnerRepo(domain, u.Path)
+	return splitOwnerRepo(strings.ToLower(domain), u.Path)
 }
 
 // splitSCPLike recognizes git's scp-like remote syntax host:path, optionally
