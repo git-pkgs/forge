@@ -76,6 +76,10 @@ func ClassifyStatus(status int, err error) error {
 	return &classifiedError{sentinel: sentinel, err: err}
 }
 
+// ErrReadOnly is returned when a client created by ReadOnlyHTTPClient refuses
+// a request that could modify forge state.
+var ErrReadOnly = errors.New("write refused in read-only mode")
+
 // ResourceType identifies the kind of resource a URL points to.
 type ResourceType string
 

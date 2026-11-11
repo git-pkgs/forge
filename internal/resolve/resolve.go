@@ -410,7 +410,8 @@ func newClientForBaseURL(domain, baseURL string) *forges.Client {
 	}
 
 	// Share one client for detection and every backend, so forges found by
-	// probing get the same User-Agent and redirect policy as the defaults.
+	// probing get the same User-Agent, redirect policy and read-only mode as the
+	// defaults.
 	hc := HTTPClient()
 	opts = append(opts, forges.WithHTTPClient(hc))
 
