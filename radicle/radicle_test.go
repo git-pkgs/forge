@@ -547,6 +547,9 @@ func TestUnsupportedServices(t *testing.T) {
 	if _, err := f.Commits().ResolveCommit(ctx, "", testRID, "main"); !errors.Is(err, forges.ErrNotSupported) {
 		t.Errorf("Commits().ResolveCommit error = %v, want ErrNotSupported", err)
 	}
+	if _, err := f.Attestations().List(ctx, "", testRID, "sha256:"+strings.Repeat("a", 64), forges.ListAttestationOpts{}); !errors.Is(err, forges.ErrNotSupported) {
+		t.Errorf("Attestations().List error = %v, want ErrNotSupported", err)
+	}
 	if _, err := f.GetAuthenticatedUser(ctx); !errors.Is(err, forges.ErrNotSupported) {
 		t.Errorf("GetAuthenticatedUser error = %v, want ErrNotSupported", err)
 	}

@@ -2,6 +2,7 @@ package gerrit
 
 import (
 	"context"
+	"encoding/json"
 	"io"
 	"net/http"
 	"os"
@@ -22,6 +23,7 @@ type unsupportedCollaboratorService struct{}
 type unsupportedCommitStatusService struct{}
 type unsupportedCheckRunService struct{}
 type unsupportedCommitService struct{}
+type unsupportedAttestationService struct{}
 
 func (f *gerritForge) Issues() forge.IssueService         { return &unsupportedIssueService{} }
 func (f *gerritForge) Labels() forge.LabelService         { return &unsupportedLabelService{} }
@@ -44,6 +46,9 @@ func (f *gerritForge) CheckRuns() forge.CheckRunService {
 	return &unsupportedCheckRunService{}
 }
 func (f *gerritForge) Commits() forge.CommitService { return &unsupportedCommitService{} }
+func (f *gerritForge) Attestations() forge.AttestationService {
+	return &unsupportedAttestationService{}
+}
 func (f *gerritForge) GetRateLimit(context.Context) (*forge.RateLimit, error) {
 	return nil, forge.ErrNotSupported
 }
@@ -256,4 +261,12 @@ func (s *unsupportedCheckRunService) List(context.Context, string, string, strin
 
 func (s *unsupportedCommitService) ResolveCommit(context.Context, string, string, string) (string, error) {
 	return "", forge.ErrNotSupported
+}
+
+func (s *unsupportedAttestationService) List(context.Context, string, string, string, forge.ListAttestationOpts) ([]forge.Attestation, error) {
+	return nil, forge.ErrNotSupported
+}
+
+func (s *unsupportedAttestationService) Download(context.Context, string, string, forge.Attestation) (json.RawMessage, error) {
+	return nil, forge.ErrNotSupported
 }

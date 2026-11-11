@@ -137,6 +137,7 @@ type Forge interface {
 	CommitStatuses() CommitStatusService
 	CheckRuns() CheckRunService
 	Commits() CommitService
+	Attestations() AttestationService
 	GetRateLimit(ctx context.Context) (*RateLimit, error)
 	// GetAuthenticatedUser returns the profile of the user the client's
 	// token belongs to.

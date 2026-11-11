@@ -66,6 +66,9 @@ func (f *tangledForge) CommitStatuses() forges.CommitStatusService {
 }
 func (f *tangledForge) CheckRuns() forges.CheckRunService { return unsupportedCheckRunService{} }
 func (f *tangledForge) Commits() forges.CommitService     { return unsupportedCommitService{} }
+func (f *tangledForge) Attestations() forges.AttestationService {
+	return unsupportedAttestationService{}
+}
 
 func (f *tangledForge) GetRateLimit(context.Context) (*forges.RateLimit, error) {
 	return nil, forges.ErrNotSupported
