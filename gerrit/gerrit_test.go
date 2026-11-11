@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strings"
 	"testing"
 
 	forge "github.com/git-pkgs/forge"
@@ -260,6 +261,11 @@ func TestUnsupportedServicesReturnErrNotSupported(t *testing.T) {
 	_, err = f.Notifications().GetRepoSubscription(context.Background(), "org", "repo")
 	if !errors.Is(err, forge.ErrNotSupported) {
 		t.Fatalf("Notifications().GetRepoSubscription error = %v, want ErrNotSupported", err)
+	}
+
+	_, err = f.Attestations().List(context.Background(), "org", "repo", "sha256:"+strings.Repeat("a", 64), forge.ListAttestationOpts{})
+	if !errors.Is(err, forge.ErrNotSupported) {
+		t.Fatalf("Attestations().List error = %v, want ErrNotSupported", err)
 	}
 }
 

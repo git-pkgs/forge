@@ -14,6 +14,9 @@ const defaultPageSize = 100
 type gitHubForge struct {
 	client     *github.Client
 	apiBaseURL string
+	// httpClient is the caller's client without the token transport, for
+	// requests that leave the API host.
+	httpClient *http.Client
 }
 
 // New creates a GitHub forge backend for github.com.
@@ -22,14 +25,14 @@ func New(token string, hc *http.Client) forge.Forge {
 	if token != "" {
 		c = c.WithAuthToken(token)
 	}
-	return &gitHubForge{client: c, apiBaseURL: "https://api.github.com"}
+	return &gitHubForge{client: c, apiBaseURL: "https://api.github.com", httpClient: hc}
 }
 
 // NewWithBase creates a GitHub forge backend for a GitHub Enterprise instance.
 func NewWithBase(baseURL, token string, hc *http.Client) forge.Forge {
 	c := github.NewClient(hc).WithAuthToken(token)
 	c, _ = c.WithEnterpriseURLs(baseURL, baseURL)
-	return &gitHubForge{client: c, apiBaseURL: strings.TrimRight(baseURL, "/") + "/api/v3"}
+	return &gitHubForge{client: c, apiBaseURL: strings.TrimRight(baseURL, "/") + "/api/v3", httpClient: hc}
 }
 
 func (f *gitHubForge) APIBaseURL() string {

@@ -4,6 +4,7 @@ package gitlab
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -118,6 +119,18 @@ func (f *gitLabForge) Commits() forge.CommitService { return &gitLabCommitServic
 
 func (s *gitLabCommitService) ResolveCommit(ctx context.Context, owner, repo, ref string) (string, error) {
 	return "", errTinyGo
+}
+
+type gitLabAttestationService struct{}
+
+func (f *gitLabForge) Attestations() forge.AttestationService { return &gitLabAttestationService{} }
+
+func (s *gitLabAttestationService) List(ctx context.Context, owner, repo, digest string, opts forge.ListAttestationOpts) ([]forge.Attestation, error) {
+	return nil, errTinyGo
+}
+
+func (s *gitLabAttestationService) Download(ctx context.Context, owner, repo string, att forge.Attestation) (json.RawMessage, error) {
+	return nil, errTinyGo
 }
 
 type gitLabDeployKeyService struct{}
