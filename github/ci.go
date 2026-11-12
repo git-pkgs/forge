@@ -2,6 +2,7 @@ package github
 
 import (
 	"context"
+	"fmt"
 	forge "github.com/git-pkgs/forge"
 	"io"
 	"net/http"
@@ -89,7 +90,7 @@ func (s *gitHubCIService) ListRuns(ctx context.Context, owner, repo string, opts
 			if resp != nil && resp.StatusCode == http.StatusNotFound {
 				return nil, forge.ErrNotFound
 			}
-			return nil, err
+			return nil, wrapErr(err)
 		}
 		for _, r := range runs.WorkflowRuns {
 			all = append(all, convertGitHubWorkflowRun(r))
@@ -113,7 +114,7 @@ func (s *gitHubCIService) GetRun(ctx context.Context, owner, repo string, runID 
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return nil, forge.ErrNotFound
 		}
-		return nil, err
+		return nil, wrapErr(err)
 	}
 	result := convertGitHubWorkflowRun(r)
 
@@ -160,7 +161,7 @@ func (s *gitHubCIService) TriggerRun(ctx context.Context, owner, repo string, op
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return forge.ErrNotFound
 		}
-		return err
+		return wrapErr(err)
 	}
 	return nil
 }
@@ -174,7 +175,7 @@ func (s *gitHubCIService) CancelRun(ctx context.Context, owner, repo string, run
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return forge.ErrNotFound
 		}
-		return err
+		return wrapErr(err)
 	}
 	return nil
 }
@@ -188,7 +189,7 @@ func (s *gitHubCIService) RetryRun(ctx context.Context, owner, repo string, runI
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return forge.ErrNotFound
 		}
-		return err
+		return wrapErr(err)
 	}
 	return nil
 }
@@ -199,12 +200,21 @@ func (s *gitHubCIService) GetJobLog(ctx context.Context, owner, repo string, job
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return nil, forge.ErrNotFound
 		}
-		return nil, err
+		return nil, wrapErr(err)
 	}
 	// url is a redirect URL; fetch the actual log
-	logResp, err := http.Get(url.String())
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url.String(), nil)
 	if err != nil {
 		return nil, err
+	}
+	logResp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	if logResp.StatusCode < http.StatusOK || logResp.StatusCode >= http.StatusMultipleChoices {
+		_ = logResp.Body.Close()
+		// The signed URL is left out of the error on purpose.
+		return nil, forge.ClassifyStatus(logResp.StatusCode, fmt.Errorf("fetching job log: HTTP %d", logResp.StatusCode))
 	}
 	return logResp.Body, nil
 }

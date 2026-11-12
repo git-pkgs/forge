@@ -25,7 +25,7 @@ func (s *gitHubCommitStatusService) List(ctx context.Context, owner, repo, sha s
 			if resp != nil && resp.StatusCode == http.StatusNotFound {
 				return nil, forge.ErrNotFound
 			}
-			return nil, err
+			return nil, wrapErr(err)
 		}
 		for _, st := range statuses {
 			cs := forge.CommitStatus{
@@ -64,7 +64,7 @@ func (s *gitHubCommitStatusService) Set(ctx context.Context, owner, repo, sha st
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return nil, forge.ErrNotFound
 		}
-		return nil, err
+		return nil, wrapErr(err)
 	}
 
 	cs := &forge.CommitStatus{

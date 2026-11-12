@@ -84,7 +84,7 @@ func (s *gitLabReleaseService) List(ctx context.Context, owner, repo string, opt
 			if resp != nil && resp.StatusCode == http.StatusNotFound {
 				return nil, forge.ErrNotFound
 			}
-			return nil, err
+			return nil, wrapErr(err)
 		}
 		for _, r := range releases {
 			all = append(all, convertGitLabRelease(r))
@@ -109,7 +109,7 @@ func (s *gitLabReleaseService) Get(ctx context.Context, owner, repo, tag string)
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return nil, forge.ErrNotFound
 		}
-		return nil, err
+		return nil, wrapErr(err)
 	}
 	result := convertGitLabRelease(r)
 	return &result, nil
@@ -126,7 +126,7 @@ func (s *gitLabReleaseService) GetLatest(ctx context.Context, owner, repo string
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return nil, forge.ErrNotFound
 		}
-		return nil, err
+		return nil, wrapErr(err)
 	}
 	if len(releases) == 0 {
 		return nil, forge.ErrNotFound
@@ -151,7 +151,7 @@ func (s *gitLabReleaseService) Create(ctx context.Context, owner, repo string, o
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return nil, forge.ErrNotFound
 		}
-		return nil, err
+		return nil, wrapErr(err)
 	}
 	result := convertGitLabRelease(r)
 	return &result, nil
@@ -180,7 +180,7 @@ func (s *gitLabReleaseService) Update(ctx context.Context, owner, repo, tag stri
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return nil, forge.ErrNotFound
 		}
-		return nil, err
+		return nil, wrapErr(err)
 	}
 	result := convertGitLabRelease(r)
 	return &result, nil
@@ -193,7 +193,7 @@ func (s *gitLabReleaseService) Delete(ctx context.Context, owner, repo, tag stri
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return forge.ErrNotFound
 		}
-		return err
+		return wrapErr(err)
 	}
 	return nil
 }

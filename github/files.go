@@ -27,7 +27,7 @@ func (s *gitHubFileService) Get(ctx context.Context, owner, repo, path, ref stri
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return nil, forge.ErrNotFound
 		}
-		return nil, err
+		return nil, wrapErr(err)
 	}
 	if file == nil {
 		return nil, forge.ErrNotFound
@@ -57,7 +57,7 @@ func (s *gitHubFileService) List(ctx context.Context, owner, repo, path, ref str
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return nil, forge.ErrNotFound
 		}
-		return nil, err
+		return nil, wrapErr(err)
 	}
 
 	entries := make([]forge.FileEntry, len(dir))

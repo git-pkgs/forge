@@ -84,7 +84,7 @@ func (s *gitHubReleaseService) List(ctx context.Context, owner, repo string, opt
 			if resp != nil && resp.StatusCode == http.StatusNotFound {
 				return nil, forge.ErrNotFound
 			}
-			return nil, err
+			return nil, wrapErr(err)
 		}
 		for _, r := range releases {
 			all = append(all, convertGitHubRelease(r))
@@ -109,7 +109,7 @@ func (s *gitHubReleaseService) getReleaseByTagOrID(ctx context.Context, owner, r
 		return r, nil
 	}
 	if resp == nil || resp.StatusCode != http.StatusNotFound {
-		return nil, err
+		return nil, wrapErr(err)
 	}
 
 	id, parseErr := strconv.ParseInt(tag, 10, 64)
@@ -122,7 +122,7 @@ func (s *gitHubReleaseService) getReleaseByTagOrID(ctx context.Context, owner, r
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return nil, forge.ErrNotFound
 		}
-		return nil, err
+		return nil, wrapErr(err)
 	}
 	return r, nil
 }
@@ -142,7 +142,7 @@ func (s *gitHubReleaseService) GetLatest(ctx context.Context, owner, repo string
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return nil, forge.ErrNotFound
 		}
-		return nil, err
+		return nil, wrapErr(err)
 	}
 	result := convertGitHubRelease(r)
 	return &result, nil
@@ -168,7 +168,7 @@ func (s *gitHubReleaseService) Create(ctx context.Context, owner, repo string, o
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return nil, forge.ErrNotFound
 		}
-		return nil, err
+		return nil, wrapErr(err)
 	}
 	result := convertGitHubRelease(r)
 	return &result, nil
@@ -219,7 +219,7 @@ func (s *gitHubReleaseService) Update(ctx context.Context, owner, repo, tag stri
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return nil, forge.ErrNotFound
 		}
-		return nil, err
+		return nil, wrapErr(err)
 	}
 	result := convertGitHubRelease(r)
 	return &result, nil
@@ -236,7 +236,7 @@ func (s *gitHubReleaseService) Delete(ctx context.Context, owner, repo, tag stri
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return forge.ErrNotFound
 		}
-		return err
+		return wrapErr(err)
 	}
 	return nil
 }
@@ -256,7 +256,7 @@ func (s *gitHubReleaseService) UploadAsset(ctx context.Context, owner, repo, tag
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return nil, forge.ErrNotFound
 		}
-		return nil, err
+		return nil, wrapErr(err)
 	}
 
 	result := forge.ReleaseAsset{
@@ -272,7 +272,7 @@ func (s *gitHubReleaseService) UploadAsset(ctx context.Context, owner, repo, tag
 func (s *gitHubReleaseService) DownloadAsset(ctx context.Context, owner, repo string, assetID int64) (io.ReadCloser, error) {
 	rc, _, err := s.client.Repositories.DownloadReleaseAsset(ctx, owner, repo, assetID, http.DefaultClient)
 	if err != nil {
-		return nil, err
+		return nil, wrapErr(err)
 	}
 	return rc, nil
 }

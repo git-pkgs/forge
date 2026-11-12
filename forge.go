@@ -28,6 +28,54 @@ var ErrLabelExists = errors.New("label already exists")
 // or token does not match the expected secret.
 var ErrInvalidWebhookSignature = errors.New("invalid webhook signature")
 
+// ErrUnauthorized is returned when a forge rejects the request's credentials or
+// denies it permission (HTTP 401 or 403).
+var ErrUnauthorized = errors.New("unauthorized")
+
+// ErrRateLimited is returned when a forge rate limits the request, including
+// GitHub's rate limit responses that use HTTP 403.
+var ErrRateLimited = errors.New("rate limited")
+
+// ErrServerError is returned when a forge fails to handle the request (HTTP 5xx).
+var ErrServerError = errors.New("server error")
+
+// statusSentinel returns the sentinel error for an HTTP status, or nil if the
+// status has none.
+func statusSentinel(status int) error {
+	switch {
+	case status == http.StatusUnauthorized || status == http.StatusForbidden:
+		return ErrUnauthorized
+	case status == http.StatusTooManyRequests:
+		return ErrRateLimited
+	case status >= http.StatusInternalServerError && status <= 599:
+		return ErrServerError
+	}
+	return nil
+}
+
+// classifiedError makes err match a sentinel with errors.Is. Its message and
+// the types it wraps are those of err.
+type classifiedError struct {
+	sentinel error
+	err      error
+}
+
+func (e *classifiedError) Error() string { return e.err.Error() }
+
+func (e *classifiedError) Unwrap() []error { return []error{e.sentinel, e.err} }
+
+// ClassifyStatus returns err extended to match ErrUnauthorized, ErrRateLimited
+// or ErrServerError according to the HTTP status, keeping its message and
+// wrapped errors. A status with no matching sentinel returns err unchanged.
+// Backends use this for errors produced by their native SDKs.
+func ClassifyStatus(status int, err error) error {
+	sentinel := statusSentinel(status)
+	if err == nil || sentinel == nil {
+		return err
+	}
+	return &classifiedError{sentinel: sentinel, err: err}
+}
+
 // ResourceType identifies the kind of resource a URL points to.
 type ResourceType string
 
@@ -53,6 +101,12 @@ type HTTPError struct {
 
 func (e *HTTPError) Error() string {
 	return fmt.Sprintf("forge: HTTP %d from %s", e.StatusCode, e.URL)
+}
+
+// Is reports whether target is the sentinel error for e's status.
+func (e *HTTPError) Is(target error) bool {
+	sentinel := statusSentinel(e.StatusCode)
+	return sentinel != nil && sentinel == target
 }
 
 // APIBaseURLProvider is implemented by forge backends that can expose their
