@@ -9,9 +9,9 @@ import (
 	"time"
 )
 
-// SHA256DigestLength is the number of hexadecimal characters in a SHA-256
+// sha256DigestLength is the number of hexadecimal characters in a SHA-256
 // digest.
-const SHA256DigestLength = 64
+const sha256DigestLength = 64
 
 // ErrInvalidDigest is returned when an artifact digest is not of the form
 // "sha256:<64 hex digits>".
@@ -68,7 +68,7 @@ type ListAttestationOpts struct {
 // ErrInvalidDigest.
 func ParseSHA256Digest(digest string) (string, error) {
 	hex, ok := strings.CutPrefix(digest, "sha256:")
-	if !ok || len(hex) != SHA256DigestLength {
+	if !ok || len(hex) != sha256DigestLength {
 		return "", fmt.Errorf("%w: %q", ErrInvalidDigest, digest)
 	}
 	for _, char := range hex {

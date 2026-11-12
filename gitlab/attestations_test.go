@@ -153,16 +153,16 @@ func TestGitLabListAttestationsEmpty(t *testing.T) {
 
 func TestGitLabListAttestationsErrors(t *testing.T) {
 	tests := []struct {
-		name     string
-		status   int
-		body     string
-		notFound bool
+		name   string
+		status int
+		body   string
+		want   error
 	}{
 		// GitLab answers 404 when the slsa_provenance_statement flag is off.
-		{"feature unavailable", http.StatusNotFound, `{"message":"404 Not Found"}`, true},
-		{"unauthorized", http.StatusUnauthorized, `{"message":"401 Unauthorized"}`, false},
-		{"forbidden", http.StatusForbidden, `{"message":"403 Forbidden"}`, false},
-		{"rate limited", http.StatusTooManyRequests, `{"message":"Retry later"}`, false},
+		{"feature unavailable", http.StatusNotFound, `{"message":"404 Not Found"}`, forge.ErrNotFound},
+		{"unauthorized", http.StatusUnauthorized, `{"message":"401 Unauthorized"}`, forge.ErrUnauthorized},
+		{"rate limited", http.StatusTooManyRequests, `{"message":"Retry later"}`, forge.ErrRateLimited},
+		{"server error", http.StatusBadGateway, `{"message":"502 Bad Gateway"}`, forge.ErrServerError},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -181,15 +181,8 @@ func TestGitLabListAttestationsErrors(t *testing.T) {
 			if err == nil {
 				t.Fatalf("expected an error, got %d attestations", len(atts))
 			}
-			if tt.notFound {
-				if !errors.Is(err, forge.ErrNotFound) {
-					t.Errorf("expected ErrNotFound, got %v", err)
-				}
-				return
-			}
-			var errResp *gitlab.ErrorResponse
-			if !errors.As(err, &errResp) || errResp.Response.StatusCode != tt.status {
-				t.Errorf("expected a %d ErrorResponse, got %v", tt.status, err)
+			if !errors.Is(err, tt.want) {
+				t.Errorf("expected %v, got %v", tt.want, err)
 			}
 		})
 	}
@@ -240,15 +233,15 @@ func TestGitLabListThenDownloadAttestation(t *testing.T) {
 
 func TestGitLabDownloadAttestationErrors(t *testing.T) {
 	tests := []struct {
-		name     string
-		status   int
-		body     string
-		notFound bool
+		name   string
+		status int
+		body   string
+		want   error
 	}{
-		{"not found", http.StatusNotFound, `{"message":"404 Not Found"}`, true},
-		{"forbidden", http.StatusForbidden, `{"message":"403 Forbidden"}`, false},
-		{"server error", http.StatusInternalServerError, `{"message":"500 Internal Server Error"}`, false},
-		{"not json", http.StatusOK, `not json`, false},
+		{"not found", http.StatusNotFound, `{"message":"404 Not Found"}`, forge.ErrNotFound},
+		{"unauthorized", http.StatusUnauthorized, `{"message":"401 Unauthorized"}`, forge.ErrUnauthorized},
+		{"server error", http.StatusInternalServerError, `{"message":"500 Internal Server Error"}`, forge.ErrServerError},
+		{"not json", http.StatusOK, `not json`, nil},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -266,8 +259,8 @@ func TestGitLabDownloadAttestationErrors(t *testing.T) {
 			if err == nil {
 				t.Fatalf("expected an error, got bundle %s", bundle)
 			}
-			if tt.notFound != errors.Is(err, forge.ErrNotFound) {
-				t.Errorf("errors.Is(err, ErrNotFound) = %v, want %v (err: %v)", !tt.notFound, tt.notFound, err)
+			if tt.want != nil && !errors.Is(err, tt.want) {
+				t.Errorf("expected %v, got %v", tt.want, err)
 			}
 		})
 	}

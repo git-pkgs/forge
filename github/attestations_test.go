@@ -129,38 +129,17 @@ func TestGitHubListAttestationsErrors(t *testing.T) {
 		name    string
 		status  int
 		headers map[string]string
-		check   func(t *testing.T, err error)
+		want    error
 	}{
-		{
-			name:   "not found",
-			status: http.StatusNotFound,
-			check: func(t *testing.T, err error) {
-				if !errors.Is(err, forge.ErrNotFound) {
-					t.Errorf("expected ErrNotFound, got %v", err)
-				}
-			},
-		},
-		{
-			name:   "unauthorized",
-			status: http.StatusUnauthorized,
-			check: func(t *testing.T, err error) {
-				var errResp *github.ErrorResponse
-				if !errors.As(err, &errResp) || errResp.Response.StatusCode != http.StatusUnauthorized {
-					t.Errorf("expected a 401 ErrorResponse, got %v", err)
-				}
-			},
-		},
+		{name: "not found", status: http.StatusNotFound, want: forge.ErrNotFound},
+		{name: "unauthorized", status: http.StatusUnauthorized, want: forge.ErrUnauthorized},
 		{
 			name:    "rate limited",
 			status:  http.StatusForbidden,
 			headers: map[string]string{"X-RateLimit-Limit": "60", "X-RateLimit-Remaining": "0", "X-RateLimit-Reset": "1700000000"},
-			check: func(t *testing.T, err error) {
-				var rateErr *github.RateLimitError
-				if !errors.As(err, &rateErr) {
-					t.Errorf("expected a RateLimitError, got %v", err)
-				}
-			},
+			want:    forge.ErrRateLimited,
 		},
+		{name: "server error", status: http.StatusBadGateway, want: forge.ErrServerError},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -182,7 +161,9 @@ func TestGitHubListAttestationsErrors(t *testing.T) {
 			if err == nil {
 				t.Fatalf("expected an error, got %d attestations", len(atts))
 			}
-			tt.check(t, err)
+			if !errors.Is(err, tt.want) {
+				t.Errorf("expected %v, got %v", tt.want, err)
+			}
 		})
 	}
 }
@@ -209,10 +190,10 @@ func TestGitHubDownloadAttestationFromBundleURL(t *testing.T) {
 		w.Header().Set("Content-Type", "application/x-snappy")
 		_, _ = w.Write(snappy.Encode(nil, []byte(testBundle)))
 	})
-	blobSrv := httptest.NewServer(blob)
+	blobSrv := httptest.NewTLSServer(blob)
 	defer blobSrv.Close()
 
-	f := NewWithBase("https://ghe.example.com", "secret-token", nil)
+	f := NewWithBase("https://ghe.example.com", "secret-token", blobSrv.Client())
 	bundle, err := f.Attestations().Download(context.Background(), "octocat", "hello", forge.Attestation{
 		SubjectDigest: testAttestationDigest,
 		BundleURL:     blobSrv.URL + "/attestations/1.json.sn?sig=signed",
@@ -240,12 +221,28 @@ func TestGitHubDownloadAttestationErrors(t *testing.T) {
 		name    string
 		handler http.HandlerFunc
 		limit   int
+		want    error
 	}{
 		{
-			name: "forbidden",
+			name: "unauthorized",
 			handler: func(w http.ResponseWriter, r *http.Request) {
-				w.WriteHeader(http.StatusForbidden)
+				w.WriteHeader(http.StatusUnauthorized)
 			},
+			want: forge.ErrUnauthorized,
+		},
+		{
+			name: "rate limited",
+			handler: func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusTooManyRequests)
+			},
+			want: forge.ErrRateLimited,
+		},
+		{
+			name: "server error",
+			handler: func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusInternalServerError)
+			},
+			want: forge.ErrServerError,
 		},
 		{
 			name: "not snappy",
@@ -274,15 +271,18 @@ func TestGitHubDownloadAttestationErrors(t *testing.T) {
 				maxBundleBytes = tt.limit
 				t.Cleanup(func() { maxBundleBytes = old })
 			}
-			srv := httptest.NewServer(tt.handler)
+			srv := httptest.NewTLSServer(tt.handler)
 			defer srv.Close()
 
-			svc := &gitHubAttestationService{client: github.NewClient(nil)}
+			svc := &gitHubAttestationService{client: github.NewClient(nil), httpClient: srv.Client()}
 			_, err := svc.Download(context.Background(), "octocat", "hello", forge.Attestation{
 				BundleURL: srv.URL + "/1.json.sn?sig=signed-secret",
 			})
 			if err == nil {
 				t.Fatal("expected an error")
+			}
+			if tt.want != nil && !errors.Is(err, tt.want) {
+				t.Errorf("expected %v, got %v", tt.want, err)
 			}
 			if strings.Contains(err.Error(), "signed-secret") {
 				t.Errorf("error leaks the signed bundle URL: %v", err)
@@ -296,4 +296,44 @@ func TestGitHubDownloadAttestationNoBundle(t *testing.T) {
 	if _, err := svc.Download(context.Background(), "octocat", "hello", forge.Attestation{}); err == nil {
 		t.Error("expected an error for an attestation without a bundle or bundle URL")
 	}
+}
+
+func TestGitHubDownloadAttestationRejectsHTTPBundleURL(t *testing.T) {
+	var hits atomic.Int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		hits.Add(1)
+		_, _ = w.Write(snappy.Encode(nil, []byte(testBundle)))
+	}))
+	defer srv.Close()
+
+	// The forge's own API is https, so a plain http bundle URL is refused.
+	f := NewWithBase("https://ghe.example.com", "secret-token", srv.Client())
+	_, err := f.Attestations().Download(context.Background(), "octocat", "hello", forge.Attestation{
+		BundleURL: srv.URL + "/1.json.sn?sig=signed-secret",
+	})
+	if err == nil {
+		t.Fatal("expected an error for an http bundle URL")
+	}
+	if strings.Contains(err.Error(), "signed-secret") {
+		t.Errorf("error leaks the signed bundle URL: %v", err)
+	}
+	if hits.Load() != 0 {
+		t.Errorf("bundle server was contacted %d times", hits.Load())
+	}
+}
+
+func TestGitHubDownloadAttestationAllowsHTTPBundleURLOnHTTPForge(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write(snappy.Encode(nil, []byte(testBundle)))
+	}))
+	defer srv.Close()
+
+	f := NewWithBase(srv.URL, "secret-token", nil)
+	bundle, err := f.Attestations().Download(context.Background(), "octocat", "hello", forge.Attestation{
+		BundleURL: srv.URL + "/1.json.sn?sig=signed",
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	assertEqual(t, "bundle", testBundle, string(bundle))
 }
