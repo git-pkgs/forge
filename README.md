@@ -177,6 +177,18 @@ issues, _ := f.Issues().List(ctx, "octocat", "hello-world", forges.ListIssueOpts
 pr, _ := f.PullRequests().Get(ctx, "octocat", "hello-world", 42)
 ```
 
+Failures map to common errors on every forge, so callers can check the kind of failure without knowing which forge they're using. Apart from `ErrNotFound`, which is returned on its own, the original error stays in the chain for callers that need forge-specific details:
+
+```go
+_, err := f.Repos().Get(ctx, "octocat", "hello-world")
+switch {
+case errors.Is(err, forges.ErrNotFound):      // 404
+case errors.Is(err, forges.ErrUnauthorized):  // 401 or 403
+case errors.Is(err, forges.ErrRateLimited):   // 429, or GitHub's 403 rate limit responses
+case errors.Is(err, forges.ErrServerError):   // 5xx
+}
+```
+
 The `factory` package imports every provider and returns a `Client` that already knows github.com, gitlab.com, codeberg.org, bitbucket.org and tangled.org. It detects and registers any other domain over https the first time a repository URL on it is used, which sends requests to that domain:
 
 ```go

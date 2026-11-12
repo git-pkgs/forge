@@ -116,7 +116,7 @@ func (s *gitLabWebhookService) List(ctx context.Context, owner, repo string, opt
 			if resp != nil && resp.StatusCode == http.StatusNotFound {
 				return nil, forge.ErrNotFound
 			}
-			return nil, err
+			return nil, wrapErr(err)
 		}
 		for _, h := range hooks {
 			all = append(all, convertGitLabHook(h))
@@ -141,7 +141,7 @@ func (s *gitLabWebhookService) Get(ctx context.Context, owner, repo string, id i
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return nil, forge.ErrNotFound
 		}
-		return nil, err
+		return nil, wrapErr(err)
 	}
 
 	wh := convertGitLabHook(h)
@@ -160,7 +160,7 @@ func (s *gitLabWebhookService) Create(ctx context.Context, owner, repo string, o
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return nil, forge.ErrNotFound
 		}
-		return nil, err
+		return nil, wrapErr(err)
 	}
 
 	wh := convertGitLabHook(h)
@@ -174,7 +174,7 @@ func (s *gitLabWebhookService) Delete(ctx context.Context, owner, repo string, i
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return forge.ErrNotFound
 		}
-		return err
+		return wrapErr(err)
 	}
 	return nil
 }

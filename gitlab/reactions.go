@@ -25,7 +25,7 @@ func (s *gitLabIssueService) ListReactions(ctx context.Context, owner, repo stri
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return nil, forge.ErrNotFound
 		}
-		return nil, err
+		return nil, wrapErr(err)
 	}
 	var all []forge.Reaction
 	for _, e := range emojis {
@@ -43,7 +43,7 @@ func (s *gitLabIssueService) AddReaction(ctx context.Context, owner, repo string
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return nil, forge.ErrNotFound
 		}
-		return nil, err
+		return nil, wrapErr(err)
 	}
 	result := convertGitLabAwardEmoji(emoji)
 	return &result, nil
@@ -56,7 +56,7 @@ func (s *gitLabPRService) ListReactions(ctx context.Context, owner, repo string,
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return nil, forge.ErrNotFound
 		}
-		return nil, err
+		return nil, wrapErr(err)
 	}
 	var all []forge.Reaction
 	for _, e := range emojis {
@@ -74,7 +74,7 @@ func (s *gitLabPRService) AddReaction(ctx context.Context, owner, repo string, n
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return nil, forge.ErrNotFound
 		}
-		return nil, err
+		return nil, wrapErr(err)
 	}
 	result := convertGitLabAwardEmoji(emoji)
 	return &result, nil

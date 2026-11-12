@@ -34,7 +34,7 @@ func (s *gitLabNotificationService) setProjectNotificationLevel(ctx context.Cont
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return nil, forge.ErrNotFound
 		}
-		return nil, err
+		return nil, wrapErr(err)
 	}
 	return settings, nil
 }
@@ -45,7 +45,7 @@ func (s *gitLabNotificationService) GetRepoSubscription(ctx context.Context, own
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return nil, forge.ErrNotFound
 		}
-		return nil, err
+		return nil, wrapErr(err)
 	}
 	return convertGitLabNotificationLevel(settings), nil
 }

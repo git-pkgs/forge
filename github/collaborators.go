@@ -68,7 +68,7 @@ func (s *gitHubCollaboratorService) List(ctx context.Context, owner, repo string
 			if resp != nil && resp.StatusCode == http.StatusNotFound {
 				return nil, forge.ErrNotFound
 			}
-			return nil, err
+			return nil, wrapErr(err)
 		}
 		for _, u := range users {
 			all = append(all, convertGitHubCollaborator(u))
@@ -97,7 +97,7 @@ func (s *gitHubCollaboratorService) Add(ctx context.Context, owner, repo, userna
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return forge.ErrNotFound
 		}
-		return err
+		return wrapErr(err)
 	}
 	return nil
 }
@@ -121,7 +121,7 @@ func (s *gitHubCollaboratorService) Remove(ctx context.Context, owner, repo, use
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return forge.ErrNotFound
 		}
-		return err
+		return wrapErr(err)
 	}
 	return nil
 }

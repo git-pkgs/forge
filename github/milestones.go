@@ -52,7 +52,7 @@ func (s *gitHubMilestoneService) List(ctx context.Context, owner, repo string, o
 			if resp != nil && resp.StatusCode == http.StatusNotFound {
 				return nil, forge.ErrNotFound
 			}
-			return nil, err
+			return nil, wrapErr(err)
 		}
 		for _, m := range milestones {
 			all = append(all, convertGitHubMilestone(m))
@@ -76,7 +76,7 @@ func (s *gitHubMilestoneService) Get(ctx context.Context, owner, repo string, id
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return nil, forge.ErrNotFound
 		}
-		return nil, err
+		return nil, wrapErr(err)
 	}
 	result := convertGitHubMilestone(m)
 	return &result, nil
@@ -96,7 +96,7 @@ func (s *gitHubMilestoneService) Create(ctx context.Context, owner, repo string,
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return nil, forge.ErrNotFound
 		}
-		return nil, err
+		return nil, wrapErr(err)
 	}
 	result := convertGitHubMilestone(m)
 	return &result, nil
@@ -132,7 +132,7 @@ func (s *gitHubMilestoneService) Update(ctx context.Context, owner, repo string,
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return nil, forge.ErrNotFound
 		}
-		return nil, err
+		return nil, wrapErr(err)
 	}
 	result := convertGitHubMilestone(m)
 	return &result, nil
@@ -146,7 +146,7 @@ func (s *gitHubMilestoneService) Close(ctx context.Context, owner, repo string, 
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return forge.ErrNotFound
 		}
-		return err
+		return wrapErr(err)
 	}
 	return nil
 }
@@ -159,7 +159,7 @@ func (s *gitHubMilestoneService) Reopen(ctx context.Context, owner, repo string,
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return forge.ErrNotFound
 		}
-		return err
+		return wrapErr(err)
 	}
 	return nil
 }
@@ -170,7 +170,7 @@ func (s *gitHubMilestoneService) Delete(ctx context.Context, owner, repo string,
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return forge.ErrNotFound
 		}
-		return err
+		return wrapErr(err)
 	}
 	return nil
 }
