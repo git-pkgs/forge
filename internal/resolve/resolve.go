@@ -400,8 +400,12 @@ func newClientForBaseURL(domain, baseURL string) *forges.Client {
 		opts = append(opts, forges.WithToken(domain, token))
 	}
 
-	// Register default forges first, so config-based registrations override them.
+	// Share one client for detection and every backend, so forges found by
+	// probing get the same User-Agent and redirect policy as the defaults.
 	hc := HTTPClient()
+	opts = append(opts, forges.WithHTTPClient(hc))
+
+	// Register default forges first, so config-based registrations override them.
 	for d, f := range factory.DefaultForges(TokenForDomain, hc) {
 		opts = append(opts, forges.WithForge(d, f))
 	}
