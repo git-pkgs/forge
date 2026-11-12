@@ -245,6 +245,42 @@ func TestForgeForURLDetectsConcurrently(t *testing.T) {
 	wg.Wait()
 }
 
+func TestForgeForURLKeepsRegistrationMadeDuringDetection(t *testing.T) {
+	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("X-Gitea-Version", "1.22.0")
+	}))
+	defer srv.Close()
+	host := strings.TrimPrefix(srv.URL, "https://")
+
+	explicit := &stubForge{}
+	var c *forges.Client
+	detecting := Builders()
+	detecting.Gitea = func(string, string, *http.Client) forges.Forge {
+		// An explicit registration lands while detection is still building.
+		stub := func(string, string, *http.Client) forges.Forge { return explicit }
+		err := c.RegisterDomain(context.Background(), srv.URL, "explicit", forges.ForgeBuilders{Gitea: stub})
+		if err != nil {
+			t.Errorf("RegisterDomain: %v", err)
+		}
+		return &stubForge{}
+	}
+	c = forges.NewClient(forges.WithHTTPClient(srv.Client()), forges.WithDetection(detecting))
+
+	if _, _, _, err := c.ForgeForURL(context.Background(), srv.URL+"/owner/repo"); err != nil {
+		t.Fatalf("ForgeForURL: %v", err)
+	}
+	got, err := c.ForgeFor(host)
+	if err != nil {
+		t.Fatalf("ForgeFor: %v", err)
+	}
+	if got != forges.Forge(explicit) {
+		t.Error("detection replaced a registration made while it was running")
+	}
+	if tok := c.Tokens()[host]; tok != "explicit" {
+		t.Errorf("token = %q, want the explicit registration's", tok)
+	}
+}
+
 func TestForgeForURLDetectsHTTPURLOverHTTPS(t *testing.T) {
 	rt := &giteaTransport{}
 	c := NewClient(

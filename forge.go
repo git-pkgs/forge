@@ -200,6 +200,12 @@ func normalizeBaseURL(s string) (baseURL, host string, err error) {
 // include an http:// or https:// prefix; without one, https is assumed.
 // The lowercased bare host[:port] is used as the registry key.
 func (c *Client) RegisterDomain(ctx context.Context, domain, token string, builders ForgeBuilders) error {
+	return c.registerDomain(ctx, domain, token, builders, false)
+}
+
+// registerDomain implements RegisterDomain. With keepExisting set, a domain
+// that was registered while detection was running is left as it is.
+func (c *Client) registerDomain(ctx context.Context, domain, token string, builders ForgeBuilders, keepExisting bool) error {
 	baseURL, domain, err := normalizeBaseURL(domain)
 	if err != nil {
 		return err
@@ -232,6 +238,9 @@ func (c *Client) RegisterDomain(ctx context.Context, domain, token string, build
 	f := build(baseURL, token, c.httpClient)
 	c.mu.Lock()
 	defer c.mu.Unlock()
+	if _, ok := c.forges[domain]; ok && keepExisting {
+		return nil
+	}
 	c.tokens[domain] = token
 	c.forges[domain] = f
 	return nil
@@ -270,7 +279,7 @@ func (c *Client) forgeOrDetect(ctx context.Context, domain string) (Forge, error
 	c.mu.RLock()
 	token := c.tokens[domain]
 	c.mu.RUnlock()
-	if err := c.RegisterDomain(ctx, "https://"+domain, token, *c.detection); err != nil {
+	if err := c.registerDomain(ctx, "https://"+domain, token, *c.detection, true); err != nil {
 		return nil, err
 	}
 	return c.forgeFor(domain)
