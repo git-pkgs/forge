@@ -326,6 +326,13 @@ func (c *Client) forgeFor(domain string) (Forge, error) {
 // finds.
 func (c *Client) forgeOrDetect(ctx context.Context, domain string) (Forge, error) {
 	domain = strings.ToLower(domain)
+	if !strings.Contains(domain, "://") {
+		// Use the key registerDomain writes, so a trailing slash or similar
+		// doesn't miss a registered host.
+		if _, host, err := normalizeBaseURL(domain); err == nil {
+			domain = host
+		}
+	}
 	f, err := c.forgeFor(domain)
 	if err == nil || c.detection == nil || strings.Contains(domain, "://") {
 		return f, err

@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strings"
 	"sync"
 )
@@ -214,12 +215,13 @@ func loadFile(cfg *Config, path string, userConfig bool) error {
 		}
 	}
 
-	for name, kv := range sections {
-		if name == "default" {
+	for _, rawName := range sectionOrder(sections) {
+		if rawName == "default" {
 			continue
 		}
+		kv := sections[rawName]
 		// Domains are matched case-insensitively, so key them by lowercase.
-		name = strings.ToLower(name)
+		name := strings.ToLower(rawName)
 		ds := cfg.Domains[name]
 		if v, ok := kv["type"]; ok {
 			ds.Type = v
@@ -265,6 +267,31 @@ func loadFile(cfg *Config, path string, userConfig bool) error {
 	}
 
 	return nil
+}
+
+// sectionOrder returns the section names in the order they should be applied
+// when case variants of one domain are merged: sorted, except that a name that
+// is already lowercase comes after the other spellings of the same domain, so
+// it wins conflicts. The order does not depend on map iteration.
+func sectionOrder(sections map[string]map[string]string) []string {
+	names := make([]string, 0, len(sections))
+	for name := range sections {
+		names = append(names, name)
+	}
+	slices.SortFunc(names, func(a, b string) int {
+		if c := strings.Compare(strings.ToLower(a), strings.ToLower(b)); c != 0 {
+			return c
+		}
+		aLower, bLower := a == strings.ToLower(a), b == strings.ToLower(b)
+		switch {
+		case aLower && !bLower:
+			return 1
+		case bLower && !aLower:
+			return -1
+		}
+		return strings.Compare(a, b)
+	})
+	return names
 }
 
 // parseINI parses a simple INI file into section -> key -> value.
@@ -379,19 +406,23 @@ func SetDomain(domain, token, tokenCmd, forgeType, scheme string) error {
 	domain = strings.ToLower(domain)
 	// Fold any existing section spelled with different case into the
 	// lowercase one so the file never holds two sections for one domain.
-	for name, kv := range sections {
-		if name == domain || !strings.EqualFold(name, domain) {
+	// Sections are applied in sectionOrder, so the exact-lowercase section
+	// wins any conflict.
+	var folded map[string]string
+	for _, name := range sectionOrder(sections) {
+		if !strings.EqualFold(name, domain) {
 			continue
 		}
-		if _, ok := sections[domain]; !ok {
-			sections[domain] = make(map[string]string)
+		if folded == nil {
+			folded = make(map[string]string)
 		}
-		for k, v := range kv {
-			if _, ok := sections[domain][k]; !ok {
-				sections[domain][k] = v
-			}
+		for k, v := range sections[name] {
+			folded[k] = v
 		}
 		delete(sections, name)
+	}
+	if folded != nil {
+		sections[domain] = folded
 	}
 	if _, ok := sections[domain]; !ok {
 		sections[domain] = make(map[string]string)

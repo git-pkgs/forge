@@ -896,6 +896,29 @@ func TestClientMatchesDomainsCaseInsensitively(t *testing.T) {
 	}
 }
 
+func TestListRepositoriesTrailingSlashKeepsRegistration(t *testing.T) {
+	mock := &mockForge{repoService: &mockRepoService{repos: []Repository{{FullName: "org/repo"}}}}
+	rt := &detectionTransport{}
+	c := NewClient(
+		WithHTTPClient(&http.Client{Transport: rt}),
+		WithForge("git.example.com", mock),
+		WithToken("git.example.com", "tok"),
+		WithDetection(ForgeBuilders{Gitea: func(string, string, *http.Client) Forge { return &mockForge{} }}),
+	)
+
+	repos, err := c.ListRepositories(context.Background(), "Git.Example.com/", "org", ListRepoOpts{})
+	if err != nil || len(repos) != 1 {
+		t.Fatalf("ListRepositories = %+v, %v", repos, err)
+	}
+	if f, err := c.ForgeFor("git.example.com"); err != nil || f != Forge(mock) {
+		t.Errorf("ForgeFor = %T, %v, want the registered forge", f, err)
+	}
+	assertEqual(t, "token", "tok", c.Tokens()["git.example.com"])
+	if len(rt.urls) != 0 {
+		t.Errorf("probed %v, want no requests", rt.urls)
+	}
+}
+
 func TestClientListRepositoriesRoutes(t *testing.T) {
 	mock := &mockForge{
 		repoService: &mockRepoService{
