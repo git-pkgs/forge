@@ -177,7 +177,7 @@ issues, _ := f.Issues().List(ctx, "octocat", "hello-world", forges.ListIssueOpts
 pr, _ := f.PullRequests().Get(ctx, "octocat", "hello-world", 42)
 ```
 
-Failures map to common errors on every forge, so callers can check the kind of failure without knowing which forge they're using. The original error stays in the chain for callers that need forge-specific details:
+Failures map to common errors on every forge, so callers can check the kind of failure without knowing which forge they're using. Apart from `ErrNotFound`, which is returned on its own, the original error stays in the chain for callers that need forge-specific details:
 
 ```go
 _, err := f.Repos().Get(ctx, "octocat", "hello-world")
