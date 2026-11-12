@@ -167,7 +167,7 @@ client := forges.NewClient(
 repo, err := client.FetchRepository(ctx, "https://github.com/octocat/hello-world")
 ```
 
-The `Forge` interface exposes services for repos, issues, pull requests, reviews, releases, CI, branches, labels, milestones, deploy keys, webhooks, secrets, notifications, files, collaborators, commit statuses and commits. Each backend implements these using its native SDK.
+The `Forge` interface exposes services for repos, issues, pull requests, reviews, releases, CI, branches, labels, milestones, deploy keys, webhooks, secrets, notifications, files, collaborators, commit statuses, commits and artifact attestations. Each backend implements these using its native SDK.
 
 Under TinyGo, `gitlab.New` retains its signature and returns a backend whose API operations report `forges.ErrNotSupported`. GitLab URL parsing, web link builders and webhook parsing remain available. Native Go retains the full GitLab implementation.
 
@@ -216,6 +216,25 @@ http.HandleFunc("/hook", func(w http.ResponseWriter, r *http.Request) {
 ```
 
 Each backend also exports `ParseWebhook(r, secret)` (for example `github.ParseWebhook`), which needs no API client.
+
+Artifact attestations, such as SLSA provenance and SBOMs signed as Sigstore bundles, can be looked up by repository and artifact digest on GitHub and GitLab. `List` follows pagination and returns metadata for every attestation; `Download` then fetches each original bundle without verifying it. An empty result means the lookup succeeded and found nothing. Request failures are returned as errors, and other backends return `forges.ErrNotSupported`:
+
+```go
+digest := "sha256:5db1fee4b5703808c48078a76768b155b421b210c0761cd6a5d223f4d99f1eaa"
+atts, err := client.ListAttestations(ctx, "https://github.com/cli/cli", digest, forges.ListAttestationOpts{})
+if err != nil {
+    log.Fatal(err)
+}
+for _, att := range atts {
+    bundle, err := client.DownloadAttestation(ctx, "https://github.com/cli/cli", att)
+    if err != nil {
+        log.Fatal(err)
+    }
+    // verify bundle with a Sigstore client
+}
+```
+
+`ListAttestationOpts.PredicateType` filters by predicate type URI or by the short names `provenance` and `sbom`. GitLab's attestation API is an Ultimate-tier experiment behind the `slsa_provenance_statement` feature flag, and GitLab answers 404 when it is off, so `List` reports `forges.ErrNotFound` for a project without it.
 
 Self-hosted instances can be registered explicitly or detected automatically:
 

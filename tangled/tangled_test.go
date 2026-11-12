@@ -187,6 +187,18 @@ func TestGetAuthenticatedUserUnsupported(t *testing.T) {
 	}
 }
 
+func TestAttestationsUnsupported(t *testing.T) {
+	ctx := context.Background()
+	a := New("https://tangled.org", "", nil).Attestations()
+
+	if _, err := a.List(ctx, "tangled.org", "core", "sha256:"+strings.Repeat("a", 64), forges.ListAttestationOpts{}); !errors.Is(err, forges.ErrNotSupported) {
+		t.Errorf("List: expected ErrNotSupported, got %v", err)
+	}
+	if _, err := a.Download(ctx, "tangled.org", "core", forges.Attestation{ID: "1"}); !errors.Is(err, forges.ErrNotSupported) {
+		t.Errorf("Download: expected ErrNotSupported, got %v", err)
+	}
+}
+
 func TestSubscriptionsUnsupported(t *testing.T) {
 	ctx := context.Background()
 	n := New("https://tangled.org", "", nil).Notifications()

@@ -2,6 +2,7 @@ package forges
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -733,6 +734,7 @@ type mockForge struct {
 	secretService    *mockSecretService
 	reviewService    *mockReviewService
 	commitService    *mockCommitService
+	attestations     *mockAttestationService
 }
 
 func (m *mockForge) Repos() RepoService {
@@ -876,6 +878,13 @@ func (m *mockForge) Commits() CommitService {
 	return &mockCommitService{}
 }
 
+func (m *mockForge) Attestations() AttestationService {
+	if m.attestations != nil {
+		return m.attestations
+	}
+	return &mockAttestationService{}
+}
+
 func (m *mockForge) GetRateLimit(_ context.Context) (*RateLimit, error) {
 	return nil, ErrNotSupported
 }
@@ -957,6 +966,31 @@ func (m *mockCommitService) ResolveCommit(_ context.Context, owner, repo, ref st
 	m.lastRepo = repo
 	m.lastRef = ref
 	return m.sha, m.err
+}
+
+type mockAttestationService struct {
+	attestations []Attestation
+	bundle       json.RawMessage
+	lastOwner    string
+	lastRepo     string
+	lastDigest   string
+	lastOpts     ListAttestationOpts
+	lastAtt      Attestation
+}
+
+func (m *mockAttestationService) List(_ context.Context, owner, repo, digest string, opts ListAttestationOpts) ([]Attestation, error) {
+	m.lastOwner = owner
+	m.lastRepo = repo
+	m.lastDigest = digest
+	m.lastOpts = opts
+	return m.attestations, nil
+}
+
+func (m *mockAttestationService) Download(_ context.Context, owner, repo string, att Attestation) (json.RawMessage, error) {
+	m.lastOwner = owner
+	m.lastRepo = repo
+	m.lastAtt = att
+	return m.bundle, nil
 }
 
 type mockRepoService struct {

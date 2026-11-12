@@ -111,6 +111,7 @@ func (m *mockForge) Collaborators() forges.CollaboratorService  { return nil }
 func (m *mockForge) CommitStatuses() forges.CommitStatusService { return m.commitStatusService }
 func (m *mockForge) CheckRuns() forges.CheckRunService          { return m.checkRunService }
 func (m *mockForge) Commits() forges.CommitService              { return nil }
+func (m *mockForge) Attestations() forges.AttestationService    { return nil }
 func (m *mockForge) GetRateLimit(_ context.Context) (*forges.RateLimit, error) {
 	return nil, forges.ErrNotSupported
 }
