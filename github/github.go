@@ -20,6 +20,9 @@ type gitHubForge struct {
 }
 
 // New creates a GitHub forge backend for github.com.
+// The client is also used for requests that leave the API host, such as
+// attestation bundle downloads, so credentials added by its transport reach
+// those hosts too.
 func New(token string, hc *http.Client) forge.Forge {
 	c := github.NewClient(hc)
 	if token != "" {
@@ -29,6 +32,9 @@ func New(token string, hc *http.Client) forge.Forge {
 }
 
 // NewWithBase creates a GitHub forge backend for a GitHub Enterprise instance.
+// The client is also used for requests that leave the API host, such as
+// attestation bundle downloads, so credentials added by its transport reach
+// those hosts too.
 func NewWithBase(baseURL, token string, hc *http.Client) forge.Forge {
 	c := github.NewClient(hc).WithAuthToken(token)
 	c, _ = c.WithEnterpriseURLs(baseURL, baseURL)

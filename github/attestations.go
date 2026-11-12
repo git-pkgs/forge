@@ -29,9 +29,9 @@ func (f *gitHubForge) Attestations() forge.AttestationService {
 	return &gitHubAttestationService{client: f.client, httpClient: f.httpClient}
 }
 
-// gitHubAttestation is one entry of the list attestations response. GitHub
-// now leaves bundle null and links to the bundle with bundle_url, which
-// go-github's Attestation type does not have.
+// gitHubAttestation is one entry of the list attestations response. bundle is
+// null when GitHub links the bundle with bundle_url, which go-github's
+// Attestation type lacks.
 type gitHubAttestation struct {
 	Bundle    json.RawMessage `json:"bundle"`
 	BundleURL string          `json:"bundle_url"`
@@ -71,7 +71,7 @@ func (s *gitHubAttestationService) List(ctx context.Context, owner, repo, digest
 			if resp != nil && resp.StatusCode == http.StatusNotFound {
 				return nil, forge.ErrNotFound
 			}
-			return nil, err
+			return nil, wrapErr(err)
 		}
 		for _, a := range page.Attestations {
 			att := forge.Attestation{SubjectDigest: subject, BundleURL: a.BundleURL}
@@ -108,6 +108,11 @@ func (s *gitHubAttestationService) Download(ctx context.Context, _, _ string, at
 	if err != nil {
 		return nil, errors.New("github: invalid attestation bundle URL")
 	}
+	// The signed query string is the only credential, so it must not travel
+	// in cleartext unless the forge's own API is plain http too.
+	if req.URL.Scheme != "https" && s.client.BaseURL.Scheme != "http" {
+		return nil, errors.New("github: attestation bundle URL must use https")
+	}
 	hc := s.httpClient
 	if hc == nil {
 		hc = http.DefaultClient
@@ -123,7 +128,7 @@ func (s *gitHubAttestationService) Download(ctx context.Context, _, _ string, at
 	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return nil, fmt.Errorf("github: downloading attestation bundle: HTTP %d", resp.StatusCode)
+		return nil, forge.ClassifyStatus(resp.StatusCode, fmt.Errorf("github: downloading attestation bundle: HTTP %d", resp.StatusCode))
 	}
 	compressed, err := io.ReadAll(io.LimitReader(resp.Body, int64(maxBundleBytes)+1))
 	if err != nil {

@@ -65,7 +65,7 @@ func (s *gitLabAttestationService) List(ctx context.Context, owner, repo, digest
 			if resp != nil && resp.StatusCode == http.StatusNotFound {
 				return nil, forge.ErrNotFound
 			}
-			return nil, err
+			return nil, wrapErr(err)
 		}
 		for _, a := range atts {
 			if gitLabAttestationMatches(a, opts.PredicateType) {
@@ -103,7 +103,7 @@ func (s *gitLabAttestationService) Download(ctx context.Context, owner, repo str
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return nil, forge.ErrNotFound
 		}
-		return nil, err
+		return nil, wrapErr(err)
 	}
 	if !json.Valid(bundle) {
 		return nil, errors.New("gitlab: attestation bundle is not valid JSON")
