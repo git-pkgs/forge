@@ -1,0 +1,53 @@
+[
+  {
+    "request": {
+      "method": "GET",
+      "url": "https://codeberg.org/api/v1/repos/Codeberg/this-repository-does-not-exist"
+    },
+    "response": {
+      "status_code": 404,
+      "header": {
+        "Alt-Svc": [
+          "h3=\":443\";ma=2592000;"
+        ],
+        "Cache-Control": [
+          "max-age=0, private, must-revalidate"
+        ],
+        "Content-Type": [
+          "application/json;charset=utf-8"
+        ],
+        "Date": [
+          "Fri, 13 Nov 2026 04:12:53 GMT"
+        ],
+        "Permissions-Policy": [
+          "interest-cohort=()"
+        ],
+        "Ratelimit": [
+          "\"baseline\";r=1993;t=600"
+        ],
+        "Ratelimit-Policy": [
+          "\"baseline\";q=2000;w=600"
+        ],
+        "Strict-Transport-Security": [
+          "max-age=63072000; includeSubDomains; preload;"
+        ],
+        "Vary": [
+          "Origin"
+        ],
+        "X-Backend-Name": [
+          "b_forgejo_secondary"
+        ],
+        "X-Content-Type-Options": [
+          "nosniff"
+        ],
+        "X-Frame-Options": [
+          "SAMEORIGIN"
+        ],
+        "X-Server-Name": [
+          "s_forgejo_secondary_alpspitz"
+        ]
+      },
+      "body": "{\"message\":\"The target couldn't be found.\",\"url\":\"https://codeberg.org/api/swagger\",\"errors\":[]}\n"
+    }
+  }
+]

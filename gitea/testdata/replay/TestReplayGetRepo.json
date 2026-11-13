@@ -1,0 +1,110 @@
+[
+  {
+    "request": {
+      "method": "GET",
+      "url": "https://codeberg.org/api/v1/repos/Codeberg/Documentation"
+    },
+    "response": {
+      "status_code": 200,
+      "header": {
+        "Alt-Svc": [
+          "h3=\":443\";ma=2592000;"
+        ],
+        "Cache-Control": [
+          "max-age=0, private, must-revalidate"
+        ],
+        "Content-Type": [
+          "application/json;charset=utf-8"
+        ],
+        "Date": [
+          "Fri, 13 Nov 2026 04:12:53 GMT"
+        ],
+        "Permissions-Policy": [
+          "interest-cohort=()"
+        ],
+        "Ratelimit": [
+          "\"baseline\";r=1995;t=600"
+        ],
+        "Ratelimit-Policy": [
+          "\"baseline\";q=2000;w=600"
+        ],
+        "Strict-Transport-Security": [
+          "max-age=63072000; includeSubDomains; preload;"
+        ],
+        "Vary": [
+          "Origin,Accept-Encoding"
+        ],
+        "X-Backend-Name": [
+          "b_forgejo_secondary"
+        ],
+        "X-Content-Type-Options": [
+          "nosniff"
+        ],
+        "X-Frame-Options": [
+          "SAMEORIGIN"
+        ],
+        "X-Server-Name": [
+          "s_forgejo_secondary_alpspitz"
+        ]
+      },
+      "body": "{\"id\":855,\"owner\":{\"id\":37566,\"login\":\"Codeberg\",\"login_name\":\"\",\"source_id\":0,\"full_name\":\"Codeberg\",\"email\":\"codeberg@noreply.codeberg.org\",\"avatar_url\":\"https://codeberg.org/avatars/8333683f10a92a1a06956d9ab61594d2acf9af24f4b70d6cd784aafa5a61a3db\",\"html_url\":\"https://codeberg.org/Codeberg\",\"language\":\"\",\"is_admin\":false,\"last_login\":\"0001-01-01T00:00:00Z\",\"created\":\"2022-01-09T23:34:52+01:00\",\"restricted\":false,\"active\":false,\"prohibit_login\":false,\"location\":\"distributed\",\"pronouns\":\"\",\"website\":\"https://codeberg.org\",\"description\":\"Codeberg is a non-profit, community-led effort that provides Git hosting and other services for free and open source projects.\",\"visibility\":\"public\",\"followers_count\":550,\"following_count\":0,\"starred_repos_count\":0,\"username\":\"Codeberg\"},\"name\":\"Documentation\",\"full_name\":\"Codeberg/Documentation\",\"description\":\"Codeberg Documentation – tutorials, how-to's and other Codeberg-specific resources for users.\",\"empty\":false,\"private\":false,\"fork\":false,\"template\":false,\"parent\":null,\"mirror\":false,\"size\":20789,\"language\":\"CSS\",\"languages_url\":\"https://codeberg.org/api/v1/repos/Codeberg/Documentation/languages\",\"html_url\":\"https://codeberg.org/Codeberg/Documentation\",\"url\":\"https://codeberg.org/api/v1/repos/Codeberg/Documentation\",\"link\":\"\",\"ssh_url\":\"ssh://git@codeberg.org/Codeberg/Documentation.git\",\"clone_url\":\"https://codeberg.org/Codeberg/Documentation.git\",\"original_url\":\"\",\"website\":\"https://docs.codeberg.org\",\"stars_count\":214,\"forks_count\":171,\"watchers_count\":44,\"open_issues_count\":71,\"open_pr_counter\":11,\"release_counter\":0,\"default_branch\":\"main\",\"archived\":false,\"created_at\":\"2019-06-04T16:53:46+02:00\",\"updated_at\":\"2026-11-10T01:09:47+01:00\",\"archived_at\":\"1970-01-01T01:00:00+01:00\",\"permissions\":{\"admin\":false,\"push\":false,\"pull\":true},\"has_issues\":true,\"internal_tracker\":{\"enable_time_tracker\":true,\"allow_only_contributors_to_track_time\":true,\"enable_issue_dependencies\":true},\"has_wiki\":true,\"has_wiki_contents\":true,\"external_wiki\":{\"external_wiki_url\":\"https://docs.codeberg.org/improving-documentation/\"},\"wiki_branch\":\"master\",\"wiki_ssh_url\":\"ssh://git@codeberg.org/Codeberg/Documentation.wiki.git\",\"wiki_clone_url\":\"https://codeberg.org/Codeberg/Documentation.wiki.git\",\"globally_editable_wiki\":false,\"has_pull_requests\":true,\"has_projects\":false,\"has_releases\":false,\"has_packages\":false,\"has_actions\":false,\"ignore_whitespace_conflicts\":false,\"allow_merge_commits\":false,\"allow_rebase\":false,\"allow_rebase_explicit\":false,\"allow_squash_merge\":true,\"allow_fast_forward_only_merge\":false,\"allow_rebase_update\":true,\"default_delete_branch_after_merge\":true,\"default_merge_style\":\"squash\",\"default_allow_maintainer_edit\":true,\"default_update_style\":\"merge\",\"avatar_url\":\"https://codeberg.org/repo-avatars/855-3e1afcfb1480c4a83338aec024f4e574\",\"internal\":false,\"mirror_interval\":\"\",\"object_format_name\":\"sha1\",\"mirror_updated\":\"0001-01-01T00:00:00Z\",\"repo_transfer\":null,\"topics\":[\"codeberg\",\"docs\",\"eleventy\",\"docuthon\",\"contributions-welcome\"]}\n"
+    }
+  },
+  {
+    "request": {
+      "method": "GET",
+      "url": "https://codeberg.org/api/v1/repos/Codeberg/Documentation/topics?limit=0&page=1"
+    },
+    "response": {
+      "status_code": 200,
+      "header": {
+        "Access-Control-Expose-Headers": [
+          "X-Total-Count"
+        ],
+        "Alt-Svc": [
+          "h3=\":443\";ma=2592000;"
+        ],
+        "Cache-Control": [
+          "max-age=0, private, must-revalidate"
+        ],
+        "Content-Type": [
+          "application/json;charset=utf-8"
+        ],
+        "Date": [
+          "Fri, 13 Nov 2026 04:12:53 GMT"
+        ],
+        "Permissions-Policy": [
+          "interest-cohort=()"
+        ],
+        "Ratelimit": [
+          "\"baseline\";r=1994;t=600"
+        ],
+        "Ratelimit-Policy": [
+          "\"baseline\";q=2000;w=600"
+        ],
+        "Strict-Transport-Security": [
+          "max-age=63072000; includeSubDomains; preload;"
+        ],
+        "Vary": [
+          "Origin"
+        ],
+        "X-Backend-Name": [
+          "b_forgejo_secondary"
+        ],
+        "X-Content-Type-Options": [
+          "nosniff"
+        ],
+        "X-Frame-Options": [
+          "SAMEORIGIN"
+        ],
+        "X-Server-Name": [
+          "s_forgejo_secondary_alpspitz"
+        ],
+        "X-Total-Count": [
+          "5"
+        ]
+      },
+      "body": "{\"topics\":[\"codeberg\",\"contributions-welcome\",\"docs\",\"docuthon\",\"eleventy\"]}\n"
+    }
+  }
+]

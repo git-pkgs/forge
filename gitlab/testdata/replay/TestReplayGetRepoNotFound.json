@@ -1,0 +1,83 @@
+[
+  {
+    "request": {
+      "method": "GET",
+      "url": "https://gitlab.com/api/v4/projects/gitlab-org%2Fthis-project-does-not-exist?license=true"
+    },
+    "response": {
+      "status_code": 404,
+      "header": {
+        "Cache-Control": [
+          "no-store, private, max-age=0"
+        ],
+        "Cf-Cache-Status": [
+          "BYPASS"
+        ],
+        "Cf-Ray": [
+          "a59af0d17850a46b-HYD"
+        ],
+        "Content-Security-Policy": [
+          "default-src 'none'"
+        ],
+        "Content-Type": [
+          "application/json"
+        ],
+        "Date": [
+          "Fri, 13 Nov 2026 04:12:54 GMT"
+        ],
+        "Gitlab-Lb": [
+          "haproxy-main-http-us-east1-d-865979db98-4ms7j"
+        ],
+        "Gitlab-Sv": [
+          "api-gke-us-east1-d"
+        ],
+        "Nel": [
+          "{\"max_age\": 0}"
+        ],
+        "Ratelimit-Limit": [
+          "500"
+        ],
+        "Ratelimit-Name": [
+          "throttle_unauthenticated_api"
+        ],
+        "Ratelimit-Observed": [
+          "2"
+        ],
+        "Ratelimit-Remaining": [
+          "498"
+        ],
+        "Ratelimit-Reset": [
+          "1794543180"
+        ],
+        "Referrer-Policy": [
+          "strict-origin-when-cross-origin"
+        ],
+        "Server": [
+          "cloudflare"
+        ],
+        "Strict-Transport-Security": [
+          "max-age=31536000"
+        ],
+        "Vary": [
+          "Origin"
+        ],
+        "X-Content-Type-Options": [
+          "nosniff"
+        ],
+        "X-Frame-Options": [
+          "SAMEORIGIN"
+        ],
+        "X-Gitlab-Meta": [
+          "{\"correlation_id\":\"a59af0d17850a46b-HYD\",\"version\":\"1\"}"
+        ],
+        "X-Request-Id": [
+          "a59af0d17850a46b-HYD"
+        ],
+        "X-Runtime": [
+          "0.050751"
+        ]
+      },
+      "body": "{\"message\":\"404 Project Not Found\"}"
+    }
+  }
+]

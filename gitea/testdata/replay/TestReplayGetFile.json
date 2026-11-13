@@ -1,0 +1,53 @@
+[
+  {
+    "request": {
+      "method": "GET",
+      "url": "https://codeberg.org/api/v1/repos/Codeberg/Documentation/contents/LICENSE.md?ref=main"
+    },
+    "response": {
+      "status_code": 200,
+      "header": {
+        "Alt-Svc": [
+          "h3=\":443\";ma=2592000;"
+        ],
+        "Cache-Control": [
+          "max-age=0, private, must-revalidate"
+        ],
+        "Content-Type": [
+          "application/json;charset=utf-8"
+        ],
+        "Date": [
+          "Fri, 13 Nov 2026 04:12:54 GMT"
+        ],
+        "Permissions-Policy": [
+          "interest-cohort=()"
+        ],
+        "Ratelimit": [
+          "\"baseline\";r=1991;t=600"
+        ],
+        "Ratelimit-Policy": [
+          "\"baseline\";q=2000;w=600"
+        ],
+        "Strict-Transport-Security": [
+          "max-age=63072000; includeSubDomains; preload;"
+        ],
+        "Vary": [
+          "Origin,Accept-Encoding"
+        ],
+        "X-Backend-Name": [
+          "b_forgejo_secondary"
+        ],
+        "X-Content-Type-Options": [
+          "nosniff"
+        ],
+        "X-Frame-Options": [
+          "SAMEORIGIN"
+        ],
+        "X-Server-Name": [
+          "s_forgejo_secondary_alpspitz"
+        ]
+      },
+      "body": "{\"name\":\"LICENSE.md\",\"path\":\"LICENSE.md\",\"sha\":\"88913eaa483ba67826545d3b8efba22782ef485e\",\"last_commit_sha\":\"c6ac9a9f948772a1eddd1a255507403b6823cef0\",\"last_commit_when\":\"2025-06-14T11:38:21+02:00\",\"type\":\"file\",\"size\":1104,\"encoding\":\"base64\",\"content\":\"PCEtLSBtYXJrZG93bmxpbnQtZGlzYWJsZSBNRDA0MSAtLT4KClRoaXMgd2Vic2l0ZSBpcyBsaWNlbnNlZCB1bmRlciBbQ0MtQlktU0EgNC4wXShodHRwczovL2NyZWF0aXZlY29tbW9ucy5vcmcvbGljZW5zZXMvYnktc2EvNC4wL2RlZWQuZW4pLgoKRHVlIHRvIHRoZSB3aWtpLWxpa2UgbmF0dXJlIG9mIHRoaXMgd2Vic2l0ZSwgcGFnZXMgdXN1YWxseSBoYXZlIG11bHRpcGxlIGF1dGhvcnMgYW5kIGFyZSBjaGFuZ2VkCmZyZXF1ZW50bHkuIENoYW5nZXMgdG8gdGhlIG9yaWdpbmFsIHZlcnNpb25zIG9mIHRoZSB3b3JrcyBhcyB3ZWxsIGFzIHRoZWlyIGluZGl2aWR1YWwgYXV0aG9ycyBjYW4gYmUKbG9va2VkIHVwIGluIFt0aGUgd2Vic2l0ZSdzIGNvbW1pdCBoaXN0b3J5XShodHRwczovL2NvZGViZXJnLm9yZy9Db2RlYmVyZy9Eb2N1bWVudGF0aW9uL2NvbW1pdHMvYnJhbmNoL21haW4pLgoKVGhlIENvZGViZXJnIGxvZ29zIGluIHRoaXMgd2Vic2l0ZSBhcmUgYnkgQG1yYXksCmxpY2Vuc2VkIHVuZGVyIFtDQzAgMS4wXShodHRwOi8vY3JlYXRpdmVjb21tb25zLm9yZy9wdWJsaWNkb21haW4vemVyby8xLjAvKS4KClRoZSBmb250cyBpbiB0aGlzIHdlYnNpdGUgYXJlIGRvY3VtZW50ZWQgb24gdGhlIFtDb2RlYmVyZyBEZXNpZ24gcmVwb10oaHR0cHM6Ly9jb2RlYmVyZy5vcmcvQ29kZWJlcmcvRGVzaWduI2ZvbnQtaW50ZXIpLgoKVGhlIGljb25zIGluIHRoaXMgd2Vic2l0ZSBhcmUgYnkgW0ZvbnQgQXdlc29tZV0oaHR0cHM6Ly9naXRodWIuY29tL0ZvcnRBd2Vzb21lL0ZvbnQtQXdlc29tZSksCmxpY2Vuc2VkIHVuZGVyIFttdWx0aXBsZSBsaWNlbnNlc10oaHR0cHM6Ly9mb250YXdlc29tZS5jb20vbGljZW5zZS9mcmVlKS4KCkNvZGViZXJnIGFuZCB0aGUgQ29kZWJlcmcgTG9nbyBhcmUgdHJhZGVtYXJrcyBvZiBDb2RlYmVyZyBlLlYuCgoiS251dCB0aGUgUG9sYXIgQmVhciIgaGFzIGJlZW4gZGVyaXZlZCBmcm9tIFtodHRwczovL29wZW5jbGlwYXJ0Lm9yZy9kZXRhaWwvMTkzMjQzL3BvbGFyLWJlYXItcmVtaXhdKGh0dHBzOi8vb3BlbmNsaXBhcnQub3JnL2RldGFpbC8xOTMyNDMvcG9sYXItYmVhci1yZW1peCksCnVuZGVyIENDMCAxLjAK\",\"target\":null,\"url\":\"https://codeberg.org/api/v1/repos/Codeberg/Documentation/contents/LICENSE.md?ref=main\",\"html_url\":\"https://codeberg.org/Codeberg/Documentation/src/branch/main/LICENSE.md\",\"git_url\":\"https://codeberg.org/api/v1/repos/Codeberg/Documentation/git/blobs/88913eaa483ba67826545d3b8efba22782ef485e\",\"download_url\":\"https://codeberg.org/Codeberg/Documentation/raw/branch/main/LICENSE.md\",\"submodule_git_url\":null,\"_links\":{\"self\":\"https://codeberg.org/api/v1/repos/Codeberg/Documentation/contents/LICENSE.md?ref=main\",\"git\":\"https://codeberg.org/api/v1/repos/Codeberg/Documentation/git/blobs/88913eaa483ba67826545d3b8efba22782ef485e\",\"html\":\"https://codeberg.org/Codeberg/Documentation/src/branch/main/LICENSE.md\"}}\n"
+    }
+  }
+]

@@ -1,0 +1,212 @@
+[
+  {
+    "request": {
+      "method": "GET",
+      "url": "https://gitlab.com/api/v4/projects/gitlab-org%2Fgitlab-test/repository/branches?page=1&per_page=2"
+    },
+    "response": {
+      "status_code": 200,
+      "header": {
+        "Cache-Control": [
+          "max-age=0, private, must-revalidate"
+        ],
+        "Cf-Cache-Status": [
+          "BYPASS"
+        ],
+        "Cf-Ray": [
+          "a59af0d6dfe0a46b-HYD"
+        ],
+        "Content-Security-Policy": [
+          "default-src 'none'"
+        ],
+        "Content-Type": [
+          "application/json"
+        ],
+        "Date": [
+          "Fri, 13 Nov 2026 04:12:54 GMT"
+        ],
+        "Etag": [
+          "W/\"fc2f61ebc0b2ca6143f9c17e85fbbe99\""
+        ],
+        "Gitlab-Lb": [
+          "haproxy-main-http-us-east1-c-544d8f9bcc-vp26l"
+        ],
+        "Gitlab-Sv": [
+          "api-gke-us-east1-c"
+        ],
+        "Link": [
+          "<https://gitlab.com/api/v4/projects/gitlab-org%2Fgitlab-test/repository/branches?id=gitlab-org%2Fgitlab-test&page=2&per_page=2>; rel=\"next\", <https://gitlab.com/api/v4/projects/gitlab-org%2Fgitlab-test/repository/branches?id=gitlab-org%2Fgitlab-test&page=1&per_page=2>; rel=\"first\", <https://gitlab.com/api/v4/projects/gitlab-org%2Fgitlab-test/repository/branches?id=gitlab-org%2Fgitlab-test&page=67&per_page=2>; rel=\"last\""
+        ],
+        "Nel": [
+          "{\"max_age\": 0}"
+        ],
+        "Ratelimit-Limit": [
+          "500"
+        ],
+        "Ratelimit-Name": [
+          "throttle_unauthenticated_api"
+        ],
+        "Ratelimit-Observed": [
+          "3"
+        ],
+        "Ratelimit-Remaining": [
+          "497"
+        ],
+        "Ratelimit-Reset": [
+          "1794543180"
+        ],
+        "Referrer-Policy": [
+          "strict-origin-when-cross-origin"
+        ],
+        "Server": [
+          "cloudflare"
+        ],
+        "Strict-Transport-Security": [
+          "max-age=31536000"
+        ],
+        "Vary": [
+          "Origin"
+        ],
+        "X-Content-Type-Options": [
+          "nosniff"
+        ],
+        "X-Frame-Options": [
+          "SAMEORIGIN"
+        ],
+        "X-Gitlab-Meta": [
+          "{\"correlation_id\":\"a59af0d6dfe0a46b-HYD\",\"version\":\"1\"}"
+        ],
+        "X-Next-Page": [
+          "2"
+        ],
+        "X-Page": [
+          "1"
+        ],
+        "X-Per-Page": [
+          "2"
+        ],
+        "X-Prev-Page": [
+          ""
+        ],
+        "X-Request-Id": [
+          "a59af0d6dfe0a46b-HYD"
+        ],
+        "X-Runtime": [
+          "0.117971"
+        ],
+        "X-Total": [
+          "133"
+        ],
+        "X-Total-Pages": [
+          "67"
+        ]
+      },
+      "body": "[{\"name\":\"'test'\",\"commit\":{\"id\":\"e56497bb5f03a90a51293fc6d516788730953899\",\"short_id\":\"e56497bb\",\"created_at\":\"2015-01-10T21:23:29.000+00:00\",\"parent_ids\":[\"5937ac0a7beb003549fc5fd26fc247adbce4a52e\",\"4cd80ccab63c82b4bad16faa5193fbd2aa06df40\"],\"title\":\"Merge branch 'tree_helper_spec' into 'master'\",\"message\":\"Merge branch 'tree_helper_spec' into 'master'\\n\\nAdd directory structure for tree_helper spec\\n\\nThis directory structure is needed for a testing the method flatten_tree(tree) in the TreeHelper module\\n\\nSee [merge request #275](https://gitlab.com/gitlab-org/gitlab-ce/merge_requests/275#note_732774)\\n\\nSee merge request !2\\n\",\"author_name\":\"Sytse Sijbrandij\",\"author_email\":\"sytse@gitlab.com\",\"authored_date\":\"2015-01-10T21:23:29.000+00:00\",\"committer_name\":\"Sytse Sijbrandij\",\"committer_email\":\"sytse@gitlab.com\",\"committed_date\":\"2015-01-10T21:23:29.000+00:00\",\"trailers\":{},\"extended_trailers\":{},\"web_url\":\"https://gitlab.com/gitlab-org/gitlab-test/-/commit/e56497bb5f03a90a51293fc6d516788730953899\"},\"merged\":true,\"protected\":true,\"developers_can_push\":false,\"developers_can_merge\":false,\"can_push\":false,\"default\":false,\"web_url\":\"https://gitlab.com/gitlab-org/gitlab-test/-/tree/'test'\"},{\"name\":\"100%branch\",\"commit\":{\"id\":\"1b12f15a11fc6e62177bef08f47bc7b5ce50b141\",\"short_id\":\"1b12f15a\",\"created_at\":\"2016-08-18T22:21:18.000+00:00\",\"parent_ids\":[\"6907208d755b60ebeacb2e9dfea74c92c3449a1f\",\"38008cb17ce1466d8fec2dfa6f6ab8dcfe5cf49e\"],\"title\":\"Merge branch 'add-directory-with-space' into 'master'\",\"message\":\"Merge branch 'add-directory-with-space' into 'master'\\r\\n\\r\\nAdd a directory containing a space in its name\\r\\n\\r\\nneeded for verifying the fix of `https://gitlab.com/gitlab-com/support-forum/issues/952` \\r\\n\\r\\nSee merge request !11\",\"author_name\":\"Stan Hu\",\"author_email\":\"stanhu@gmail.com\",\"authored_date\":\"2016-08-18T22:21:18.000+00:00\",\"committer_name\":\"Stan Hu\",\"committer_email\":\"stanhu@gmail.com\",\"committed_date\":\"2016-08-18T22:21:18.000+00:00\",\"trailers\":{},\"extended_trailers\":{},\"web_url\":\"https://gitlab.com/gitlab-org/gitlab-test/-/commit/1b12f15a11fc6e62177bef08f47bc7b5ce50b141\"},\"merged\":true,\"protected\":true,\"developers_can_push\":false,\"developers_can_merge\":false,\"can_push\":false,\"default\":false,\"web_url\":\"https://gitlab.com/gitlab-org/gitlab-test/-/tree/100%25branch\"}]"
+    }
+  },
+  {
+    "request": {
+      "method": "GET",
+      "url": "https://gitlab.com/api/v4/projects/gitlab-org%2Fgitlab-test/repository/branches?page=2&per_page=2"
+    },
+    "response": {
+      "status_code": 200,
+      "header": {
+        "Cache-Control": [
+          "max-age=0, private, must-revalidate"
+        ],
+        "Cf-Cache-Status": [
+          "BYPASS"
+        ],
+        "Cf-Ray": [
+          "a59af0d96b46a46b-HYD"
+        ],
+        "Content-Security-Policy": [
+          "default-src 'none'"
+        ],
+        "Content-Type": [
+          "application/json"
+        ],
+        "Date": [
+          "Fri, 13 Nov 2026 04:12:54 GMT"
+        ],
+        "Etag": [
+          "W/\"08af2b2677668481cf70da0df9b8d84b\""
+        ],
+        "Gitlab-Lb": [
+          "haproxy-main-http-us-east1-c-544d8f9bcc-n5mfx"
+        ],
+        "Gitlab-Sv": [
+          "api-gke-us-east1-c"
+        ],
+        "Link": [
+          "<https://gitlab.com/api/v4/projects/gitlab-org%2Fgitlab-test/repository/branches?id=gitlab-org%2Fgitlab-test&page=1&per_page=2>; rel=\"prev\", <https://gitlab.com/api/v4/projects/gitlab-org%2Fgitlab-test/repository/branches?id=gitlab-org%2Fgitlab-test&page=3&per_page=2>; rel=\"next\", <https://gitlab.com/api/v4/projects/gitlab-org%2Fgitlab-test/repository/branches?id=gitlab-org%2Fgitlab-test&page=1&per_page=2>; rel=\"first\", <https://gitlab.com/api/v4/projects/gitlab-org%2Fgitlab-test/repository/branches?id=gitlab-org%2Fgitlab-test&page=67&per_page=2>; rel=\"last\""
+        ],
+        "Nel": [
+          "{\"max_age\": 0}"
+        ],
+        "Ratelimit-Limit": [
+          "500"
+        ],
+        "Ratelimit-Name": [
+          "throttle_unauthenticated_api"
+        ],
+        "Ratelimit-Observed": [
+          "4"
+        ],
+        "Ratelimit-Remaining": [
+          "496"
+        ],
+        "Ratelimit-Reset": [
+          "1794543180"
+        ],
+        "Referrer-Policy": [
+          "strict-origin-when-cross-origin"
+        ],
+        "Server": [
+          "cloudflare"
+        ],
+        "Strict-Transport-Security": [
+          "max-age=31536000"
+        ],
+        "Vary": [
+          "Origin"
+        ],
+        "X-Content-Type-Options": [
+          "nosniff"
+        ],
+        "X-Frame-Options": [
+          "SAMEORIGIN"
+        ],
+        "X-Gitlab-Meta": [
+          "{\"correlation_id\":\"a59af0d96b46a46b-HYD\",\"version\":\"1\"}"
+        ],
+        "X-Next-Page": [
+          "3"
+        ],
+        "X-Page": [
+          "2"
+        ],
+        "X-Per-Page": [
+          "2"
+        ],
+        "X-Prev-Page": [
+          "1"
+        ],
+        "X-Request-Id": [
+          "a59af0d96b46a46b-HYD"
+        ],
+        "X-Runtime": [
+          "0.087959"
+        ],
+        "X-Total": [
+          "133"
+        ],
+        "X-Total-Pages": [
+          "67"
+        ]
+      },
+      "body": "[{\"name\":\"1942eed5cc108b19c7405106e81fa96125d0be22\",\"commit\":{\"id\":\"1942eed5cc108b19c7405106e81fa96125d0be22\",\"short_id\":\"1942eed5\",\"created_at\":\"2018-02-21T12:08:14.000+01:00\",\"parent_ids\":[\"60ecb67744cb56576c30214ff52294f8ce2def98\"],\"title\":\"Create empty commit\",\"message\":\"Create empty commit\\n\\nI need a branch name where the name is the same as the commit id it\\npoints to. To explain why this commit is here, I needed to create a new\\ncommit. As the title suggests, the tree is the same as its parent.\\n\",\"author_name\":\"Zeger-Jan van de Weg\",\"author_email\":\"git@zjvandeweg.nl\",\"authored_date\":\"2018-02-21T12:08:14.000+01:00\",\"committer_name\":\"Zeger-Jan van de Weg\",\"committer_email\":\"git@zjvandeweg.nl\",\"committed_date\":\"2018-02-21T12:08:14.000+01:00\",\"trailers\":{},\"extended_trailers\":{},\"web_url\":\"https://gitlab.com/gitlab-org/gitlab-test/-/commit/1942eed5cc108b19c7405106e81fa96125d0be22\"},\"merged\":false,\"protected\":true,\"developers_can_push\":false,\"developers_can_merge\":false,\"can_push\":false,\"default\":false,\"web_url\":\"https://gitlab.com/gitlab-org/gitlab-test/-/tree/1942eed5cc108b19c7405106e81fa96125d0be22\"},{\"name\":\"2-mb-file\",\"commit\":{\"id\":\"bf12d2567099e26f59692896f73ac819bae45b00\",\"short_id\":\"bf12d256\",\"created_at\":\"2018-08-05T13:11:44.000-05:00\",\"parent_ids\":[\"7975be0116940bf2ad4321f79d02a55c5f7779aa\"],\"title\":\"Add file of  2 MB for tests\",\"message\":\"Add file of  2 MB for tests\\n\",\"author_name\":\"Rubén Dávila\",\"author_email\":\"ruben@gitlab.com\",\"authored_date\":\"2018-08-05T13:11:44.000-05:00\",\"committer_name\":\"Rubén Dávila\",\"committer_email\":\"ruben@gitlab.com\",\"committed_date\":\"2018-08-05T13:11:44.000-05:00\",\"trailers\":{},\"extended_trailers\":{},\"web_url\":\"https://gitlab.com/gitlab-org/gitlab-test/-/commit/bf12d2567099e26f59692896f73ac819bae45b00\"},\"merged\":false,\"protected\":true,\"developers_can_push\":false,\"developers_can_merge\":false,\"can_push\":false,\"default\":false,\"web_url\":\"https://gitlab.com/gitlab-org/gitlab-test/-/tree/2-mb-file\"}]"
+    }
+  }
+]
