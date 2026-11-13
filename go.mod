@@ -9,7 +9,7 @@ require (
 	github.com/git-pkgs/purl v0.1.24
 	github.com/google/go-github/v82 v82.0.0
 	github.com/spf13/cobra v1.10.2
-	github.com/spf13/pflag v1.0.10
+	github.com/spf13/pflag v1.1.0
 	gitlab.com/gitlab-org/api/client-go v1.46.0
 	go.yaml.in/yaml/v3 v3.0.6
 	golang.org/x/crypto v0.58.0
