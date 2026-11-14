@@ -71,11 +71,12 @@ func (rt *giteaTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 func TestNewClientRegistersDefaultForges(t *testing.T) {
 	c := NewClient()
 	for domain, wantAPI := range map[string]string{
-		"github.com":    "https://api.github.com",
-		"gitlab.com":    "https://gitlab.com/api/v4",
-		"codeberg.org":  "https://codeberg.org/api/v1",
-		"bitbucket.org": "https://api.bitbucket.org/2.0",
-		"tangled.org":   "https://tangled.org/xrpc",
+		"github.com":     "https://api.github.com",
+		"gitlab.com":     "https://gitlab.com/api/v4",
+		"codeberg.org":   "https://codeberg.org/api/v1",
+		"bitbucket.org":  "https://api.bitbucket.org/2.0",
+		"tangled.org":    "https://tangled.org/xrpc",
+		"upstream.codes": "https://upstream.codes/api/v3",
 	} {
 		f, err := c.ForgeFor(domain)
 		if err != nil {

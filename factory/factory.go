@@ -38,6 +38,8 @@ func DefaultForges(token func(domain string) string, hc *http.Client) map[string
 		"codeberg.org":  gitea.New("https://codeberg.org", token("codeberg.org"), hc),
 		"bitbucket.org": bitbucket.New(token("bitbucket.org"), hc),
 		"tangled.org":   tangled.New("https://tangled.org", token("tangled.org"), hc),
+		// Upstream serves GitHub's REST API at /api/v3.
+		"upstream.codes": github.NewWithBase("https://upstream.codes", token("upstream.codes"), hc),
 	}
 }
 

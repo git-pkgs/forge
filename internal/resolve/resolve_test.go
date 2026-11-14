@@ -67,6 +67,9 @@ ssh_host = ssh.gitlab.test
 		// no mapping: pass through unchanged
 		{"github.com", "github.com"},
 		{"gitlab.test", "gitlab.test"},
+		// built-in git hosts of a hosted forge
+		{"git.coline.app", "upstream.codes"},
+		{"ssh.git.coline.app", "upstream.codes"},
 	}
 
 	for _, tt := range tests {
@@ -95,7 +98,7 @@ func clearTokenEnv(t *testing.T) {
 	for _, v := range []string{
 		"GITHUB_TOKEN", "GH_TOKEN",
 		"GITLAB_TOKEN", "GLAB_TOKEN",
-		"FORGEJO_TOKEN", "GITEA_TOKEN", "BITBUCKET_TOKEN", "TANGLED_TOKEN",
+		"FORGEJO_TOKEN", "GITEA_TOKEN", "BITBUCKET_TOKEN", "TANGLED_TOKEN", "UPSTREAM_TOKEN",
 		"FORGE_TOKEN",
 	} {
 		t.Setenv(v, "")
@@ -172,6 +175,14 @@ func TestTokenForDomain(t *testing.T) {
 		t.Errorf("expected tangled-tok, got %q", got)
 	}
 	t.Setenv("TANGLED_TOKEN", "")
+
+	// Upstream
+	t.Setenv("UPSTREAM_TOKEN", "upstream-tok")
+	got = TokenForDomain("upstream.codes")
+	if got != "upstream-tok" {
+		t.Errorf("expected upstream-tok, got %q", got)
+	}
+	t.Setenv("UPSTREAM_TOKEN", "")
 }
 
 func TestTokenForDomainLogsFailingCommand(t *testing.T) {
@@ -661,6 +672,8 @@ func TestRepoResolvesGitRemoteURLs(t *testing.T) {
 		{name: "HTTPS userinfo", remoteURL: "https://user:token@github.com/owner/repo.git", domain: "github.com", owner: "owner"},
 		{name: "bracketed IPv6", remoteURL: "ssh://git@[2001:db8::1]:2222/owner/repo.git", domain: "2001:db8::1", owner: "owner"},
 		{name: "bracketed IPv6 SCP", remoteURL: "git@[2001:db8::1]:owner/repo.git", domain: "2001:db8::1", owner: "owner"},
+		{name: "Upstream HTTPS", remoteURL: "https://git.coline.app/owner/repo.git", domain: "upstream.codes", owner: "owner"},
+		{name: "Upstream SSH", remoteURL: "git@ssh.git.coline.app:owner/repo.git", domain: "upstream.codes", owner: "owner"},
 		{name: "empty host", remoteURL: ":owner/repo", wantErr: true},
 	}
 

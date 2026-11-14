@@ -325,13 +325,24 @@ func resolveRemote() (domain, owner, repo string, err error) {
 // Returns the input unchanged when no mapping is configured.
 func mapSSHHost(domain string) string {
 	cfg, err := config.Load()
-	if err != nil {
-		return domain
+	if err == nil {
+		if api := cfg.DomainForSSHHost(domain); api != "" {
+			return api
+		}
 	}
-	if api := cfg.DomainForSSHHost(domain); api != "" {
+	if api, ok := knownGitHosts[domain]; ok {
 		return api
 	}
 	return domain
+}
+
+// knownGitHosts maps the git hosts of hosted forges whose clone URLs live on
+// a different host from their API. A config ssh_host takes precedence.
+var knownGitHosts = map[string]string{
+	// Upstream clones over https://git.coline.app and git@ssh.git.coline.app,
+	// while its API and web pages are on upstream.codes.
+	"git.coline.app":     "upstream.codes",
+	"ssh.git.coline.app": "upstream.codes",
 }
 
 func gitRemoteURL(name string) (string, error) {
@@ -545,6 +556,10 @@ func TokenForDomainEnv(domain string) string {
 		}
 	case "tangled.org":
 		if t := os.Getenv("TANGLED_TOKEN"); t != "" {
+			return t
+		}
+	case "upstream.codes":
+		if t := os.Getenv("UPSTREAM_TOKEN"); t != "" {
 			return t
 		}
 	}
