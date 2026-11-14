@@ -780,3 +780,147 @@ git_protocol = typo
 		t.Errorf("expected error about invalid git_protocol, got: %v", loadErr)
 	}
 }
+
+func TestLoadFileLowercasesSectionNames(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "config")
+	_ = os.WriteFile(path, []byte(`[Git.Example.com]
+type = gitea
+scheme = http
+token = tok
+git_protocol = ssh
+`), 0600)
+
+	cfg := &Config{Domains: make(map[string]DomainSection)}
+	if err := loadFile(cfg, path, true); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, ok := cfg.Domains["Git.Example.com"]; ok {
+		t.Error("section name kept its original case")
+	}
+	ds, ok := cfg.Domains["git.example.com"]
+	if !ok {
+		t.Fatal("expected a git.example.com section")
+	}
+	if ds.Type != "gitea" || ds.Scheme != "http" || ds.Token != "tok" || ds.GitProtocol != "ssh" {
+		t.Errorf("unexpected section: %+v", ds)
+	}
+}
+
+func TestDomainForSSHHostIgnoresCase(t *testing.T) {
+	cfg := &Config{
+		Domains: map[string]DomainSection{
+			"gitlab.test": {SSHHost: "SSH.GitLab.test"},
+		},
+	}
+	if got := cfg.DomainForSSHHost("ssh.gitlab.test"); got != "gitlab.test" {
+		t.Errorf("DomainForSSHHost = %q, want gitlab.test", got)
+	}
+}
+
+func TestSetDomainLowercasesAndMergesSection(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", dir)
+
+	cfgDir := filepath.Join(dir, "forge")
+	_ = os.MkdirAll(cfgDir, 0700)
+	_ = os.WriteFile(filepath.Join(cfgDir, "config"), []byte(`[Git.Example.com]
+ssh_host = ssh.example.com
+`), 0600)
+
+	if err := SetDomain("GIT.example.com", "tok", "", "gitea", ""); err != nil {
+		t.Fatalf("SetDomain: %v", err)
+	}
+
+	f, err := os.Open(filepath.Join(cfgDir, "config"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = f.Close() }()
+	sections, err := parseINI(f)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(sections) != 1 {
+		t.Fatalf("expected one section, got %v", sections)
+	}
+	got := sections["git.example.com"]
+	if got["token"] != "tok" || got["type"] != "gitea" || got["ssh_host"] != "ssh.example.com" {
+		t.Errorf("unexpected section: %v", got)
+	}
+}
+
+func TestLoadFileCaseVariantSectionsLowercaseWins(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "config")
+	_ = os.WriteFile(path, []byte(`[git.example.com]
+token = lower
+[Git.Example.com]
+token = mixed
+type = gitea
+scheme = http
+[GIT.EXAMPLE.COM]
+token = upper
+scheme = https
+git_protocol = ssh
+`), 0600)
+
+	// Map iteration order is random, so repeat to catch order dependence.
+	for range 20 {
+		cfg := &Config{Domains: make(map[string]DomainSection)}
+		if err := loadFile(cfg, path, true); err != nil {
+			t.Fatal(err)
+		}
+		ds := cfg.Domains["git.example.com"]
+		if ds.Token != "lower" {
+			t.Fatalf("token = %q, want the lowercase section's", ds.Token)
+		}
+		// Settings the lowercase section doesn't set come from the other
+		// spellings in sorted order, so "GIT.EXAMPLE.COM" sorts before "Git.Example.com".
+		if ds.Type != "gitea" || ds.Scheme != "http" || ds.GitProtocol != "ssh" {
+			t.Fatalf("unexpected section: %+v", ds)
+		}
+	}
+}
+
+func TestSetDomainCaseVariantSectionsLowercaseWins(t *testing.T) {
+	for range 20 {
+		dir := t.TempDir()
+		t.Setenv("XDG_CONFIG_HOME", dir)
+		cfgDir := filepath.Join(dir, "forge")
+		_ = os.MkdirAll(cfgDir, 0700)
+		_ = os.WriteFile(filepath.Join(cfgDir, "config"), []byte(`[Git.Example.com]
+token = mixed
+ssh_host = mixed.example.com
+type = forgejo
+[GIT.EXAMPLE.COM]
+token = upper
+ssh_host = upper.example.com
+[git.example.com]
+token = lower
+ssh_host = lower.example.com
+`), 0600)
+
+		if err := SetDomain("git.example.com", "", "", "gitea", ""); err != nil {
+			t.Fatalf("SetDomain: %v", err)
+		}
+
+		f, err := os.Open(filepath.Join(cfgDir, "config"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		sections, err := parseINI(f)
+		_ = f.Close()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(sections) != 1 {
+			t.Fatalf("expected one section, got %v", sections)
+		}
+		got := sections["git.example.com"]
+		if got["token"] != "lower" || got["ssh_host"] != "lower.example.com" || got["type"] != "gitea" {
+			t.Fatalf("unexpected section: %v", got)
+		}
+	}
+}
