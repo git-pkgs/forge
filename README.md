@@ -148,6 +148,17 @@ Committed `.forge` files cannot set the API scheme.
 
 Precedence from highest to lowest: CLI flags, environment variables, `.forge`, `~/.config/forge/config`, built-in defaults.
 
+### Read-only mode
+
+`--read-only`, or `FORGE_READ_ONLY=true` in the environment, stops forge from changing anything on the forge. Only GET, HEAD and OPTIONS requests are sent, so listing and viewing work as usual, and any command that would create, edit or delete something fails before its request leaves the machine. This covers `forge api` too, and `pr create --push` is refused before anything is pushed. It's meant for CI jobs, monitoring and audits that need a token but should never write with it.
+
+```
+FORGE_READ_ONLY=true forge issue list
+forge --read-only label create bug   # Error: create label: Post "...": write refused in read-only mode
+```
+
+`--read-only=false` overrides `FORGE_READ_ONLY` for a single command.
+
 ## Library
 
 ```sh
@@ -240,6 +251,20 @@ err := client.RegisterDomain(ctx, "git.example.com", token, forges.ForgeBuilders
     Tangled: tangled.New,
     Radicle: radicle.New,
 })
+```
+
+For read-only access, wrap the HTTP client with `forges.ReadOnlyHTTPClient` and give it to every backend you construct and to `WithHTTPClient`. Requests other than GET, HEAD and OPTIONS then fail with `forges.ErrReadOnly` without being sent, whichever backend or operation made them:
+
+```go
+hc := forges.ReadOnlyHTTPClient(nil)
+client := forges.NewClient(
+    forges.WithHTTPClient(hc),
+    forges.WithForge("github.com", github.New(token, hc)),
+)
+
+f, _ := client.ForgeFor("github.com")
+_, err := f.Issues().Create(ctx, "octocat", "hello-world", forges.CreateIssueOpts{Title: "x"})
+errors.Is(err, forges.ErrReadOnly) // true
 ```
 
 PURL support via `github.com/git-pkgs/purl`:

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strconv"
 
 	"github.com/git-pkgs/forge"
 	"github.com/git-pkgs/forge/internal/config"
@@ -18,6 +19,7 @@ var (
 	flagHost      string
 	flagOutput    string
 	flagRemote    string
+	flagReadOnly  bool
 )
 
 var rootCmd = &cobra.Command{
@@ -25,7 +27,7 @@ var rootCmd = &cobra.Command{
 	Short:        "Work with git forges from the command line",
 	Long:         "Supports GitHub, GitLab, Gitea, Forgejo, Bitbucket Cloud, Gerrit, and Tangled through a single interface.",
 	SilenceUsage: true,
-	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 		cfg, _ := config.Load()
 		if cfg != nil {
 			if !cmd.Flags().Changed("output") && cfg.Default.Output != "" {
@@ -43,6 +45,17 @@ var rootCmd = &cobra.Command{
 		resolve.SetRemote(remote)
 		resolve.SetHost(flagHost)
 		resolve.SetForgeType(flagForgeType)
+
+		readOnly := flagReadOnly
+		if v := os.Getenv("FORGE_READ_ONLY"); v != "" && !cmd.Flags().Changed("read-only") {
+			b, err := strconv.ParseBool(v)
+			if err != nil {
+				return fmt.Errorf("invalid FORGE_READ_ONLY value %q: use true or false", v)
+			}
+			readOnly = b
+		}
+		resolve.SetReadOnly(readOnly)
+		return nil
 	},
 }
 
@@ -57,6 +70,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&flagHost, "host", "", "Force forge host (e.g. gitea.com, http://forgejo.local:3000); overrides FORGE_HOST and remote detection")
 	rootCmd.PersistentFlags().StringVarP(&flagOutput, "output", "o", "table", "Output format: table, json, plain")
 	rootCmd.PersistentFlags().StringVar(&flagRemote, "remote", "", "Git remote to use when --repo (-R) is not specified (default from config, otherwise origin)")
+	rootCmd.PersistentFlags().BoolVar(&flagReadOnly, "read-only", false, "Refuse API requests that could modify the forge (also FORGE_READ_ONLY=true)")
 }
 
 // notSupported wraps ErrNotSupported with a user-friendly message
