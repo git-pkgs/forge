@@ -1,0 +1,77 @@
+[
+  {
+    "request": {
+      "method": "GET",
+      "url": "https://api.github.com/repos/octocat/this-repository-does-not-exist"
+    },
+    "response": {
+      "status_code": 404,
+      "header": {
+        "Access-Control-Allow-Origin": [
+          "*"
+        ],
+        "Access-Control-Expose-Headers": [
+          "ETag, Link, Location, Retry-After, X-GitHub-OTP, X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Used, X-RateLimit-Resource, X-RateLimit-Reset, X-OAuth-Scopes, X-Accepted-OAuth-Scopes, X-Poll-Interval, X-GitHub-Media-Type, X-GitHub-SSO, X-GitHub-Request-Id, Deprecation, Sunset, Warning"
+        ],
+        "Content-Security-Policy": [
+          "default-src 'none'"
+        ],
+        "Content-Type": [
+          "application/json; charset=utf-8"
+        ],
+        "Date": [
+          "Fri, 13 Nov 2026 04:11:46 GMT"
+        ],
+        "Referrer-Policy": [
+          "origin-when-cross-origin, strict-origin-when-cross-origin"
+        ],
+        "Server": [
+          "github.com"
+        ],
+        "Strict-Transport-Security": [
+          "max-age=31536000; includeSubdomains; preload"
+        ],
+        "Vary": [
+          "Accept-Encoding, Accept, X-Requested-With"
+        ],
+        "X-Content-Type-Options": [
+          "nosniff"
+        ],
+        "X-Frame-Options": [
+          "deny"
+        ],
+        "X-Github-Api-Version-Selected": [
+          "2022-11-28"
+        ],
+        "X-Github-Edge-Region": [
+          "centralindia"
+        ],
+        "X-Github-Media-Type": [
+          "github.v3; param=scarlet-witch-preview; format=json, github.mercy-preview; param=baptiste-preview.nebula-preview; format=json"
+        ],
+        "X-Github-Request-Id": [
+          "AA9C:3382A:483357:762710:6AF68E02"
+        ],
+        "X-Ratelimit-Limit": [
+          "60"
+        ],
+        "X-Ratelimit-Remaining": [
+          "56"
+        ],
+        "X-Ratelimit-Reset": [
+          "1794546512"
+        ],
+        "X-Ratelimit-Resource": [
+          "core"
+        ],
+        "X-Ratelimit-Used": [
+          "4"
+        ],
+        "X-Xss-Protection": [
+          "0"
+        ]
+      },
+      "body": "{\"message\":\"Not Found\",\"documentation_url\":\"https://docs.github.com/rest/repos/repos#get-a-repository\",\"status\":\"404\"}"
+    }
+  }
+]

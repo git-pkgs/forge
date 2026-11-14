@@ -1,0 +1,116 @@
+[
+  {
+    "request": {
+      "method": "GET",
+      "url": "https://gitlab.com/api/v4/projects/gitlab-org%2Fgitlab-test/repository/files/VERSION?ref=master"
+    },
+    "response": {
+      "status_code": 200,
+      "header": {
+        "Cache-Control": [
+          "max-age=0, private, must-revalidate"
+        ],
+        "Cf-Cache-Status": [
+          "BYPASS"
+        ],
+        "Cf-Ray": [
+          "a59af0dbcd5da46b-HYD"
+        ],
+        "Content-Security-Policy": [
+          "default-src 'none'"
+        ],
+        "Content-Type": [
+          "application/json"
+        ],
+        "Date": [
+          "Fri, 13 Nov 2026 04:12:55 GMT"
+        ],
+        "Etag": [
+          "W/\"03b379beb38b0b7212b99d47f4d1e767\""
+        ],
+        "Gitlab-Lb": [
+          "haproxy-main-http-us-east1-d-865979db98-pgp7p"
+        ],
+        "Gitlab-Sv": [
+          "api-gke-us-east1-d"
+        ],
+        "Nel": [
+          "{\"max_age\": 0}"
+        ],
+        "Ratelimit-Limit": [
+          "500"
+        ],
+        "Ratelimit-Name": [
+          "throttle_unauthenticated_api"
+        ],
+        "Ratelimit-Observed": [
+          "5"
+        ],
+        "Ratelimit-Remaining": [
+          "495"
+        ],
+        "Ratelimit-Reset": [
+          "1794543180"
+        ],
+        "Referrer-Policy": [
+          "strict-origin-when-cross-origin"
+        ],
+        "Server": [
+          "cloudflare"
+        ],
+        "Strict-Transport-Security": [
+          "max-age=31536000"
+        ],
+        "Vary": [
+          "Origin"
+        ],
+        "X-Content-Type-Options": [
+          "nosniff"
+        ],
+        "X-Frame-Options": [
+          "SAMEORIGIN"
+        ],
+        "X-Gitlab-Blob-Id": [
+          "998707b421c89bd9a3063333f9f728ef3e43d101"
+        ],
+        "X-Gitlab-Commit-Id": [
+          "ddd0f15ae83993f5cb66a927a28673882e99100b"
+        ],
+        "X-Gitlab-Content-Sha256": [
+          "2f6dc79336c0d560984e748c5c38172f4b83a369b3af687f7ada4799bc1e6323"
+        ],
+        "X-Gitlab-Encoding": [
+          "base64"
+        ],
+        "X-Gitlab-Execute-Filemode": [
+          "false"
+        ],
+        "X-Gitlab-File-Name": [
+          "VERSION"
+        ],
+        "X-Gitlab-File-Path": [
+          "VERSION"
+        ],
+        "X-Gitlab-Last-Commit-Id": [
+          "913c66a37b4a45b9769037c55c2d238bd0942d2e"
+        ],
+        "X-Gitlab-Meta": [
+          "{\"correlation_id\":\"a59af0dbcd5da46b-HYD\",\"version\":\"1\"}"
+        ],
+        "X-Gitlab-Ref": [
+          "master"
+        ],
+        "X-Gitlab-Size": [
+          "10"
+        ],
+        "X-Request-Id": [
+          "a59af0dbcd5da46b-HYD"
+        ],
+        "X-Runtime": [
+          "0.106101"
+        ]
+      },
+      "body": "{\"file_name\":\"VERSION\",\"file_path\":\"VERSION\",\"size\":10,\"encoding\":\"base64\",\"content_sha256\":\"2f6dc79336c0d560984e748c5c38172f4b83a369b3af687f7ada4799bc1e6323\",\"ref\":\"master\",\"blob_id\":\"998707b421c89bd9a3063333f9f728ef3e43d101\",\"commit_id\":\"ddd0f15ae83993f5cb66a927a28673882e99100b\",\"last_commit_id\":\"913c66a37b4a45b9769037c55c2d238bd0942d2e\",\"execute_filemode\":false,\"content\":\"Ni43LjAucHJlCg==\"}"
+    }
+  }
+]

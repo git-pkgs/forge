@@ -283,6 +283,29 @@ resolver := githubforge.NewCommitResolver(os.Getenv("GITHUB_TOKEN"), nil)
 sha, err := resolver.ResolveCommit(ctx, "actions", "checkout", "v4.2.1")
 ```
 
+## Testing
+
+```sh
+go test ./...
+```
+
+Most backend tests run against `httptest` servers with hand-written responses. Tests named `TestReplay*` instead replay responses recorded from the real APIs (api.github.com, gitlab.com, codeberg.org and api.bitbucket.org), so they check the backends against what the forges actually send without needing network access. The recordings live in `testdata/replay/<test name>.json` next to each test.
+
+Set `FORGE_RECORD=1` to send the requests to the real API and rewrite the recordings, for example after adding a test or when an API changes:
+
+```sh
+FORGE_RECORD=1 go test ./github -run TestReplayGetRepo
+```
+
+A recording is only written when the test passes. Only the method, URL and body of each request are stored, so a token sent in a request header never ends up in a fixture, and `Set-Cookie` response headers are dropped. Replay fails the test if the code makes a request that is not in the recording, or if a recorded request is never made.
+
+New replay tests get their client from `internal/httpreplay`:
+
+```go
+f := github.New("", httpreplay.Client(t))
+repo, err := f.Repos().Get(ctx, "octocat", "Hello-World")
+```
+
 ## License
 
 [MIT](LICENSE).

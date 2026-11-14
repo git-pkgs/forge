@@ -1,0 +1,128 @@
+[
+  {
+    "request": {
+      "method": "GET",
+      "url": "https://api.bitbucket.org/2.0/repositories/tutorials/this-repository-does-not-exist"
+    },
+    "response": {
+      "status_code": 404,
+      "header": {
+        "Age": [
+          "0"
+        ],
+        "Atl-Request-Id": [
+          "92cd09f7-7628-4b0f-bd9f-7b84d2bc5d25"
+        ],
+        "Atl-Traceid": [
+          "92cd09f776284b0fbd9f7b84d2bc5d25"
+        ],
+        "Cache-Control": [
+          "max-age=900"
+        ],
+        "Content-Type": [
+          "application/json; charset=utf-8"
+        ],
+        "Date": [
+          "Fri, 13 Nov 2026 04:13:10 GMT"
+        ],
+        "Etag": [
+          "\"540e4ce8c3885eb9205fe234e50848c2\""
+        ],
+        "Nel": [
+          "{\"failure_fraction\": 0.01, \"include_subdomains\": true, \"max_age\": 600, \"report_to\": \"endpoint-1\"}"
+        ],
+        "Report-To": [
+          "{\"endpoints\": [{\"url\": \"https://dz8aopenkvv6s.cloudfront.net\"}], \"group\": \"endpoint-1\", \"include_subdomains\": true, \"max_age\": 600}"
+        ],
+        "Server": [
+          "AtlassianEdge"
+        ],
+        "Server-Timing": [
+          "atl-edge;dur=74,atl-edge-internal;dur=7,atl-edge-upstream;dur=67,atl-edge-pop;desc=\"aws-us-east-1\""
+        ],
+        "Strict-Transport-Security": [
+          "max-age=63072000; includeSubDomains; preload"
+        ],
+        "Vary": [
+          "authorization, cookie, user-context, origin"
+        ],
+        "Via": [
+          "1.1 b9bc310de68fa79af0899ef6365bb4bc.cloudfront.net (CloudFront)"
+        ],
+        "X-Accepted-Oauth-Scopes": [
+          "repository"
+        ],
+        "X-Amz-Cf-Id": [
+          "YqT7rO9d3Hyw3oEJIWwN71cmOLXgdtAVUuGg6Jr_DjVgf0ghUzN-8Q=="
+        ],
+        "X-Amz-Cf-Pop": [
+          "HYD57-P6"
+        ],
+        "X-Asap-Succeeded": [
+          "True"
+        ],
+        "X-B3-Spanid": [
+          "938d3fc44740ee12"
+        ],
+        "X-B3-Traceid": [
+          "92cd09f776284b0fbd9f7b84d2bc5d25"
+        ],
+        "X-Cache": [
+          "Error from cloudfront"
+        ],
+        "X-Content-Type-Options": [
+          "nosniff"
+        ],
+        "X-Credential-Type": [
+          "unauthenticated_identity"
+        ],
+        "X-Dc-Location": [
+          "Micros-3"
+        ],
+        "X-Envoy-Attempt-Count": [
+          "1"
+        ],
+        "X-Frame-Options": [
+          "SAMEORIGIN"
+        ],
+        "X-Render-Time": [
+          "0.03886270523071289"
+        ],
+        "X-Request-Count": [
+          "611"
+        ],
+        "X-Served-By": [
+          "a73bb510fedf"
+        ],
+        "X-Static-Version": [
+          "650ce3fb4191"
+        ],
+        "X-Usage-Input-Ops": [
+          "0"
+        ],
+        "X-Usage-Output-Ops": [
+          "0"
+        ],
+        "X-Usage-System-Time": [
+          "0.000876"
+        ],
+        "X-Usage-User-Time": [
+          "0.032838"
+        ],
+        "X-Used-Mesh": [
+          "False"
+        ],
+        "X-Version": [
+          "650ce3fb4191"
+        ],
+        "X-View-Name": [
+          "bitbucket.apps.repo2.api.v20.repo.RepositoryHandler"
+        ],
+        "X-Xss-Protection": [
+          "1; mode=block"
+        ]
+      },
+      "body": "{\"type\": \"error\", \"error\": {\"message\": \"You may not have access to this repository or it no longer exists in this workspace. If you think this repository exists and you have access, make sure you are authenticated.\"}}"
+    }
+  }
+]

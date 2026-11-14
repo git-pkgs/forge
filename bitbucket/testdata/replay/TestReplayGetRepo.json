@@ -1,0 +1,129 @@
+[
+  {
+    "request": {
+      "method": "GET",
+      "url": "https://api.bitbucket.org/2.0/repositories/tutorials/markdowndemo"
+    },
+    "response": {
+      "status_code": 200,
+      "header": {
+        "Age": [
+          "0"
+        ],
+        "Atl-Request-Id": [
+          "fa76de95-4504-44c5-bc60-efb41265d706"
+        ],
+        "Atl-Traceid": [
+          "fa76de95450444c5bc60efb41265d706"
+        ],
+        "Cache-Control": [
+          "max-age=900"
+        ],
+        "Content-Type": [
+          "application/json; charset=utf-8"
+        ],
+        "Date": [
+          "Fri, 13 Nov 2026 04:13:10 GMT"
+        ],
+        "Etag": [
+          "W/\"542ef878500116b3fdf8ec9da10487a7\""
+        ],
+        "Nel": [
+          "{\"failure_fraction\": 0.01, \"include_subdomains\": true, \"max_age\": 600, \"report_to\": \"endpoint-1\"}"
+        ],
+        "Report-To": [
+          "{\"endpoints\": [{\"url\": \"https://dz8aopenkvv6s.cloudfront.net\"}], \"group\": \"endpoint-1\", \"include_subdomains\": true, \"max_age\": 600}"
+        ],
+        "Server": [
+          "AtlassianEdge"
+        ],
+        "Server-Timing": [
+          "cdn-upstream-layer;desc=\"EDGE\",cdn-upstream-dns;dur=0,cdn-upstream-connect;dur=0,cdn-upstream-fbl;dur=334,atl-edge;dur=130,atl-edge-internal;dur=9,atl-edge-upstream;dur=121,atl-edge-pop;desc=\"aws-us-east-1\",cdn-cache-miss,cdn-pop;desc=\"HYD57-P6\",cdn-rid;desc=\"zpUcAbr-tPY3-6k8cpBL8z16RjSfvxISe08eudpKqITVmPP_K6VJYw==\",cdn-downstream-fbl;dur=338"
+        ],
+        "Strict-Transport-Security": [
+          "max-age=63072000; includeSubDomains; preload"
+        ],
+        "Vary": [
+          "Authorization, origin",
+          "Accept-Encoding"
+        ],
+        "Via": [
+          "1.1 b9bc310de68fa79af0899ef6365bb4bc.cloudfront.net (CloudFront)"
+        ],
+        "X-Accepted-Oauth-Scopes": [
+          "repository"
+        ],
+        "X-Amz-Cf-Id": [
+          "zpUcAbr-tPY3-6k8cpBL8z16RjSfvxISe08eudpKqITVmPP_K6VJYw=="
+        ],
+        "X-Amz-Cf-Pop": [
+          "HYD57-P6"
+        ],
+        "X-Asap-Succeeded": [
+          "True"
+        ],
+        "X-B3-Spanid": [
+          "10b4a9ae58b2bfd6"
+        ],
+        "X-B3-Traceid": [
+          "fa76de95450444c5bc60efb41265d706"
+        ],
+        "X-Cache": [
+          "Miss from cloudfront"
+        ],
+        "X-Content-Type-Options": [
+          "nosniff"
+        ],
+        "X-Credential-Type": [
+          "unauthenticated_identity"
+        ],
+        "X-Dc-Location": [
+          "Micros-3"
+        ],
+        "X-Envoy-Attempt-Count": [
+          "1"
+        ],
+        "X-Frame-Options": [
+          "SAMEORIGIN"
+        ],
+        "X-Render-Time": [
+          "0.10052609443664551"
+        ],
+        "X-Request-Count": [
+          "562"
+        ],
+        "X-Served-By": [
+          "9002dd80eba1"
+        ],
+        "X-Static-Version": [
+          "650ce3fb4191"
+        ],
+        "X-Usage-Input-Ops": [
+          "0"
+        ],
+        "X-Usage-Output-Ops": [
+          "0"
+        ],
+        "X-Usage-System-Time": [
+          "0.003965"
+        ],
+        "X-Usage-User-Time": [
+          "0.059263"
+        ],
+        "X-Used-Mesh": [
+          "False"
+        ],
+        "X-Version": [
+          "650ce3fb4191"
+        ],
+        "X-View-Name": [
+          "bitbucket.apps.repo2.api.v20.repo.RepositoryHandler"
+        ],
+        "X-Xss-Protection": [
+          "1; mode=block"
+        ]
+      },
+      "body": "{\"type\": \"repository\", \"full_name\": \"tutorials/markdowndemo\", \"links\": {\"self\": {\"href\": \"https://api.bitbucket.org/2.0/repositories/tutorials/markdowndemo\"}, \"html\": {\"href\": \"https://bitbucket.org/tutorials/markdowndemo\"}, \"avatar\": {\"href\": \"https://bytebucket.org/ravatar/%7B97a9a6a1-2b16-445f-bda9-5781d0153d70%7D?ts=default\"}, \"pullrequests\": {\"href\": \"https://api.bitbucket.org/2.0/repositories/tutorials/markdowndemo/pullrequests\"}, \"commits\": {\"href\": \"https://api.bitbucket.org/2.0/repositories/tutorials/markdowndemo/commits\"}, \"forks\": {\"href\": \"https://api.bitbucket.org/2.0/repositories/tutorials/markdowndemo/forks\"}, \"watchers\": {\"href\": \"https://api.bitbucket.org/2.0/repositories/tutorials/markdowndemo/watchers\"}, \"branches\": {\"href\": \"https://api.bitbucket.org/2.0/repositories/tutorials/markdowndemo/refs/branches\"}, \"tags\": {\"href\": \"https://api.bitbucket.org/2.0/repositories/tutorials/markdowndemo/refs/tags\"}, \"downloads\": {\"href\": \"https://api.bitbucket.org/2.0/repositories/tutorials/markdowndemo/downloads\"}, \"source\": {\"href\": \"https://api.bitbucket.org/2.0/repositories/tutorials/markdowndemo/src\"}, \"clone\": [{\"name\": \"https\", \"href\": \"https://bitbucket.org/tutorials/markdowndemo.git\"}, {\"name\": \"ssh\", \"href\": \"git@ssh.bitbucket.org:tutorials/markdowndemo.git\"}], \"issues\": {\"href\": \"https://api.bitbucket.org/2.0/repositories/tutorials/markdowndemo/issues\"}, \"hooks\": {\"href\": \"https://api.bitbucket.org/2.0/repositories/tutorials/markdowndemo/hooks\"}}, \"name\": \"MarkdownDemo\", \"slug\": \"markdowndemo\", \"description\": \"\", \"scm\": \"git\", \"website\": \"\", \"owner\": {\"display_name\": \"tutorials account\", \"links\": {\"self\": {\"href\": \"https://api.bitbucket.org/2.0/workspaces/%7Bc788b2da-b7a2-404c-9e26-d3f077557007%7D\"}, \"avatar\": {\"href\": \"https://bitbucket.org/account/tutorials-team/avatar/\"}, \"html\": {\"href\": \"https://bitbucket.org/%7B7995b79e-9d2c-4c79-8303-635527d06dbb%7D/\"}}, \"type\": \"team\", \"uuid\": \"{7995b79e-9d2c-4c79-8303-635527d06dbb}\", \"username\": \"tutorials-team\"}, \"workspace\": {\"type\": \"workspace\", \"uuid\": \"{c788b2da-b7a2-404c-9e26-d3f077557007}\", \"name\": \"tutorials account\", \"slug\": \"tutorials\", \"links\": {\"avatar\": {\"href\": \"https://bitbucket.org/workspaces/tutorials/avatar/?ts=1543463025\"}, \"html\": {\"href\": \"https://bitbucket.org/tutorials/\"}, \"self\": {\"href\": \"https://api.bitbucket.org/2.0/workspaces/tutorials\"}}}, \"is_private\": false, \"project\": {\"type\": \"project\", \"key\": \"PROJ\", \"uuid\": \"{142f0b6a-6cdf-4f19-b99f-dcc5e58a8f03}\", \"name\": \"Untitled project\", \"links\": {\"self\": {\"href\": \"https://api.bitbucket.org/2.0/workspaces/tutorials/projects/PROJ\"}, \"html\": {\"href\": \"https://bitbucket.org/tutorials/workspace/projects/PROJ\"}, \"avatar\": {\"href\": \"https://bitbucket.org/tutorials/workspace/projects/PROJ/avatar/32?ts=1543463025\"}}}, \"fork_policy\": \"allow_forks\", \"created_on\": \"2013-08-26T16:37:02.542269+00:00\", \"updated_on\": \"2026-10-08T08:08:35.973576+00:00\", \"size\": 1554546, \"language\": \"\", \"uuid\": \"{97a9a6a1-2b16-445f-bda9-5781d0153d70}\", \"mainbranch\": {\"name\": \"master\", \"type\": \"branch\"}, \"override_settings\": {\"default_merge_strategy\": false, \"branching_model\": false}, \"parent\": null, \"enforced_signed_commits\": null, \"has_issues\": true, \"has_wiki\": true}"
+    }
+  }
+]

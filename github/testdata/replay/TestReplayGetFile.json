@@ -1,0 +1,89 @@
+[
+  {
+    "request": {
+      "method": "GET",
+      "url": "https://api.github.com/repos/octocat/Hello-World/contents/README"
+    },
+    "response": {
+      "status_code": 200,
+      "header": {
+        "Accept-Ranges": [
+          "bytes"
+        ],
+        "Access-Control-Allow-Origin": [
+          "*"
+        ],
+        "Access-Control-Expose-Headers": [
+          "ETag, Link, Location, Retry-After, X-GitHub-OTP, X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Used, X-RateLimit-Resource, X-RateLimit-Reset, X-OAuth-Scopes, X-Accepted-OAuth-Scopes, X-Poll-Interval, X-GitHub-Media-Type, X-GitHub-SSO, X-GitHub-Request-Id, Deprecation, Sunset, Warning"
+        ],
+        "Cache-Control": [
+          "public, max-age=60, s-maxage=60"
+        ],
+        "Content-Security-Policy": [
+          "default-src 'none'"
+        ],
+        "Content-Type": [
+          "application/json; charset=utf-8"
+        ],
+        "Date": [
+          "Fri, 13 Nov 2026 04:11:47 GMT"
+        ],
+        "Etag": [
+          "\"980a0d5f19a64b4b30a87d4206aade58726b60e3\""
+        ],
+        "Last-Modified": [
+          "Tue, 06 Mar 2012 23:06:50 GMT"
+        ],
+        "Referrer-Policy": [
+          "origin-when-cross-origin, strict-origin-when-cross-origin"
+        ],
+        "Server": [
+          "github.com"
+        ],
+        "Strict-Transport-Security": [
+          "max-age=31536000; includeSubdomains; preload"
+        ],
+        "Vary": [
+          "Accept, Accept-Encoding, Accept, X-Requested-With"
+        ],
+        "X-Content-Type-Options": [
+          "nosniff"
+        ],
+        "X-Frame-Options": [
+          "deny"
+        ],
+        "X-Github-Api-Version-Selected": [
+          "2022-11-28"
+        ],
+        "X-Github-Edge-Region": [
+          "centralindia"
+        ],
+        "X-Github-Media-Type": [
+          "github.v3; format=json"
+        ],
+        "X-Github-Request-Id": [
+          "AA9C:3382A:483478:7628D1:6AF68E03"
+        ],
+        "X-Ratelimit-Limit": [
+          "60"
+        ],
+        "X-Ratelimit-Remaining": [
+          "54"
+        ],
+        "X-Ratelimit-Reset": [
+          "1794546512"
+        ],
+        "X-Ratelimit-Resource": [
+          "core"
+        ],
+        "X-Ratelimit-Used": [
+          "6"
+        ],
+        "X-Xss-Protection": [
+          "0"
+        ]
+      },
+      "body": "{\"name\":\"README\",\"path\":\"README\",\"sha\":\"980a0d5f19a64b4b30a87d4206aade58726b60e3\",\"size\":13,\"url\":\"https://api.github.com/repos/octocat/Hello-World/contents/README?ref=master\",\"html_url\":\"https://github.com/octocat/Hello-World/blob/master/README\",\"git_url\":\"https://api.github.com/repos/octocat/Hello-World/git/blobs/980a0d5f19a64b4b30a87d4206aade58726b60e3\",\"download_url\":\"https://raw.githubusercontent.com/octocat/Hello-World/master/README\",\"type\":\"file\",\"content\":\"SGVsbG8gV29ybGQhCg==\\n\",\"encoding\":\"base64\",\"_links\":{\"self\":\"https://api.github.com/repos/octocat/Hello-World/contents/README?ref=master\",\"git\":\"https://api.github.com/repos/octocat/Hello-World/git/blobs/980a0d5f19a64b4b30a87d4206aade58726b60e3\",\"html\":\"https://github.com/octocat/Hello-World/blob/master/README\"}}"
+    }
+  }
+]
