@@ -363,7 +363,7 @@ Set `FORGE_RECORD=1` to send the requests to the real API and rewrite the record
 FORGE_RECORD=1 go test ./github -run TestReplayGetRepo
 ```
 
-A recording is only written when the test passes. Only the method, URL and body of each request are stored, so a token sent in a request header never ends up in a fixture, and `Set-Cookie` response headers are dropped. Replay fails the test if the code makes a request that is not in the recording, or if a recorded request is never made.
+A recording is only written when the test passes. Only the method, URL and body of each request are stored, so a token sent in a request header never ends up in a fixture, and only the response headers the SDKs read (`Content-Type`, `Link`, pagination and `X-Gitlab-*` file headers) are kept. Replay fails the test if the code makes a request that is not in the recording, or if a recorded request is never made.
 
 New replay tests get their client from `internal/httpreplay`:
 

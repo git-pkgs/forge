@@ -7,47 +7,8 @@
     "response": {
       "status_code": 200,
       "header": {
-        "Access-Control-Expose-Headers": [
-          "X-Total-Count"
-        ],
-        "Alt-Svc": [
-          "h3=\":443\";ma=2592000;"
-        ],
-        "Cache-Control": [
-          "max-age=0, private, must-revalidate"
-        ],
         "Content-Type": [
           "application/json;charset=utf-8"
-        ],
-        "Date": [
-          "Fri, 13 Nov 2026 04:12:54 GMT"
-        ],
-        "Permissions-Policy": [
-          "interest-cohort=()"
-        ],
-        "Ratelimit": [
-          "\"baseline\";r=1992;t=600"
-        ],
-        "Ratelimit-Policy": [
-          "\"baseline\";q=2000;w=600"
-        ],
-        "Strict-Transport-Security": [
-          "max-age=63072000; includeSubDomains; preload;"
-        ],
-        "Vary": [
-          "Origin,Accept-Encoding"
-        ],
-        "X-Backend-Name": [
-          "b_forgejo_secondary"
-        ],
-        "X-Content-Type-Options": [
-          "nosniff"
-        ],
-        "X-Frame-Options": [
-          "SAMEORIGIN"
-        ],
-        "X-Server-Name": [
-          "s_forgejo_secondary_alpspitz"
         ],
         "X-Total-Count": [
           "10"

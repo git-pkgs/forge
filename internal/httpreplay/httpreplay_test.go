@@ -20,12 +20,14 @@ import (
 type fakeTB struct {
 	testing.TB
 	errors   []string
+	skipped  bool
 	cleanups []func()
 }
 
 func (f *fakeTB) Helper()             {}
 func (f *fakeTB) Logf(string, ...any) {}
 func (f *fakeTB) Failed() bool        { return len(f.errors) > 0 }
+func (f *fakeTB) Skipped() bool       { return f.skipped }
 func (f *fakeTB) Cleanup(fn func())   { f.cleanups = append(f.cleanups, fn) }
 
 func (f *fakeTB) Errorf(format string, args ...any) {
@@ -307,12 +309,78 @@ func TestReplayUnknownBodyEncoding(t *testing.T) {
 		Request:  recordedRequest{Method: "GET", URL: "https://api.example.test/a"},
 		Response: recordedResponse{StatusCode: 200, Body: "a", BodyEncoding: "gzip"},
 	}})
-	r, err := newReplayer(&fakeTB{}, path)
+	ft := &fakeTB{}
+	r, err := newReplayer(ft, path)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if _, err := (&http.Client{Transport: r}).Get("https://api.example.test/a"); err == nil || !strings.Contains(err.Error(), `unknown body encoding "gzip"`) {
 		t.Errorf("err = %v, want unknown body encoding", err)
+	}
+	ft.finish()
+	if len(ft.errors) != 2 || !strings.Contains(ft.errors[0], `unknown body encoding "gzip"`) || !strings.Contains(ft.errors[1], "was never made") {
+		t.Errorf("errors = %q, want the decode error and an unused exchange", ft.errors)
+	}
+}
+
+func TestRecorderKeepsOnlyListedHeaders(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Link", `<https://api.example.test/?page=2>; rel="next"`)
+		w.Header().Set("X-Total", "3")
+		w.Header().Set("X-Gitlab-File-Name", "a.txt")
+		w.Header().Set("X-Gitlab-Meta", `{"correlation_id":"abc"}`)
+		w.Header().Set("X-Request-Id", "abc")
+		w.Header().Set("Date", "Mon, 01 Jan 2024 00:00:00 GMT")
+		http.SetCookie(w, &http.Cookie{Name: "session", Value: "cookie-value"})
+		_, _ = w.Write([]byte("ok"))
+	}))
+	defer srv.Close()
+
+	path := filepath.Join(t.TempDir(), "fixture.json")
+	ft := &fakeTB{}
+	resp, err := (&http.Client{Transport: newRecorder(ft, path, http.DefaultTransport)}).Get(srv.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = resp.Body.Close()
+	ft.finish()
+
+	interactions, err := readFixture(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := interactions[0].Response.Header
+	want := http.Header{
+		"Content-Type":       {"application/json"},
+		"Link":               {`<https://api.example.test/?page=2>; rel="next"`},
+		"X-Total":            {"3"},
+		"X-Gitlab-File-Name": {"a.txt"},
+	}
+	if len(got) != len(want) {
+		t.Errorf("header = %v, want %v", got, want)
+	}
+	for k, v := range want {
+		if strings.Join(got[k], ",") != strings.Join(v, ",") {
+			t.Errorf("header %s = %q, want %q", k, got[k], v)
+		}
+	}
+}
+
+func TestRecorderSkipsWriteWhenTestSkips(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "fixture.json")
+	if err := os.WriteFile(path, []byte("existing"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	st := &fakeTB{skipped: true}
+	newRecorder(st, path, http.DefaultTransport)
+	st.finish()
+	got, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(got) != "existing" {
+		t.Errorf("fixture overwritten by a skipped test: %q", got)
 	}
 }
 

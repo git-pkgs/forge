@@ -10,7 +10,8 @@
 //
 // Fixtures live in testdata/replay/<test name>.json next to the test. Only
 // the method, URL and body of each request are stored, so credentials sent
-// in headers never reach a fixture. Set-Cookie response headers are dropped.
+// in headers never reach a fixture. Of the response headers only the ones the
+// SDKs read are kept, see keepHeader.
 package httpreplay
 
 import (
@@ -23,17 +24,16 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
+	"strings"
 	"sync"
 	"testing"
 	"unicode/utf8"
 )
 
-// recordEnv is the environment variable that switches Client to record mode
-// when set to 1.
 const recordEnv = "FORGE_RECORD"
 
-// interaction is one recorded request and the response the server sent.
 type interaction struct {
 	Request  recordedRequest  `json:"request"`
 	Response recordedResponse `json:"response"`
@@ -61,6 +61,10 @@ type recordedResponse struct {
 // Client returns an HTTP client that replays the fixture for t, or records a
 // new one when FORGE_RECORD=1 is set. A missing fixture, a request with no
 // recorded match and a recorded request that is never made all fail t.
+//
+// Call Client before registering any cleanup that can fail t. Cleanups run in
+// reverse order, so a cleanup registered earlier runs after the recorder has
+// already written the fixture.
 func Client(t testing.TB) *http.Client {
 	t.Helper()
 	path := fixturePath(t)
@@ -93,8 +97,8 @@ type recorder struct {
 func newRecorder(t testing.TB, path string, base http.RoundTripper) *recorder {
 	r := &recorder{t: t, base: base, interactions: []interaction{}}
 	t.Cleanup(func() {
-		if t.Failed() {
-			t.Logf("httpreplay: test failed, not writing %s", path)
+		if t.Failed() || t.Skipped() {
+			t.Logf("httpreplay: test failed or skipped, not writing %s", path)
 			return
 		}
 		r.mu.Lock()
@@ -137,12 +141,7 @@ func (r *recorder) RoundTrip(req *http.Request) (*http.Response, error) {
 	}
 	resp.Body = io.NopCloser(bytes.NewReader(respBody))
 
-	header := resp.Header.Clone()
-	header.Del("Set-Cookie")
-	// The stored body has already been decompressed by the transport when
-	// the server gzipped it, and replay sets the length from the stored body.
-	header.Del("Content-Length")
-	recorded := recordedResponse{StatusCode: resp.StatusCode, Header: header}
+	recorded := recordedResponse{StatusCode: resp.StatusCode, Header: keptHeaders(resp.Header)}
 	recorded.Body, recorded.BodyEncoding = encodeBody(respBody)
 
 	recordedReq := recordedRequest{Method: req.Method, URL: req.URL.String()}
@@ -203,8 +202,13 @@ func (r *replayer) RoundTrip(req *http.Request) (*http.Response, error) {
 		if err != nil || !bytes.Equal(want, body) {
 			continue
 		}
+		resp, err := in.Response.httpResponse(req)
+		if err != nil {
+			r.t.Errorf("%v", err)
+			return nil, err
+		}
 		r.used[i] = true
-		return in.Response.httpResponse(req)
+		return resp, nil
 	}
 
 	// Backends sometimes discard request errors, so fail the test directly
@@ -222,6 +226,36 @@ func (r *replayer) checkAllUsed() {
 			r.t.Errorf("httpreplay: recorded request %s %s in %s was never made", in.Request.Method, in.Request.URL, r.path)
 		}
 	}
+}
+
+// keptHeaders returns the response headers worth storing. Everything else
+// changes on every request or identifies where the recording was made, which
+// would rewrite every fixture on each re-record.
+func keptHeaders(h http.Header) http.Header {
+	kept := http.Header{}
+	for name, values := range h {
+		if keepHeader(name) {
+			kept[name] = slices.Clone(values)
+		}
+	}
+	if len(kept) == 0 {
+		return nil
+	}
+	return kept
+}
+
+// keepHeader reports whether the SDKs read the response header name. Add a
+// header here when a test needs one that is not listed.
+func keepHeader(name string) bool {
+	name = http.CanonicalHeaderKey(name)
+	switch name {
+	case "Content-Type", "Link", "Retry-After",
+		"X-Total", "X-Total-Count", "X-Total-Pages",
+		"X-Page", "X-Per-Page", "X-Next-Page", "X-Prev-Page":
+		return true
+	}
+	// X-Gitlab-Meta carries a correlation ID that differs on every request.
+	return strings.HasPrefix(name, "X-Gitlab-") && name != "X-Gitlab-Meta"
 }
 
 func (resp recordedResponse) httpResponse(req *http.Request) (*http.Response, error) {
@@ -246,7 +280,6 @@ func (resp recordedResponse) httpResponse(req *http.Request) (*http.Response, er
 	}, nil
 }
 
-// readRequestBody reads and closes the request body.
 func readRequestBody(req *http.Request) ([]byte, error) {
 	if req.Body == nil || req.Body == http.NoBody {
 		return nil, nil
