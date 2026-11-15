@@ -1,0 +1,40 @@
+package gitea
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	forge "github.com/git-pkgs/forge"
+	"net/http"
+	"net/http/httptest"
+	"testing"
+)
+
+func TestGiteaReadOnlyHTTPClient(t *testing.T) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /api/v1/version", giteaVersionHandler)
+	mux.HandleFunc("GET /api/v1/user", func(w http.ResponseWriter, r *http.Request) {
+		_ = json.NewEncoder(w).Encode(map[string]any{"login": "alice"})
+	})
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		t.Errorf("unexpected request %s %s", r.Method, r.URL.Path)
+	})
+	srv := httptest.NewServer(mux)
+	defer srv.Close()
+
+	f := New(srv.URL, "test-token", forge.ReadOnlyHTTPClient(srv.Client()))
+	ctx := context.Background()
+
+	u, err := f.GetAuthenticatedUser(ctx)
+	if err != nil {
+		t.Fatalf("GetAuthenticatedUser: %v", err)
+	}
+	assertEqual(t, "Login", "alice", u.Login)
+
+	if _, err := f.Issues().Create(ctx, "alice", "hello", forge.CreateIssueOpts{Title: "x"}); !errors.Is(err, forge.ErrReadOnly) {
+		t.Errorf("Issues().Create: err = %v, want ErrReadOnly", err)
+	}
+	if err := f.Repos().Delete(ctx, "alice", "hello"); !errors.Is(err, forge.ErrReadOnly) {
+		t.Errorf("Repos().Delete: err = %v, want ErrReadOnly", err)
+	}
+}

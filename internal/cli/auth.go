@@ -214,7 +214,7 @@ func authStatusCmd() *cobra.Command {
 			}
 
 			// Known domains to check for env var tokens
-			knownDomains := []string{"github.com", "gitlab.com", "codeberg.org", "bitbucket.org", "tangled.org"}
+			knownDomains := []string{"github.com", "gitlab.com", "codeberg.org", "bitbucket.org", "tangled.org", "upstream.codes"}
 
 			// Collect all unique domains
 			domains := make(map[string]bool)

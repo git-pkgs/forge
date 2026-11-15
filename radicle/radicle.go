@@ -66,6 +66,9 @@ func (f *radicleForge) CommitStatuses() forges.CommitStatusService {
 }
 func (f *radicleForge) CheckRuns() forges.CheckRunService { return unsupportedCheckRunService{} }
 func (f *radicleForge) Commits() forges.CommitService     { return unsupportedCommitService{} }
+func (f *radicleForge) Attestations() forges.AttestationService {
+	return unsupportedAttestationService{}
+}
 
 func (f *radicleForge) GetRateLimit(context.Context) (*forges.RateLimit, error) {
 	return nil, forges.ErrNotSupported

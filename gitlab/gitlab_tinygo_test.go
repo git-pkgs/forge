@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"strings"
 	"testing"
 
 	forge "github.com/git-pkgs/forge"
@@ -72,6 +73,10 @@ func TestTinyGoServicesReturnUnsupported(t *testing.T) {
 		}},
 		{"commit statuses", func() error { _, err := f.CommitStatuses().List(ctx, "group", "project", "main"); return err }},
 		{"commits", func() error { _, err := f.Commits().ResolveCommit(ctx, "group", "project", "main"); return err }},
+		{"attestations", func() error {
+			_, err := f.Attestations().List(ctx, "group", "project", "sha256:"+strings.Repeat("a", 64), forge.ListAttestationOpts{})
+			return err
+		}},
 		{"rate limit", func() error { _, err := f.GetRateLimit(ctx); return err }},
 		{"authenticated user", func() error { _, err := f.GetAuthenticatedUser(ctx); return err }},
 	}

@@ -12,7 +12,7 @@ import (
 	"strings"
 
 	"github.com/git-pkgs/forge"
-	"github.com/git-pkgs/forge/bitbucket"
+	"github.com/git-pkgs/forge/factory"
 	"github.com/git-pkgs/forge/gerrit"
 	"github.com/git-pkgs/forge/gitea"
 	ghforge "github.com/git-pkgs/forge/github"
@@ -106,15 +106,6 @@ func ResetTestForge() {
 	testDomain = ""
 }
 
-var builders = forges.ForgeBuilders{
-	GitHub:  ghforge.NewWithBase,
-	GitLab:  glforge.New,
-	Gitea:   gitea.New,
-	Gerrit:  gerrit.New,
-	Tangled: tangled.New,
-	Radicle: radicle.New,
-}
-
 // Repo figures out the forge, owner, and repo name from flags or a git remote.
 // The --repo (-R) flag takes precedence; otherwise it parses the remote selected
 // by --remote, config, or the "origin" fallback.
@@ -146,7 +137,7 @@ func repoFromFlag(flagRepo, flagForgeType string) (forges.Forge, string, string,
 		}
 	case 3:
 		// host/owner/repo
-		domain, owner, repo = parts[0], parts[1], parts[2]
+		domain, owner, repo = mapSSHHost(parts[0]), parts[1], parts[2]
 	default:
 		return nil, "", "", "", fmt.Errorf("invalid repo format %q, expected OWNER/REPO or HOST/OWNER/REPO", flagRepo)
 	}
@@ -331,13 +322,16 @@ func resolveRemote() (domain, owner, repo string, err error) {
 // hostname when the config declares them as different. Self-hosted GitLab
 // can serve ssh on ssh.gitlab.test while the API lives at gitlab.test;
 // without this mapping the parsed remote domain would point at the wrong host.
-// Returns the input unchanged when no mapping is configured.
+// A configured ssh_host takes precedence over factory.DefaultHostAliases.
+// Returns the input unchanged when neither maps it.
 func mapSSHHost(domain string) string {
 	cfg, err := config.Load()
-	if err != nil {
-		return domain
+	if err == nil {
+		if api := cfg.DomainForSSHHost(domain); api != "" {
+			return api
+		}
 	}
-	if api := cfg.DomainForSSHHost(domain); api != "" {
+	if api, ok := factory.DefaultHostAliases()[strings.ToLower(domain)]; ok {
 		return api
 	}
 	return domain
@@ -410,19 +404,13 @@ func newClientForBaseURL(domain, baseURL string) *forges.Client {
 	}
 
 	// Share one client for detection and every backend, so forges found by
-	// probing get the same User-Agent and redirect policy as the defaults.
+	// probing get the same User-Agent, redirect policy and read-only mode as the
+	// defaults.
 	hc := HTTPClient()
 	opts = append(opts, forges.WithHTTPClient(hc))
 
 	// Register default forges first, so config-based registrations override them.
-	defaults := map[string]forges.Forge{
-		"github.com":    ghforge.New(TokenForDomain("github.com"), hc),
-		"gitlab.com":    glforge.New("https://gitlab.com", TokenForDomain("gitlab.com"), hc),
-		"codeberg.org":  gitea.New("https://codeberg.org", TokenForDomain("codeberg.org"), hc),
-		"bitbucket.org": bitbucket.New(TokenForDomain("bitbucket.org"), hc),
-		"tangled.org":   tangled.New("https://tangled.org", TokenForDomain("tangled.org"), hc),
-	}
-	for d, f := range defaults {
+	for d, f := range factory.DefaultForges(TokenForDomain, hc) {
 		opts = append(opts, forges.WithForge(d, f))
 	}
 
@@ -486,7 +474,7 @@ func forgeForDomainAtBaseURL(ctx context.Context, client *forges.Client, domain,
 		return f, nil
 	}
 	token := TokenForDomain(domain)
-	if regErr := client.RegisterDomain(ctx, baseURL, token, builders); regErr != nil {
+	if regErr := client.RegisterDomain(ctx, baseURL, token, factory.Builders()); regErr != nil {
 		return nil, fmt.Errorf("unknown forge at %s: %w (use --forge-type, or set type under [%s] in config, to skip detection)", domain, regErr, domain)
 	}
 	return client.ForgeFor(domain)
@@ -499,7 +487,7 @@ func configForgeType(domain string) string {
 	if err != nil || cfg == nil {
 		return ""
 	}
-	return cfg.Domains[domain].Type
+	return cfg.Domains[strings.ToLower(domain)].Type
 }
 
 // configScheme returns the API scheme for a domain from config files,
@@ -509,7 +497,7 @@ func configScheme(domain string) string {
 	if err != nil || cfg == nil {
 		return ""
 	}
-	return cfg.Domains[domain].Scheme
+	return cfg.Domains[strings.ToLower(domain)].Scheme
 }
 
 // TokenForDomain looks up an auth token. Checks environment variables first
@@ -523,7 +511,7 @@ func TokenForDomain(domain string) string {
 	if err != nil || cfg == nil {
 		return ""
 	}
-	token, err := cfg.Domains[domain].ResolveToken(domain)
+	token, err := cfg.Domains[strings.ToLower(domain)].ResolveToken(domain)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "forge: token command for %s failed: %v\n", domain, err)
 	}
@@ -561,6 +549,10 @@ func TokenForDomainEnv(domain string) string {
 		}
 	case "tangled.org":
 		if t := os.Getenv("TANGLED_TOKEN"); t != "" {
+			return t
+		}
+	case "upstream.codes":
+		if t := os.Getenv("UPSTREAM_TOKEN"); t != "" {
 			return t
 		}
 	}

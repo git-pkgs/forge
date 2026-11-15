@@ -14,7 +14,7 @@ Or with Go:
 go install github.com/git-pkgs/forge/cmd/forge@latest
 ```
 
-The CLI detects which forge to use from your git remote, or you can set it with `--forge-type`.
+The CLI detects which forge to use from your git remote, or you can set it with `--forge-type`. Upstream is built in: remotes on `git.coline.app` and `ssh.git.coline.app`, where Upstream serves git, resolve to its API on `upstream.codes`.
 
 ```
 forge repo view
@@ -61,7 +61,7 @@ Command for token (e.g. rbw get github.com): rbw get github-token
 
 Check what's configured with `forge auth status`.
 
-Tokens are resolved in this order: CLI flags, environment variables (`FORGE_TOKEN`, `GITHUB_TOKEN`/`GH_TOKEN`, `GITLAB_TOKEN`, `FORGEJO_TOKEN`/`GITEA_TOKEN`, `BITBUCKET_TOKEN`, `TANGLED_TOKEN`), then the config file at `~/.config/forge/config`. The target host is inferred from the current directory's git remote; use `--host` to override it (for example `forge --host gitea.com repo list someone`). `FORGE_HOST` sets the host for `-R OWNER/REPO` and for commands that don't act on the current repo, but doesn't override the current repo's remote.
+Tokens are resolved in this order: CLI flags, environment variables (`FORGE_TOKEN`, `GITHUB_TOKEN`/`GH_TOKEN`, `GITLAB_TOKEN`, `FORGEJO_TOKEN`/`GITEA_TOKEN`, `BITBUCKET_TOKEN`, `TANGLED_TOKEN`, `UPSTREAM_TOKEN`), then the config file at `~/.config/forge/config`. The target host is inferred from the current directory's git remote; use `--host` to override it (for example `forge --host gitea.com repo list someone`). `FORGE_HOST` sets the host for `-R OWNER/REPO` and for commands that don't act on the current repo, but doesn't override the current repo's remote.
 
 Radicle repositories have no owner, so they're selected by repository ID: `-R rad:<RID>` or `-R HOST/rad:<RID>`. The node to query comes from the host in `-R`, `--host`, `FORGE_HOST` or a section with `type = radicle` in your user config (a project `.forge` file can't pick the node). There's no default node, so a repository ID is never sent to a seed you didn't choose. For example `forge --host seed.radicle.dev -R rad:z3gqcJUoA1n9HaHKufZs5FCSGazv5 file ls`. The Radicle backend is read-only over `radicle-httpd` and currently covers repositories, branches, tags and files.
 
@@ -148,6 +148,17 @@ Committed `.forge` files cannot set the API scheme.
 
 Precedence from highest to lowest: CLI flags, environment variables, `.forge`, `~/.config/forge/config`, built-in defaults.
 
+### Read-only mode
+
+`--read-only`, or `FORGE_READ_ONLY=true` in the environment, stops forge from changing anything on the forge. Only GET, HEAD and OPTIONS requests are sent, so listing and viewing work as usual, and any command that would create, edit or delete something fails before its request leaves the machine. This covers `forge api` too, and `pr create --push` is refused before anything is pushed. It's meant for CI jobs, monitoring and audits that need a token but should never write with it.
+
+```
+FORGE_READ_ONLY=true forge issue list
+forge --read-only label create bug   # Error: create label: Post "...": write refused in read-only mode
+```
+
+`--read-only=false` overrides `FORGE_READ_ONLY` for a single command.
+
 ## Library
 
 ```sh
@@ -167,7 +178,7 @@ client := forges.NewClient(
 repo, err := client.FetchRepository(ctx, "https://github.com/octocat/hello-world")
 ```
 
-The `Forge` interface exposes services for repos, issues, pull requests, reviews, releases, CI, branches, labels, milestones, deploy keys, webhooks, secrets, notifications, files, collaborators, commit statuses and commits. Each backend implements these using its native SDK.
+The `Forge` interface exposes services for repos, issues, pull requests, reviews, releases, CI, branches, labels, milestones, deploy keys, webhooks, secrets, notifications, files, collaborators, commit statuses, commits and artifact attestations. Each backend implements these using its native SDK.
 
 Under TinyGo, `gitlab.New` retains its signature and returns a backend whose API operations report `forges.ErrNotSupported`. GitLab URL parsing, web link builders and webhook parsing remain available. Native Go retains the full GitLab implementation.
 
@@ -186,6 +197,28 @@ case errors.Is(err, forges.ErrNotFound):      // 404
 case errors.Is(err, forges.ErrUnauthorized):  // 401 or 403
 case errors.Is(err, forges.ErrRateLimited):   // 429, or GitHub's 403 rate limit responses
 case errors.Is(err, forges.ErrServerError):   // 5xx
+}
+```
+
+The `factory` package imports every provider and returns a `Client` that already knows github.com, gitlab.com, codeberg.org, bitbucket.org, tangled.org and upstream.codes, and sends repository URLs on Upstream's git hosts, `git.coline.app` and `ssh.git.coline.app`, to upstream.codes. `forges.WithHostAlias` adds such a mapping for another forge. It detects and registers any other domain over https the first time a repository URL on it is used, which sends requests to that domain:
+
+```go
+import "github.com/git-pkgs/forge/factory"
+
+client := factory.NewClient(forges.WithToken("git.example.com", token))
+
+f, owner, repo, err := client.ForgeForURL(ctx, "https://git.example.com/octocat/hello-world")
+if err != nil {
+    return err
+}
+issues, err := f.Issues().List(ctx, owner, repo, forges.ListIssueOpts{State: "open"})
+```
+
+Detection never uses plain HTTP, so an http-only instance has to be registered with `RegisterDomain` before its URLs are used:
+
+```go
+if err := client.RegisterDomain(ctx, "http://git.internal.example", token, factory.Builders()); err != nil {
+    return err
 }
 ```
 
@@ -217,6 +250,25 @@ http.HandleFunc("/hook", func(w http.ResponseWriter, r *http.Request) {
 
 Each backend also exports `ParseWebhook(r, secret)` (for example `github.ParseWebhook`), which needs no API client.
 
+Artifact attestations, such as SLSA provenance and SBOMs signed as Sigstore bundles, can be looked up by repository and artifact digest on GitHub and GitLab. `List` follows pagination and returns metadata for every attestation; `Download` then fetches each original bundle without verifying it. An empty result means the lookup succeeded and found nothing. Request failures are returned as errors, and other backends return `forges.ErrNotSupported`:
+
+```go
+digest := "sha256:5db1fee4b5703808c48078a76768b155b421b210c0761cd6a5d223f4d99f1eaa"
+atts, err := client.ListAttestations(ctx, "https://github.com/cli/cli", digest, forges.ListAttestationOpts{})
+if err != nil {
+    log.Fatal(err)
+}
+for _, att := range atts {
+    bundle, err := client.DownloadAttestation(ctx, "https://github.com/cli/cli", att)
+    if err != nil {
+        log.Fatal(err)
+    }
+    // verify bundle with a Sigstore client
+}
+```
+
+`ListAttestationOpts.PredicateType` filters by predicate type URI or by the short names `provenance` and `sbom`. GitLab's attestation API is an Ultimate-tier experiment behind the `slsa_provenance_statement` feature flag, and GitLab answers 404 when it is off, so `List` reports `forges.ErrNotFound` for a project without it.
+
 Self-hosted instances can be registered explicitly or detected automatically:
 
 ```go
@@ -240,6 +292,20 @@ err := client.RegisterDomain(ctx, "git.example.com", token, forges.ForgeBuilders
     Tangled: tangled.New,
     Radicle: radicle.New,
 })
+```
+
+For read-only access, wrap the HTTP client with `forges.ReadOnlyHTTPClient` and give it to every backend you construct and to `WithHTTPClient`. Requests other than GET, HEAD and OPTIONS then fail with `forges.ErrReadOnly` without being sent, whichever backend or operation made them:
+
+```go
+hc := forges.ReadOnlyHTTPClient(nil)
+client := forges.NewClient(
+    forges.WithHTTPClient(hc),
+    forges.WithForge("github.com", github.New(token, hc)),
+)
+
+f, _ := client.ForgeFor("github.com")
+_, err := f.Issues().Create(ctx, "octocat", "hello-world", forges.CreateIssueOpts{Title: "x"})
+errors.Is(err, forges.ErrReadOnly) // true
 ```
 
 PURL support via `github.com/git-pkgs/purl`:
