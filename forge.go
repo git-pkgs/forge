@@ -182,8 +182,9 @@ func WithForge(domain string, f Forge) Option {
 }
 
 // WithHostAlias makes repository URLs on host use the forge for domain, for
-// forges that serve git from a different host than their API. Hosts are
-// matched case-insensitively.
+// forges that serve git from a different host than their API. A Forge
+// registered for host itself takes precedence. Hosts are matched
+// case-insensitively.
 func WithHostAlias(host, domain string) Option {
 	return func(c *Client) {
 		c.aliases[strings.ToLower(host)] = strings.ToLower(domain)
@@ -344,7 +345,9 @@ func (c *Client) forgeOrDetect(ctx context.Context, domain string) (Forge, error
 			domain = host
 		}
 		if alias, ok := c.aliases[domain]; ok {
-			domain = alias
+			if _, err := c.forgeFor(domain); err != nil {
+				domain = alias
+			}
 		}
 	}
 	f, err := c.forgeFor(domain)

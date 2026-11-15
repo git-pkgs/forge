@@ -138,6 +138,18 @@ func TestNewClientKeepsRegisteredHostAlias(t *testing.T) {
 	}
 }
 
+func TestNewClientKeepsForgeRegisteredForAliasHost(t *testing.T) {
+	want := &stubForge{}
+	c := NewClient(forges.WithForge("git.coline.app", want))
+	f, _, _, err := c.ForgeForURL(context.Background(), "https://git.coline.app/owner/project")
+	if err != nil {
+		t.Fatalf("ForgeForURL: %v", err)
+	}
+	if f != forges.Forge(want) {
+		t.Errorf("ForgeForURL returned %T, want the forge registered for git.coline.app", f)
+	}
+}
+
 func TestNewClientAppliesOptionsToDefaultForges(t *testing.T) {
 	rt := &recordingTransport{}
 	c := NewClient(
