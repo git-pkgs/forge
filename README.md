@@ -14,7 +14,7 @@ Or with Go:
 go install github.com/git-pkgs/forge/cmd/forge@latest
 ```
 
-The CLI detects which forge to use from your git remote, or you can set it with `--forge-type`.
+The CLI detects which forge to use from your git remote, or you can set it with `--forge-type`. Upstream is built in: remotes on `git.coline.app` and `ssh.git.coline.app`, where Upstream serves git, resolve to its API on `upstream.codes`.
 
 ```
 forge repo view
@@ -61,7 +61,7 @@ Command for token (e.g. rbw get github.com): rbw get github-token
 
 Check what's configured with `forge auth status`.
 
-Tokens are resolved in this order: CLI flags, environment variables (`FORGE_TOKEN`, `GITHUB_TOKEN`/`GH_TOKEN`, `GITLAB_TOKEN`, `FORGEJO_TOKEN`/`GITEA_TOKEN`, `BITBUCKET_TOKEN`, `TANGLED_TOKEN`), then the config file at `~/.config/forge/config`. The target host is inferred from the current directory's git remote; use `--host` to override it (for example `forge --host gitea.com repo list someone`). `FORGE_HOST` sets the host for `-R OWNER/REPO` and for commands that don't act on the current repo, but doesn't override the current repo's remote.
+Tokens are resolved in this order: CLI flags, environment variables (`FORGE_TOKEN`, `GITHUB_TOKEN`/`GH_TOKEN`, `GITLAB_TOKEN`, `FORGEJO_TOKEN`/`GITEA_TOKEN`, `BITBUCKET_TOKEN`, `TANGLED_TOKEN`, `UPSTREAM_TOKEN`), then the config file at `~/.config/forge/config`. The target host is inferred from the current directory's git remote; use `--host` to override it (for example `forge --host gitea.com repo list someone`). `FORGE_HOST` sets the host for `-R OWNER/REPO` and for commands that don't act on the current repo, but doesn't override the current repo's remote.
 
 Radicle repositories have no owner, so they're selected by repository ID: `-R rad:<RID>` or `-R HOST/rad:<RID>`. The node to query comes from the host in `-R`, `--host`, `FORGE_HOST` or a section with `type = radicle` in your user config (a project `.forge` file can't pick the node). There's no default node, so a repository ID is never sent to a seed you didn't choose. For example `forge --host seed.radicle.dev -R rad:z3gqcJUoA1n9HaHKufZs5FCSGazv5 file ls`. The Radicle backend is read-only over `radicle-httpd` and currently covers repositories, branches, tags and files.
 
@@ -200,7 +200,7 @@ case errors.Is(err, forges.ErrServerError):   // 5xx
 }
 ```
 
-The `factory` package imports every provider and returns a `Client` that already knows github.com, gitlab.com, codeberg.org, bitbucket.org and tangled.org. It detects and registers any other domain over https the first time a repository URL on it is used, which sends requests to that domain:
+The `factory` package imports every provider and returns a `Client` that already knows github.com, gitlab.com, codeberg.org, bitbucket.org, tangled.org and upstream.codes, and sends repository URLs on Upstream's git hosts, `git.coline.app` and `ssh.git.coline.app`, to upstream.codes. `forges.WithHostAlias` adds such a mapping for another forge. It detects and registers any other domain over https the first time a repository URL on it is used, which sends requests to that domain:
 
 ```go
 import "github.com/git-pkgs/forge/factory"

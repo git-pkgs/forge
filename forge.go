@@ -157,6 +157,7 @@ type Client struct {
 	tokens     map[string]string
 	httpClient *http.Client
 	detection  *ForgeBuilders
+	aliases    map[string]string
 }
 
 // Option configures a Client.
@@ -185,6 +186,16 @@ func WithForge(domain string, f Forge) Option {
 	}
 }
 
+// WithHostAlias makes repository URLs on host use the forge for domain, for
+// forges that serve git from a different host than their API. A Forge
+// registered for host itself takes precedence. Hosts are matched
+// case-insensitively.
+func WithHostAlias(host, domain string) Option {
+	return func(c *Client) {
+		c.aliases[strings.ToLower(host)] = strings.ToLower(domain)
+	}
+}
+
 // WithDetection makes the Client detect and register domains it hasn't seen,
 // using the given builders, the first time a repository URL on that domain is
 // used. Detection always uses https, whatever the scheme of the URL, so a
@@ -200,8 +211,9 @@ func WithDetection(builders ForgeBuilders) Option {
 // NewClient creates a Client and applies the given options.
 func NewClient(opts ...Option) *Client {
 	c := &Client{
-		forges: make(map[string]Forge),
-		tokens: make(map[string]string),
+		forges:  make(map[string]Forge),
+		tokens:  make(map[string]string),
+		aliases: make(map[string]string),
 	}
 	for _, opt := range opts {
 		opt(c)
@@ -336,6 +348,11 @@ func (c *Client) forgeOrDetect(ctx context.Context, domain string) (Forge, error
 		// doesn't miss a registered host.
 		if _, host, err := normalizeBaseURL(domain); err == nil {
 			domain = host
+		}
+		if alias, ok := c.aliases[domain]; ok {
+			if _, err := c.forgeFor(domain); err != nil {
+				domain = alias
+			}
 		}
 	}
 	f, err := c.forgeFor(domain)

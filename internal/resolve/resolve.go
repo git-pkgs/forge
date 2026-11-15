@@ -137,7 +137,7 @@ func repoFromFlag(flagRepo, flagForgeType string) (forges.Forge, string, string,
 		}
 	case 3:
 		// host/owner/repo
-		domain, owner, repo = parts[0], parts[1], parts[2]
+		domain, owner, repo = mapSSHHost(parts[0]), parts[1], parts[2]
 	default:
 		return nil, "", "", "", fmt.Errorf("invalid repo format %q, expected OWNER/REPO or HOST/OWNER/REPO", flagRepo)
 	}
@@ -322,13 +322,16 @@ func resolveRemote() (domain, owner, repo string, err error) {
 // hostname when the config declares them as different. Self-hosted GitLab
 // can serve ssh on ssh.gitlab.test while the API lives at gitlab.test;
 // without this mapping the parsed remote domain would point at the wrong host.
-// Returns the input unchanged when no mapping is configured.
+// A configured ssh_host takes precedence over factory.DefaultHostAliases.
+// Returns the input unchanged when neither maps it.
 func mapSSHHost(domain string) string {
 	cfg, err := config.Load()
-	if err != nil {
-		return domain
+	if err == nil {
+		if api := cfg.DomainForSSHHost(domain); api != "" {
+			return api
+		}
 	}
-	if api := cfg.DomainForSSHHost(domain); api != "" {
+	if api, ok := factory.DefaultHostAliases()[strings.ToLower(domain)]; ok {
 		return api
 	}
 	return domain
@@ -546,6 +549,10 @@ func TokenForDomainEnv(domain string) string {
 		}
 	case "tangled.org":
 		if t := os.Getenv("TANGLED_TOKEN"); t != "" {
+			return t
+		}
+	case "upstream.codes":
+		if t := os.Getenv("UPSTREAM_TOKEN"); t != "" {
 			return t
 		}
 	}
