@@ -75,11 +75,7 @@ func ResolvedCommitSHA(owner, repo, ref, sha string) (string, error) {
 // ResolveCommit resolves ref to a full commit SHA for the repository at
 // repoURL, routing to the forge registered for that URL's domain.
 func (c *Client) ResolveCommit(ctx context.Context, repoURL, ref string) (string, error) {
-	domain, owner, repo, err := ParseRepoURL(repoURL)
-	if err != nil {
-		return "", err
-	}
-	f, err := c.forgeFor(domain)
+	f, owner, repo, err := c.ForgeForURL(ctx, repoURL)
 	if err != nil {
 		return "", err
 	}

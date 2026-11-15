@@ -1130,3 +1130,41 @@ func TestDomainRadicleHasNoDefault(t *testing.T) {
 		t.Errorf("Domain(radicle) = %q, want empty", got)
 	}
 }
+
+func TestMixedCaseRemoteMatchesMixedCaseConfigSection(t *testing.T) {
+	clearTokenEnv(t)
+	config.ResetCache()
+	defer config.ResetCache()
+
+	dir := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", dir)
+	cfgDir := filepath.Join(dir, "forge")
+	_ = os.MkdirAll(cfgDir, 0700)
+	_ = os.WriteFile(filepath.Join(cfgDir, "config"), []byte(`[Git.Example.com]
+type = gitea
+scheme = http
+token = secret
+ssh_host = SSH.Example.com
+`), 0600)
+
+	domain, _, _, err := forges.ParseRepoURL("git@Git.Example.com:owner/repo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := TokenForDomain(domain); got != "secret" {
+		t.Errorf("TokenForDomain(%q) = %q, want secret", domain, got)
+	}
+	if got := configForgeType(domain); got != "gitea" {
+		t.Errorf("configForgeType(%q) = %q, want gitea", domain, got)
+	}
+	if got := configScheme(domain); got != "http" {
+		t.Errorf("configScheme(%q) = %q, want http", domain, got)
+	}
+	if got := mapSSHHost("ssh.example.com"); got != "git.example.com" {
+		t.Errorf("mapSSHHost = %q, want git.example.com", got)
+	}
+	// A mixed-case --host style value resolves the same section.
+	if got := TokenForDomain("GIT.example.com"); got != "secret" {
+		t.Errorf("TokenForDomain mixed case = %q, want secret", got)
+	}
+}
