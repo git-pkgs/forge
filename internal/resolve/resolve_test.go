@@ -56,6 +56,10 @@ func TestMapSSHHost(t *testing.T) {
 	_ = os.WriteFile(filepath.Join(cfgDir, "config"), []byte(`[gitlab.test]
 type = gitlab
 ssh_host = ssh.gitlab.test
+
+[mirror.example]
+type = github
+ssh_host = git.coline.app
 `), 0600)
 
 	tests := []struct {
@@ -67,9 +71,11 @@ ssh_host = ssh.gitlab.test
 		// no mapping: pass through unchanged
 		{"github.com", "github.com"},
 		{"gitlab.test", "gitlab.test"},
-		// built-in git hosts of a hosted forge
-		{"git.coline.app", "upstream.codes"},
+		// a configured ssh_host takes precedence over a default host alias
+		{"git.coline.app", "mirror.example"},
+		// default host aliases from the factory package
 		{"ssh.git.coline.app", "upstream.codes"},
+		{"SSH.Git.Coline.App", "upstream.codes"},
 	}
 
 	for _, tt := range tests {
@@ -91,6 +97,58 @@ func TestMapSSHHostNoConfig(t *testing.T) {
 	if got != "ssh.gitlab.test" {
 		t.Errorf("with no config, expected passthrough, got %q", got)
 	}
+	// Default host aliases still apply.
+	if got := mapSSHHost("git.coline.app"); got != "upstream.codes" {
+		t.Errorf("mapSSHHost(%q) with no config = %q, want %q", "git.coline.app", got, "upstream.codes")
+	}
+}
+
+func TestRepoFromUpstreamGitHost(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not installed")
+	}
+	config.ResetCache()
+	defer config.ResetCache()
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+
+	assertUpstream := func(t *testing.T, f forges.Forge, owner, repo, domain string) {
+		t.Helper()
+		if domain != "upstream.codes" || owner != "owner" || repo != "project" {
+			t.Errorf("got %q/%q on %q, want owner/project on upstream.codes", owner, repo, domain)
+		}
+		provider, ok := f.(forges.APIBaseURLProvider)
+		if !ok {
+			t.Fatalf("forge %T does not expose its API URL", f)
+		}
+		if got := provider.APIBaseURL(); got != "https://upstream.codes/api/v3" {
+			t.Errorf("API URL = %q, want %q", got, "https://upstream.codes/api/v3")
+		}
+	}
+
+	for _, remote := range []string{
+		"https://git.coline.app/owner/project.git",
+		"git@ssh.git.coline.app:owner/project.git",
+	} {
+		t.Run(remote, func(t *testing.T) {
+			t.Chdir(t.TempDir())
+			mustGit(t, "init", "-q")
+			mustGit(t, "remote", "add", "origin", remote)
+
+			f, owner, repo, domain, err := Repo("", "")
+			if err != nil {
+				t.Fatalf("Repo: %v", err)
+			}
+			assertUpstream(t, f, owner, repo, domain)
+		})
+	}
+
+	t.Run("-R git.coline.app/owner/project", func(t *testing.T) {
+		f, owner, repo, domain, err := Repo("git.coline.app/owner/project", "")
+		if err != nil {
+			t.Fatalf("Repo: %v", err)
+		}
+		assertUpstream(t, f, owner, repo, domain)
+	})
 }
 
 func clearTokenEnv(t *testing.T) {

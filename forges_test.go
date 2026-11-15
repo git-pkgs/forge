@@ -896,6 +896,35 @@ func TestClientMatchesDomainsCaseInsensitively(t *testing.T) {
 	}
 }
 
+func TestClientFollowsHostAlias(t *testing.T) {
+	mock := &mockForge{repoService: &mockRepoService{repos: []Repository{{FullName: "org/repo"}}}}
+	rt := &detectionTransport{}
+	c := NewClient(
+		WithHTTPClient(&http.Client{Transport: rt}),
+		WithForge("forge.example", mock),
+		WithHostAlias("Git.Forge.Example", "forge.example"),
+		WithDetection(ForgeBuilders{Gitea: func(string, string, *http.Client) Forge { return &mockForge{} }}),
+	)
+
+	for _, repoURL := range []string{
+		"https://git.forge.example/org/repo.git",
+		"git@GIT.forge.example:org/repo.git",
+	} {
+		f, owner, repo, err := c.ForgeForURL(context.Background(), repoURL)
+		if err != nil || f != Forge(mock) {
+			t.Errorf("ForgeForURL(%q) = %T, %v, want the aliased forge", repoURL, f, err)
+		}
+		assertEqual(t, "owner", "org", owner)
+		assertEqual(t, "repo", "repo", repo)
+	}
+	if repos, err := c.ListRepositories(context.Background(), "git.forge.example", "org", ListRepoOpts{}); err != nil || len(repos) != 1 {
+		t.Errorf("ListRepositories = %+v, %v", repos, err)
+	}
+	if len(rt.urls) != 0 {
+		t.Errorf("probed %v, want no requests", rt.urls)
+	}
+}
+
 func TestListRepositoriesTrailingSlashKeepsRegistration(t *testing.T) {
 	mock := &mockForge{repoService: &mockRepoService{repos: []Repository{{FullName: "org/repo"}}}}
 	rt := &detectionTransport{}

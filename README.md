@@ -1,6 +1,6 @@
 # forge
 
-Go library and CLI for working with git forges. Supports GitHub, GitLab, Gitea/Forgejo, Bitbucket Cloud, Gerrit, Tangled and Radicle (read-only) through a single interface. GitHub Enterprise and other hosts that serve GitHub's REST API, such as [Upstream](https://upstream.codes), work through the GitHub backend.
+Go library and CLI for working with git forges. Supports GitHub, GitLab, Gitea/Forgejo, Bitbucket Cloud, Gerrit, Tangled and Radicle (read-only) through a single interface. GitHub Enterprise and other hosts that serve GitHub's REST API work through the GitHub backend.
 
 ## CLI
 
@@ -189,7 +189,7 @@ case errors.Is(err, forges.ErrServerError):   // 5xx
 }
 ```
 
-The `factory` package imports every provider and returns a `Client` that already knows github.com, gitlab.com, codeberg.org, bitbucket.org, tangled.org and upstream.codes. It detects and registers any other domain over https the first time a repository URL on it is used, which sends requests to that domain:
+The `factory` package imports every provider and returns a `Client` that already knows github.com, gitlab.com, codeberg.org, bitbucket.org, tangled.org and upstream.codes, and sends repository URLs on Upstream's git hosts, `git.coline.app` and `ssh.git.coline.app`, to upstream.codes. `forges.WithHostAlias` adds such a mapping for another forge. It detects and registers any other domain over https the first time a repository URL on it is used, which sends requests to that domain:
 
 ```go
 import "github.com/git-pkgs/forge/factory"

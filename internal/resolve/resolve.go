@@ -137,7 +137,7 @@ func repoFromFlag(flagRepo, flagForgeType string) (forges.Forge, string, string,
 		}
 	case 3:
 		// host/owner/repo
-		domain, owner, repo = parts[0], parts[1], parts[2]
+		domain, owner, repo = mapSSHHost(parts[0]), parts[1], parts[2]
 	default:
 		return nil, "", "", "", fmt.Errorf("invalid repo format %q, expected OWNER/REPO or HOST/OWNER/REPO", flagRepo)
 	}
@@ -322,7 +322,8 @@ func resolveRemote() (domain, owner, repo string, err error) {
 // hostname when the config declares them as different. Self-hosted GitLab
 // can serve ssh on ssh.gitlab.test while the API lives at gitlab.test;
 // without this mapping the parsed remote domain would point at the wrong host.
-// Returns the input unchanged when no mapping is configured.
+// A configured ssh_host takes precedence over factory.DefaultHostAliases.
+// Returns the input unchanged when neither maps it.
 func mapSSHHost(domain string) string {
 	cfg, err := config.Load()
 	if err == nil {
@@ -330,19 +331,10 @@ func mapSSHHost(domain string) string {
 			return api
 		}
 	}
-	if api, ok := knownGitHosts[domain]; ok {
+	if api, ok := factory.DefaultHostAliases()[strings.ToLower(domain)]; ok {
 		return api
 	}
 	return domain
-}
-
-// knownGitHosts maps the git hosts of hosted forges whose clone URLs live on
-// a different host from their API. A config ssh_host takes precedence.
-var knownGitHosts = map[string]string{
-	// Upstream clones over https://git.coline.app and git@ssh.git.coline.app,
-	// while its API and web pages are on upstream.codes.
-	"git.coline.app":     "upstream.codes",
-	"ssh.git.coline.app": "upstream.codes",
 }
 
 func gitRemoteURL(name string) (string, error) {

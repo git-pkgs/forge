@@ -43,12 +43,25 @@ func DefaultForges(token func(domain string) string, hc *http.Client) map[string
 	}
 }
 
-// NewClient returns a Client with the default forges registered and detection
-// enabled for every other domain. Options apply first, so WithToken and
-// WithHTTPClient reach the default forges, and a domain registered with
-// WithForge keeps that registration.
+// DefaultHostAliases returns the git hosts of well-known forges that serve git
+// from a different host than their API, mapped to the API's domain.
+func DefaultHostAliases() map[string]string {
+	return map[string]string{
+		"git.coline.app":     "upstream.codes",
+		"ssh.git.coline.app": "upstream.codes",
+	}
+}
+
+// NewClient returns a Client with the default forges and host aliases
+// registered and detection enabled for every other domain. Options apply
+// first, so WithToken and WithHTTPClient reach the default forges, and a
+// domain registered with WithForge or WithHostAlias keeps that registration.
 func NewClient(opts ...forges.Option) *forges.Client {
-	c := forges.NewClient(append([]forges.Option{forges.WithDetection(Builders())}, opts...)...)
+	base := []forges.Option{forges.WithDetection(Builders())}
+	for host, domain := range DefaultHostAliases() {
+		base = append(base, forges.WithHostAlias(host, domain))
+	}
+	c := forges.NewClient(append(base, opts...)...)
 	tokens := c.Tokens()
 	defaults := DefaultForges(func(domain string) string { return tokens[domain] }, c.HTTPClient())
 	for domain, f := range defaults {

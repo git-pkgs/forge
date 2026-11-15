@@ -94,6 +94,50 @@ func TestNewClientRegistersDefaultForges(t *testing.T) {
 	}
 }
 
+func TestNewClientResolvesUpstreamGitHosts(t *testing.T) {
+	rt := &recordingTransport{}
+	c := NewClient(forges.WithHTTPClient(&http.Client{Transport: rt}))
+	want, err := c.ForgeFor("upstream.codes")
+	if err != nil {
+		t.Fatalf("ForgeFor: %v", err)
+	}
+
+	for _, repoURL := range []string{
+		"https://git.coline.app/owner/project.git",
+		"git@ssh.git.coline.app:owner/project.git",
+	} {
+		f, owner, repo, err := c.ForgeForURL(context.Background(), repoURL)
+		if err != nil {
+			t.Errorf("ForgeForURL(%q): %v", repoURL, err)
+			continue
+		}
+		if f != want {
+			t.Errorf("ForgeForURL(%q) returned %T, want the upstream.codes forge", repoURL, f)
+		}
+		if owner != "owner" || repo != "project" {
+			t.Errorf("ForgeForURL(%q) owner/repo = %q/%q", repoURL, owner, repo)
+		}
+	}
+	if len(rt.auth) != 0 {
+		t.Errorf("requests sent to %v, want no detection probe", rt.auth)
+	}
+}
+
+func TestNewClientKeepsRegisteredHostAlias(t *testing.T) {
+	c := NewClient(forges.WithHostAlias("git.coline.app", "github.com"))
+	want, err := c.ForgeFor("github.com")
+	if err != nil {
+		t.Fatalf("ForgeFor: %v", err)
+	}
+	f, _, _, err := c.ForgeForURL(context.Background(), "https://git.coline.app/owner/project")
+	if err != nil {
+		t.Fatalf("ForgeForURL: %v", err)
+	}
+	if f != want {
+		t.Errorf("ForgeForURL returned %T, want the github.com forge", f)
+	}
+}
+
 func TestNewClientAppliesOptionsToDefaultForges(t *testing.T) {
 	rt := &recordingTransport{}
 	c := NewClient(
