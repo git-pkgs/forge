@@ -2,6 +2,7 @@ package tangled
 
 import (
 	"context"
+	"encoding/json"
 	"io"
 	"net/http"
 	"os"
@@ -298,4 +299,13 @@ type unsupportedCommitService struct{}
 
 func (unsupportedCommitService) ResolveCommit(context.Context, string, string, string) (string, error) {
 	return "", forges.ErrNotSupported
+}
+
+type unsupportedAttestationService struct{}
+
+func (unsupportedAttestationService) List(context.Context, string, string, string, forges.ListAttestationOpts) ([]forges.Attestation, error) {
+	return nil, forges.ErrNotSupported
+}
+func (unsupportedAttestationService) Download(context.Context, string, string, forges.Attestation) (json.RawMessage, error) {
+	return nil, forges.ErrNotSupported
 }
