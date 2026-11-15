@@ -1,6 +1,6 @@
 # forge
 
-Go library and CLI for working with git forges. Supports GitHub, GitLab, Gitea/Forgejo, Bitbucket Cloud, Gerrit, Tangled and Radicle (read-only) through a single interface. GitHub Enterprise and other hosts that serve GitHub's REST API work through the GitHub backend.
+Go library and CLI for working with git forges. Supports GitHub, GitLab, Gitea/Forgejo, Bitbucket Cloud, Gerrit, Tangled and Radicle (read-only) through a single interface.
 
 ## CLI
 
