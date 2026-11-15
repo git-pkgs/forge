@@ -843,6 +843,10 @@ func TestClientMethodsDetectOnFirstUse(t *testing.T) {
 					repo:  &Repository{FullName: "owner/repo"},
 				},
 				commitService: &mockCommitService{sha: "abc"},
+				attestations: &mockAttestationService{
+					attestations: []Attestation{{ID: "1"}},
+					bundle:       json.RawMessage(`{"n":1}`),
+				},
 			}
 		},
 	}
@@ -863,6 +867,12 @@ func TestClientMethodsDetectOnFirstUse(t *testing.T) {
 	}
 	if sha, err := newClient().ResolveCommit(ctx, repoURL, "main"); err != nil || sha != "abc" {
 		t.Errorf("ResolveCommit = %q, %v", sha, err)
+	}
+	if atts, err := newClient().ListAttestations(ctx, repoURL, "sha256:"+testDigestHex, ListAttestationOpts{}); err != nil || len(atts) != 1 {
+		t.Errorf("ListAttestations = %+v, %v", atts, err)
+	}
+	if bundle, err := newClient().DownloadAttestation(ctx, repoURL, Attestation{ID: "1"}); err != nil || string(bundle) != `{"n":1}` {
+		t.Errorf("DownloadAttestation = %s, %v", bundle, err)
 	}
 }
 
@@ -898,7 +908,14 @@ func TestClientMatchesDomainsCaseInsensitively(t *testing.T) {
 }
 
 func TestClientFollowsHostAlias(t *testing.T) {
-	mock := &mockForge{repoService: &mockRepoService{repos: []Repository{{FullName: "org/repo"}}}}
+	attestations := &mockAttestationService{
+		attestations: []Attestation{{ID: "1"}},
+		bundle:       json.RawMessage(`{"n":1}`),
+	}
+	mock := &mockForge{
+		repoService:  &mockRepoService{repos: []Repository{{FullName: "org/repo"}}},
+		attestations: attestations,
+	}
 	rt := &detectionTransport{}
 	c := NewClient(
 		WithHTTPClient(&http.Client{Transport: rt}),
@@ -921,6 +938,15 @@ func TestClientFollowsHostAlias(t *testing.T) {
 	if repos, err := c.ListRepositories(context.Background(), "git.forge.example", "org", ListRepoOpts{}); err != nil || len(repos) != 1 {
 		t.Errorf("ListRepositories = %+v, %v", repos, err)
 	}
+	repoURL := "https://git.forge.example/org/repo"
+	if atts, err := c.ListAttestations(context.Background(), repoURL, "sha256:"+testDigestHex, ListAttestationOpts{}); err != nil || len(atts) != 1 {
+		t.Errorf("ListAttestations = %+v, %v", atts, err)
+	}
+	if bundle, err := c.DownloadAttestation(context.Background(), repoURL, Attestation{ID: "1"}); err != nil || string(bundle) != `{"n":1}` {
+		t.Errorf("DownloadAttestation = %s, %v", bundle, err)
+	}
+	assertEqual(t, "owner", "org", attestations.lastOwner)
+	assertEqual(t, "repo", "repo", attestations.lastRepo)
 	if len(rt.urls) != 0 {
 		t.Errorf("probed %v, want no requests", rt.urls)
 	}
