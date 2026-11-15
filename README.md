@@ -31,6 +31,7 @@ forge label list
 forge webhook add --url https://example.com/hook -e push -e pull_request
 forge notification list --unread
 forge notification read --id 123
+forge attestation download ./forge_linux_amd64.tar.gz
 forge api repos/{owner}/{repo}
 ```
 
@@ -158,6 +159,19 @@ forge --read-only label create bug   # Error: create label: Post "...": write re
 ```
 
 `--read-only=false` overrides `FORGE_READ_ONLY` for a single command.
+
+### Attestations
+
+`forge attestation` finds and downloads the artifact attestations, such as SLSA provenance and SBOMs signed as Sigstore bundles, that a repository holds for an artifact on GitHub or GitLab. Pass the artifact's path, which is hashed with SHA-256, or its digest as `sha256:<hex>`:
+
+```
+forge attestation list ./forge_linux_amd64.tar.gz
+forge attestation list sha256:5db1fee4b5703808c48078a76768b155b421b210c0761cd6a5d223f4d99f1eaa --predicate-type provenance
+forge attestation download ./forge_linux_amd64.tar.gz
+forge attestation download ./forge_linux_amd64.tar.gz -O bundles.jsonl
+```
+
+`download` writes every bundle as JSON Lines, one per line, to `sha256:<hex>.jsonl` (`sha256-<hex>.jsonl` on Windows) unless `-O` names another file, the same layout `gh attestation download` uses, so the file can be checked with `gh attestation verify --bundle`. Nothing is written if any bundle fails to download. forge doesn't verify bundles itself. `--predicate-type` takes a predicate type URI or `provenance` or `sbom`, and `--limit` caps how many attestations are fetched. GitHub doesn't report predicate types when listing, so on GitHub `list` reads each one from the attestation's bundle.
 
 ## Library
 
