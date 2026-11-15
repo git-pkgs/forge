@@ -17,6 +17,11 @@ import (
 func resetCmd(cmd *cobra.Command) {
 	reset := func(f *pflag.Flag) {
 		f.Changed = false
+		// Set on a slice flag would add its "[]" default as an element.
+		if v, ok := f.Value.(pflag.SliceValue); ok {
+			_ = v.Replace(nil)
+			return
+		}
 		_ = f.Value.Set(f.DefValue)
 	}
 	cmd.Flags().VisitAll(reset)

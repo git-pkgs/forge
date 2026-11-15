@@ -291,6 +291,9 @@ func prCreateCmd() *cobra.Command {
 		Aliases: []string{"new"},
 		Short:   "Create a pull request",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if flagPush && resolve.ReadOnly() {
+				return fmt.Errorf("--push cannot be used in read-only mode")
+			}
 			if flagTitle == "" && !flagFill {
 				return fmt.Errorf("--title is required")
 			}
