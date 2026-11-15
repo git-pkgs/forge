@@ -2,6 +2,7 @@ package httpreplay
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -346,4 +347,69 @@ func TestClientReplaysFixture(t *testing.T) {
 	t.Setenv(recordEnv, "")
 	hc := Client(t)
 	do(t, hc, "https://api.example.test", exchange{method: "GET", path: "/hello", wantStatus: 200, wantBody: []byte("hello from the fixture")})
+}
+
+type failingTransport struct{}
+
+func (failingTransport) RoundTrip(*http.Request) (*http.Response, error) {
+	return nil, errors.New("connection refused")
+}
+
+func TestRecorderTransportErrorFailsTest(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "fixture.json")
+	if err := os.WriteFile(path, []byte("existing"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	ft := &fakeTB{}
+	hc := &http.Client{Transport: newRecorder(ft, path, failingTransport{})}
+	if resp, err := hc.Get("https://api.example.test/a"); err == nil {
+		_ = resp.Body.Close()
+		t.Fatal("expected a transport error")
+	}
+	ft.finish()
+
+	if len(ft.errors) != 1 || !strings.Contains(ft.errors[0], "connection refused") {
+		t.Errorf("errors = %q, want one transport error", ft.errors)
+	}
+	got, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(got) != "existing" {
+		t.Errorf("fixture overwritten after a failed exchange: %q", got)
+	}
+}
+
+func TestRecordThenReplayBinaryRequestBody(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "fixture.json")
+	srv := newCountingServer(t)
+	payload := []byte{0xff, 0x00, 0xfe}
+
+	post := func(hc *http.Client) {
+		t.Helper()
+		resp, err := hc.Post(srv.URL+"/repos/octocat/hello/issues", "application/octet-stream", bytes.NewReader(payload))
+		if err != nil {
+			t.Fatal(err)
+		}
+		_ = resp.Body.Close()
+	}
+
+	ft := &fakeTB{}
+	post(&http.Client{Transport: newRecorder(ft, path, http.DefaultTransport)})
+	ft.finish()
+	if len(ft.errors) != 0 {
+		t.Fatalf("recording errors: %q", ft.errors)
+	}
+	srv.Close()
+
+	ft = &fakeTB{}
+	r, err := newReplayer(ft, path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	post(&http.Client{Transport: r})
+	ft.finish()
+	if len(ft.errors) != 0 {
+		t.Errorf("replay errors: %q", ft.errors)
+	}
 }

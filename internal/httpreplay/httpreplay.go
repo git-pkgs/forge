@@ -40,11 +40,13 @@ type interaction struct {
 }
 
 // recordedRequest holds the parts of a request used to match it during
-// replay.
+// replay. Body is stored as text when it is valid UTF-8 and as base64
+// otherwise, with BodyEncoding set to "base64".
 type recordedRequest struct {
-	Method string `json:"method"`
-	URL    string `json:"url"`
-	Body   string `json:"body,omitempty"`
+	Method       string `json:"method"`
+	URL          string `json:"url"`
+	Body         string `json:"body,omitempty"`
+	BodyEncoding string `json:"body_encoding,omitempty"`
 }
 
 // recordedResponse holds a recorded response. Body is stored as text when it
@@ -81,6 +83,7 @@ func fixturePath(t testing.TB) string {
 // recorder sends requests to the network and keeps every exchange. The
 // exchanges are written to path when the test finishes without failing.
 type recorder struct {
+	t    testing.TB
 	base http.RoundTripper
 
 	mu           sync.Mutex
@@ -88,7 +91,7 @@ type recorder struct {
 }
 
 func newRecorder(t testing.TB, path string, base http.RoundTripper) *recorder {
-	r := &recorder{base: base, interactions: []interaction{}}
+	r := &recorder{t: t, base: base, interactions: []interaction{}}
 	t.Cleanup(func() {
 		if t.Failed() {
 			t.Logf("httpreplay: test failed, not writing %s", path)
@@ -103,10 +106,18 @@ func newRecorder(t testing.TB, path string, base http.RoundTripper) *recorder {
 	return r
 }
 
+// fail reports a failed exchange on t directly, because backends sometimes
+// discard request errors. That also keeps the incomplete recording from being
+// written over a good fixture.
+func (r *recorder) fail(err error) (*http.Response, error) {
+	r.t.Errorf("%v", err)
+	return nil, err
+}
+
 func (r *recorder) RoundTrip(req *http.Request) (*http.Response, error) {
 	reqBody, err := readRequestBody(req)
 	if err != nil {
-		return nil, err
+		return r.fail(err)
 	}
 	// RoundTrip must not modify req, so the body that was just read is sent
 	// on a copy.
@@ -117,12 +128,12 @@ func (r *recorder) RoundTrip(req *http.Request) (*http.Response, error) {
 
 	resp, err := r.base.RoundTrip(out)
 	if err != nil {
-		return nil, err
+		return r.fail(fmt.Errorf("httpreplay: %s %s: %w", req.Method, req.URL, err))
 	}
 	respBody, err := io.ReadAll(resp.Body)
 	_ = resp.Body.Close()
 	if err != nil {
-		return nil, fmt.Errorf("httpreplay: reading response body: %w", err)
+		return r.fail(fmt.Errorf("httpreplay: reading response body: %w", err))
 	}
 	resp.Body = io.NopCloser(bytes.NewReader(respBody))
 
@@ -134,9 +145,12 @@ func (r *recorder) RoundTrip(req *http.Request) (*http.Response, error) {
 	recorded := recordedResponse{StatusCode: resp.StatusCode, Header: header}
 	recorded.Body, recorded.BodyEncoding = encodeBody(respBody)
 
+	recordedReq := recordedRequest{Method: req.Method, URL: req.URL.String()}
+	recordedReq.Body, recordedReq.BodyEncoding = encodeBody(reqBody)
+
 	r.mu.Lock()
 	r.interactions = append(r.interactions, interaction{
-		Request:  recordedRequest{Method: req.Method, URL: req.URL.String(), Body: string(reqBody)},
+		Request:  recordedReq,
 		Response: recorded,
 	})
 	r.mu.Unlock()
@@ -181,7 +195,12 @@ func (r *replayer) RoundTrip(req *http.Request) (*http.Response, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	for i, in := range r.interactions {
-		if r.used[i] || in.Request.Method != req.Method || in.Request.URL != target || in.Request.Body != string(body) {
+		if r.used[i] || in.Request.Method != req.Method || in.Request.URL != target {
+			continue
+		}
+		// An undecodable recorded body can never match a real request.
+		want, err := decodeBody(in.Request.Body, in.Request.BodyEncoding)
+		if err != nil || !bytes.Equal(want, body) {
 			continue
 		}
 		r.used[i] = true
