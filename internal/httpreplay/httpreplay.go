@@ -249,7 +249,7 @@ func keptHeaders(h http.Header) http.Header {
 func keepHeader(name string) bool {
 	name = http.CanonicalHeaderKey(name)
 	switch name {
-	case "Content-Type", "Link", "Retry-After",
+	case "Content-Type", "Link", "Location", "Retry-After",
 		"X-Total", "X-Total-Count", "X-Total-Pages",
 		"X-Page", "X-Per-Page", "X-Next-Page", "X-Prev-Page":
 		return true

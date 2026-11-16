@@ -327,6 +327,7 @@ func TestRecorderKeepsOnlyListedHeaders(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.Header().Set("Link", `<https://api.example.test/?page=2>; rel="next"`)
+		w.Header().Set("Location", "https://api.example.test/moved")
 		w.Header().Set("X-Total", "3")
 		w.Header().Set("X-Gitlab-File-Name", "a.txt")
 		w.Header().Set("X-Gitlab-Meta", `{"correlation_id":"abc"}`)
@@ -354,6 +355,7 @@ func TestRecorderKeepsOnlyListedHeaders(t *testing.T) {
 	want := http.Header{
 		"Content-Type":       {"application/json"},
 		"Link":               {`<https://api.example.test/?page=2>; rel="next"`},
+		"Location":           {"https://api.example.test/moved"},
 		"X-Total":            {"3"},
 		"X-Gitlab-File-Name": {"a.txt"},
 	}
