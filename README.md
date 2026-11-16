@@ -322,6 +322,35 @@ _, err := f.Issues().Create(ctx, "octocat", "hello-world", forges.CreateIssueOpt
 errors.Is(err, forges.ErrReadOnly) // true
 ```
 
+Credentials that a fixed token can't express, such as a GitHub App installation token that expires after an hour or a token that comes from a secrets manager, go in the HTTP client instead. `forges.AuthHTTPClient` returns a copy of a client that passes every request to a `forges.Credentials` before sending it. Give it to each backend with an empty token, so the backend adds no credentials of its own, and to `WithHTTPClient`. `forges.BearerToken` covers GitHub, GitLab, Gitea/Forgejo, Bitbucket Cloud and Tangled. It asks its `TokenSource` for a token on every request and only sends it to the named host and its subdomains, so `github.com` covers `api.github.com` but detection probes and attestation bundle downloads on other hosts get no token:
+
+```go
+ts := forges.TokenSourceFunc(func(ctx context.Context) (string, error) {
+    return installationTokens.Get(ctx) // cached, refreshed before it expires
+})
+hc := forges.AuthHTTPClient(nil, forges.BearerToken("github.com", ts))
+
+client := factory.NewClient(forges.WithHTTPClient(hc))
+```
+
+For anything else, such as a different token per organization or signing each request, implement `Credentials` or use `forges.CredentialsFunc`. It gets a copy of every request the client sends, to any host, so check `req.URL` before adding anything. An error stops the request from being sent. Gerrit only uses its authenticated endpoints when it has a token, so it needs `gerrit.New` with a token instead.
+
+```go
+hc := forges.AuthHTTPClient(nil, forges.CredentialsFunc(func(req *http.Request) error {
+    if req.URL.Host != "git.example.com" {
+        return nil
+    }
+    owner, _, _ := strings.Cut(strings.TrimPrefix(req.URL.Path, "/api/v1/repos/"), "/")
+    if token, ok := orgTokens[owner]; ok {
+        req.Header.Set("Authorization", "Bearer "+token)
+    }
+    return nil
+}))
+f := gitea.New("https://git.example.com", "", hc)
+```
+
+`AuthHTTPClient` and `ReadOnlyHTTPClient` can be combined: `forges.ReadOnlyHTTPClient(forges.AuthHTTPClient(nil, creds))`.
+
 PURL support via `github.com/git-pkgs/purl`:
 
 ```go

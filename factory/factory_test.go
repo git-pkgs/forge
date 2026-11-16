@@ -378,3 +378,46 @@ func TestForgeForURLDetectsHTTPURLOverHTTPS(t *testing.T) {
 		t.Errorf("API URL = %q, want %q", got, want)
 	}
 }
+
+func TestNewClientWithCredentials(t *testing.T) {
+	rt := &recordingTransport{}
+	tokens := map[string]string{
+		"github.com":     "gh-secret",
+		"gitlab.com":     "gl-secret",
+		"codeberg.org":   "cb-secret",
+		"bitbucket.org":  "bb-secret",
+		"tangled.org":    "tg-secret",
+		"upstream.codes": "up-secret",
+	}
+	creds := forges.CredentialsFunc(func(req *http.Request) error {
+		for domain, token := range tokens {
+			bearer := forges.BearerToken(domain, forges.TokenSourceFunc(func(context.Context) (string, error) {
+				return token, nil
+			}))
+			if err := bearer.Authenticate(req); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	c := NewClient(forges.WithHTTPClient(forges.AuthHTTPClient(&http.Client{Transport: rt}, creds)))
+	ctx := context.Background()
+
+	for domain, token := range tokens {
+		f, err := c.ForgeFor(domain)
+		if err != nil {
+			t.Fatalf("ForgeFor(%q): %v", domain, err)
+		}
+		_, _ = f.Repos().Get(ctx, "owner", "repo")
+		apiHost := strings.TrimPrefix(f.(forges.APIBaseURLProvider).APIBaseURL(), "https://")
+		apiHost, _, _ = strings.Cut(apiHost, "/")
+		if got, want := rt.auth[apiHost], "Bearer "+token; got != want {
+			t.Errorf("%s: Authorization sent to %s = %q, want %q", domain, apiHost, got, want)
+		}
+	}
+
+	_, _, _, _ = c.ForgeForURL(ctx, "https://git.example.com/owner/repo")
+	if got, ok := rt.auth["git.example.com"]; !ok || got != "" {
+		t.Errorf("detection probe to git.example.com: sent = %v, Authorization = %q, want a probe without credentials", ok, got)
+	}
+}
