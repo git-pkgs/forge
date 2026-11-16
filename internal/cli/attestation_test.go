@@ -184,7 +184,7 @@ func TestAttestationListOutput(t *testing.T) {
 	if err != nil {
 		t.Fatalf("attestation list --output plain: %v", err)
 	}
-	if want := "1\t" + testProvenanceType + "\n2\thttps://cyclonedx.org/bom\n"; stdout != want {
+	if want := "1\t" + testProvenanceType + "\tsuccess\t2025-10-07\n2\thttps://cyclonedx.org/bom\tsuccess\t2025-10-07\n"; stdout != want {
 		t.Errorf("plain output = %q, want %q", stdout, want)
 	}
 
@@ -246,7 +246,7 @@ func TestAttestationListReadsMissingPredicateTypesFromBundles(t *testing.T) {
 	if err != nil {
 		t.Fatalf("attestation list: %v", err)
 	}
-	if want := "1\t" + testProvenanceType + "\n2\thttps://cyclonedx.org/bom\n3\t\n"; stdout != want {
+	if want := "1\t" + testProvenanceType + "\t\t\n2\thttps://cyclonedx.org/bom\t\t\n3\t\t\t\n"; stdout != want {
 		t.Errorf("plain output = %q, want %q", stdout, want)
 	}
 	if strings.Join(svc.downloads, ",") != "1,3" {
@@ -432,7 +432,7 @@ func TestAttestationCommandsAgainstGitLab(t *testing.T) {
 	if err != nil {
 		t.Fatalf("attestation list: %v", err)
 	}
-	if want := "3\t" + testProvenanceType + "\n"; stdout != want {
+	if want := "3\t" + testProvenanceType + "\tsuccess\t2025-10-07\n"; stdout != want {
 		t.Errorf("list output = %q, want %q", stdout, want)
 	}
 

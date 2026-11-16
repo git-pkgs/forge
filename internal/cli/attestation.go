@@ -83,7 +83,12 @@ func attestationListCmd() *cobra.Command {
 			if p.Format == output.Plain {
 				lines := make([]string, len(atts))
 				for i, a := range atts {
-					lines[i] = output.Sanitize(a.ID) + "\t" + output.Sanitize(a.PredicateType)
+					lines[i] = strings.Join([]string{
+						output.Sanitize(a.ID),
+						output.Sanitize(a.PredicateType),
+						output.Sanitize(a.Status),
+						attestationCreated(a),
+					}, "\t")
 				}
 				p.PrintPlain(lines)
 				return nil
@@ -92,15 +97,11 @@ func attestationListCmd() *cobra.Command {
 			headers := []string{"ID", "PREDICATE TYPE", "STATUS", "CREATED"}
 			rows := make([][]string, len(atts))
 			for i, a := range atts {
-				created := ""
-				if !a.CreatedAt.IsZero() {
-					created = a.CreatedAt.Format("2006-01-02")
-				}
 				rows[i] = []string{
 					output.Sanitize(a.ID),
 					output.Sanitize(a.PredicateType),
 					output.Sanitize(a.Status),
-					created,
+					attestationCreated(a),
 				}
 			}
 			p.PrintTable(headers, rows)
@@ -111,6 +112,13 @@ func attestationListCmd() *cobra.Command {
 	cmd.Flags().StringVar(&flagPredicateType, "predicate-type", "", "Only include this predicate type (a URI, or provenance or sbom)")
 	cmd.Flags().IntVarP(&flagLimit, "limit", "L", 0, "Maximum number of attestations")
 	return cmd
+}
+
+func attestationCreated(a forges.Attestation) string {
+	if a.CreatedAt.IsZero() {
+		return ""
+	}
+	return a.CreatedAt.Format("2006-01-02")
 }
 
 func attestationDownloadCmd() *cobra.Command {
