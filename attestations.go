@@ -80,14 +80,10 @@ func ParseSHA256Digest(digest string) (string, error) {
 }
 
 // ListAttestations lists the attestations for the artifact with the given
-// digest in the repository at repoURL, routing to the forge registered for
-// that URL's domain.
+// digest in the repository at repoURL, routing to the forge for that URL the
+// same way ForgeForURL does.
 func (c *Client) ListAttestations(ctx context.Context, repoURL, digest string, opts ListAttestationOpts) ([]Attestation, error) {
-	domain, owner, repo, err := ParseRepoURL(repoURL)
-	if err != nil {
-		return nil, err
-	}
-	f, err := c.forgeFor(domain)
+	f, owner, repo, err := c.ForgeForURL(ctx, repoURL)
 	if err != nil {
 		return nil, err
 	}
@@ -95,13 +91,10 @@ func (c *Client) ListAttestations(ctx context.Context, repoURL, digest string, o
 }
 
 // DownloadAttestation returns the Sigstore bundle for an attestation that
-// ListAttestations returned for the repository at repoURL.
+// ListAttestations returned for the repository at repoURL, routing the same
+// way ForgeForURL does.
 func (c *Client) DownloadAttestation(ctx context.Context, repoURL string, att Attestation) (json.RawMessage, error) {
-	domain, owner, repo, err := ParseRepoURL(repoURL)
-	if err != nil {
-		return nil, err
-	}
-	f, err := c.forgeFor(domain)
+	f, owner, repo, err := c.ForgeForURL(ctx, repoURL)
 	if err != nil {
 		return nil, err
 	}
