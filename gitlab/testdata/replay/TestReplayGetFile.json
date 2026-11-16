@@ -1,0 +1,47 @@
+[
+  {
+    "request": {
+      "method": "GET",
+      "url": "https://gitlab.com/api/v4/projects/gitlab-org%2Fgitlab-test/repository/files/VERSION?ref=master"
+    },
+    "response": {
+      "status_code": 200,
+      "header": {
+        "Content-Type": [
+          "application/json"
+        ],
+        "X-Gitlab-Blob-Id": [
+          "998707b421c89bd9a3063333f9f728ef3e43d101"
+        ],
+        "X-Gitlab-Commit-Id": [
+          "ddd0f15ae83993f5cb66a927a28673882e99100b"
+        ],
+        "X-Gitlab-Content-Sha256": [
+          "2f6dc79336c0d560984e748c5c38172f4b83a369b3af687f7ada4799bc1e6323"
+        ],
+        "X-Gitlab-Encoding": [
+          "base64"
+        ],
+        "X-Gitlab-Execute-Filemode": [
+          "false"
+        ],
+        "X-Gitlab-File-Name": [
+          "VERSION"
+        ],
+        "X-Gitlab-File-Path": [
+          "VERSION"
+        ],
+        "X-Gitlab-Last-Commit-Id": [
+          "913c66a37b4a45b9769037c55c2d238bd0942d2e"
+        ],
+        "X-Gitlab-Ref": [
+          "master"
+        ],
+        "X-Gitlab-Size": [
+          "10"
+        ]
+      },
+      "body": "{\"file_name\":\"VERSION\",\"file_path\":\"VERSION\",\"size\":10,\"encoding\":\"base64\",\"content_sha256\":\"2f6dc79336c0d560984e748c5c38172f4b83a369b3af687f7ada4799bc1e6323\",\"ref\":\"master\",\"blob_id\":\"998707b421c89bd9a3063333f9f728ef3e43d101\",\"commit_id\":\"ddd0f15ae83993f5cb66a927a28673882e99100b\",\"last_commit_id\":\"913c66a37b4a45b9769037c55c2d238bd0942d2e\",\"execute_filemode\":false,\"content\":\"Ni43LjAucHJlCg==\"}"
+    }
+  }
+]

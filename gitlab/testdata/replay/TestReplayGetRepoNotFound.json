@@ -1,0 +1,17 @@
+[
+  {
+    "request": {
+      "method": "GET",
+      "url": "https://gitlab.com/api/v4/projects/gitlab-org%2Fthis-project-does-not-exist?license=true"
+    },
+    "response": {
+      "status_code": 404,
+      "header": {
+        "Content-Type": [
+          "application/json"
+        ]
+      },
+      "body": "{\"message\":\"404 Project Not Found\"}"
+    }
+  }
+]

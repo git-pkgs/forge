@@ -1,0 +1,17 @@
+[
+  {
+    "request": {
+      "method": "GET",
+      "url": "https://codeberg.org/api/v1/repos/Codeberg/this-repository-does-not-exist"
+    },
+    "response": {
+      "status_code": 404,
+      "header": {
+        "Content-Type": [
+          "application/json;charset=utf-8"
+        ]
+      },
+      "body": "{\"message\":\"The target couldn't be found.\",\"url\":\"https://codeberg.org/api/swagger\",\"errors\":[]}\n"
+    }
+  }
+]

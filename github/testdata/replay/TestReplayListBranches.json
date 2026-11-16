@@ -1,0 +1,17 @@
+[
+  {
+    "request": {
+      "method": "GET",
+      "url": "https://api.github.com/repos/octocat/Hello-World/branches?page=1&per_page=30"
+    },
+    "response": {
+      "status_code": 200,
+      "header": {
+        "Content-Type": [
+          "application/json; charset=utf-8"
+        ]
+      },
+      "body": "[{\"name\":\"master\",\"commit\":{\"sha\":\"7fd1a60b01f91b314f59955a4e4d4e80d8edf11d\",\"url\":\"https://api.github.com/repos/octocat/Hello-World/commits/7fd1a60b01f91b314f59955a4e4d4e80d8edf11d\"},\"protected\":false},{\"name\":\"octocat-patch-1\",\"commit\":{\"sha\":\"b1b3f9723831141a31a1a7252a213e216ea76e56\",\"url\":\"https://api.github.com/repos/octocat/Hello-World/commits/b1b3f9723831141a31a1a7252a213e216ea76e56\"},\"protected\":false},{\"name\":\"test\",\"commit\":{\"sha\":\"b3cbd5bbd7e81436d2eee04537ea2b4c0cad4cdf\",\"url\":\"https://api.github.com/repos/octocat/Hello-World/commits/b3cbd5bbd7e81436d2eee04537ea2b4c0cad4cdf\"},\"protected\":false}]"
+    }
+  }
+]

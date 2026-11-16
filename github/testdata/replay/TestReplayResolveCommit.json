@@ -1,0 +1,17 @@
+[
+  {
+    "request": {
+      "method": "GET",
+      "url": "https://api.github.com/repos/octocat/Hello-World/commits/7fd1a60"
+    },
+    "response": {
+      "status_code": 200,
+      "header": {
+        "Content-Type": [
+          "application/vnd.github.v3.sha; charset=utf-8"
+        ]
+      },
+      "body": "7fd1a60b01f91b314f59955a4e4d4e80d8edf11d"
+    }
+  }
+]

@@ -1,0 +1,17 @@
+[
+  {
+    "request": {
+      "method": "GET",
+      "url": "https://api.example.test/hello"
+    },
+    "response": {
+      "status_code": 200,
+      "header": {
+        "Content-Type": [
+          "text/plain"
+        ]
+      },
+      "body": "hello from the fixture"
+    }
+  }
+]
