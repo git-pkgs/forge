@@ -23,3 +23,20 @@ func (f *radicleForge) ParsePath(parts []string) (*forges.ResourceRef, error) {
 	}
 	return nil, fmt.Errorf("URL path must contain a radicle repository ID (rad:...)")
 }
+
+// RemoteScheme is the URL scheme of git remotes set up by rad clone and rad init.
+const RemoteScheme = "rad://"
+
+// ParseRemoteURL returns the repository ID from a rad://<RID> fetch URL or a
+// rad://<RID>/<NID> push URL.
+func ParseRemoteURL(rawURL string) (string, error) {
+	rest, ok := strings.CutPrefix(strings.TrimSpace(rawURL), RemoteScheme)
+	if !ok {
+		return "", fmt.Errorf("not a radicle remote URL: %q", rawURL)
+	}
+	id, _, _ := strings.Cut(rest, "/")
+	if strings.HasPrefix(id, RIDPrefix) {
+		return "", fmt.Errorf("invalid radicle remote URL %q", rawURL)
+	}
+	return rid("", id)
+}

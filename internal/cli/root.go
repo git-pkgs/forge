@@ -35,14 +35,18 @@ var rootCmd = &cobra.Command{
 			}
 		}
 
-		remote := "origin"
+		remote := ""
 		if cfg != nil && cfg.Default.Remote != "" {
 			remote = cfg.Default.Remote
 		}
 		if cmd.Flags().Changed("remote") && flagRemote != "" {
 			remote = flagRemote
 		}
-		resolve.SetRemote(remote)
+		if remote == "" {
+			resolve.UseDefaultRemote()
+		} else {
+			resolve.SetRemote(remote)
+		}
 		resolve.SetHost(flagHost)
 		resolve.SetForgeType(flagForgeType)
 

@@ -554,3 +554,36 @@ func TestUnsupportedServices(t *testing.T) {
 		t.Errorf("GetAuthenticatedUser error = %v, want ErrNotSupported", err)
 	}
 }
+
+func TestParseRemoteURL(t *testing.T) {
+	const nid = "z6MksFqXN3Yhqk8pTJdUGLwATkRfQvwZXPqR2qMEhbS9wzpT"
+	id := strings.TrimPrefix(testRID, RIDPrefix)
+
+	valid := []string{
+		"rad://" + id,
+		"rad://" + id + "/" + nid,
+		" rad://" + id + "\n",
+	}
+	for _, in := range valid {
+		got, err := ParseRemoteURL(in)
+		if err != nil || got != testRID {
+			t.Errorf("ParseRemoteURL(%q) = %q, %v, want %q", in, got, err, testRID)
+		}
+	}
+
+	invalid := []string{
+		"",
+		"rad://",
+		"rad:///" + nid,
+		"rad://" + testRID,
+		"rad://" + id + "?x=1",
+		"rad:" + id,
+		"https://seed.radicle.dev/" + id + ".git",
+		"git@github.com:owner/repo.git",
+	}
+	for _, in := range invalid {
+		if got, err := ParseRemoteURL(in); err == nil {
+			t.Errorf("ParseRemoteURL(%q) = %q, want error", in, got)
+		}
+	}
+}
