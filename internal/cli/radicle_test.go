@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"os/exec"
 	"strings"
 	"testing"
 
@@ -41,13 +42,20 @@ func radicleCLIServer(t *testing.T) *httptest.Server {
 
 func runRadicleCLI(t *testing.T, args ...string) (string, error) {
 	t.Helper()
+	return runRadicleCLIWithHost(t, "", args...)
+}
+
+// runRadicleCLIWithHost picks the node through FORGE_HOST, since --host sets
+// state in resolve that would outlive the test.
+func runRadicleCLIWithHost(t *testing.T, forgeHost string, args ...string) (string, error) {
+	t.Helper()
 	resetCmd(rootCmd)
 	t.Cleanup(func() {
 		resetCmd(rootCmd)
 		rootCmd.SetArgs(nil)
 	})
 	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
-	t.Setenv("FORGE_HOST", "")
+	t.Setenv("FORGE_HOST", forgeHost)
 	config.ResetCache()
 	t.Cleanup(config.ResetCache)
 
@@ -103,5 +111,34 @@ func TestRepoDisplayName(t *testing.T) {
 	}
 	if got := repoDisplayName("", cliTestRID); got != cliTestRID {
 		t.Errorf("repoDisplayName with empty owner = %q, want %q", got, cliTestRID)
+	}
+}
+
+func TestRadicleRemoteFallbackOnlyForDefaultRemote(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not installed")
+	}
+	srv := radicleCLIServer(t)
+
+	t.Chdir(t.TempDir())
+	t.Setenv("GIT_CONFIG_GLOBAL", "/dev/null")
+	t.Setenv("GIT_CONFIG_SYSTEM", "/dev/null")
+	for _, args := range [][]string{{"init", "-q"}, {"remote", "add", "rad", "rad://" + strings.TrimPrefix(cliTestRID, "rad:")}} {
+		if out, err := exec.Command("git", args...).CombinedOutput(); err != nil {
+			t.Fatalf("git %v: %v\n%s", args, err, out)
+		}
+	}
+
+	stdout, err := runRadicleCLIWithHost(t, srv.URL, "--output", "json", "repo", "view")
+	if err != nil {
+		t.Fatalf("repo view with the default remote: %v", err)
+	}
+	if !strings.Contains(stdout, `"full_name": "`+cliTestRID+`"`) {
+		t.Errorf("repo view output = %s", stdout)
+	}
+
+	_, err = runRadicleCLIWithHost(t, srv.URL, "--remote", "origin", "repo", "view")
+	if err == nil || !strings.Contains(err.Error(), `reading remote "origin"`) {
+		t.Fatalf("repo view with --remote origin: error = %v, want missing origin", err)
 	}
 }

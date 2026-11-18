@@ -1281,6 +1281,19 @@ func TestRepoResolvesRadicleRemote(t *testing.T) {
 			wantErr: `reading remote "origin"`,
 		},
 		{
+			name:    "no fallback when origin is chosen explicitly",
+			remotes: map[string]string{"rad": radURL},
+			remote:  "origin",
+			host:    "seed.radicle.dev",
+			wantErr: `reading remote "origin"`,
+		},
+		{
+			name:    "fallback error names the rad remote",
+			remotes: map[string]string{"rad": "rad://"},
+			host:    "seed.radicle.dev",
+			wantErr: `parsing remote "rad" URL`,
+		},
+		{
 			name:    "no fallback for a remote other than origin",
 			remotes: map[string]string{"rad": radURL},
 			remote:  "upstream",
@@ -1311,14 +1324,17 @@ func TestRepoResolvesRadicleRemote(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			dir := t.TempDir()
 			t.Chdir(dir)
+			isolateGitConfig(t)
 			t.Setenv("XDG_CONFIG_HOME", t.TempDir())
 			t.Setenv("FORGE_HOST", "")
 			config.ResetCache()
 			t.Cleanup(config.ResetCache)
 
-			oldR, oldH, oldS, oldT := remoteName, hostOverride, schemeOverride, forgeTypeOverride
-			t.Cleanup(func() { remoteName, hostOverride, schemeOverride, forgeTypeOverride = oldR, oldH, oldS, oldT })
-			remoteName, hostOverride, schemeOverride, forgeTypeOverride = "origin", "", "", ""
+			restoreRemote(t)
+			oldH, oldS, oldT := hostOverride, schemeOverride, forgeTypeOverride
+			t.Cleanup(func() { hostOverride, schemeOverride, forgeTypeOverride = oldH, oldS, oldT })
+			hostOverride, schemeOverride, forgeTypeOverride = "", "", ""
+			UseDefaultRemote()
 			SetRemote(tt.remote)
 			SetHost(tt.host)
 
@@ -1353,16 +1369,78 @@ func TestRemoteURLPrefersOriginOverRad(t *testing.T) {
 		t.Skip("git not installed")
 	}
 	t.Chdir(t.TempDir())
-	old := remoteName
-	t.Cleanup(func() { remoteName = old })
-	remoteName = "origin"
+	isolateGitConfig(t)
+	restoreRemote(t)
+	UseDefaultRemote()
 
 	mustGit(t, "init", "-q")
 	mustGit(t, "remote", "add", "origin", "git@github.com:owner/repo.git")
 	mustGit(t, "remote", "add", "rad", "rad://z3gqcJUoA1n9HaHKufZs5FCSGazv5")
 
-	got, err := remoteURL()
-	if err != nil || got != "git@github.com:owner/repo.git" {
-		t.Fatalf("remoteURL() = %q, %v, want the origin URL", got, err)
+	name, got, err := remoteURL()
+	if err != nil || name != "origin" || got != "git@github.com:owner/repo.git" {
+		t.Fatalf("remoteURL() = %q, %q, %v, want the origin URL", name, got, err)
 	}
+}
+
+func TestDomainIgnoresRadicleRemotes(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not installed")
+	}
+	const radURL = "rad://z3gqcJUoA1n9HaHKufZs5FCSGazv5"
+
+	for name, remotes := range map[string]map[string]string{
+		"rad fallback":               {"rad": radURL},
+		"origin with extra segments": {"origin": radURL + "/z6MksFqXN3Yhqk8pTJdUGLwATkRfQvwZXPqR2qMEhbS9wzpT/extra"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Chdir(t.TempDir())
+			isolateGitConfig(t)
+			t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+			t.Setenv("FORGE_HOST", "")
+			config.ResetCache()
+			t.Cleanup(config.ResetCache)
+			restoreRemote(t)
+			UseDefaultRemote()
+			oldH := hostOverride
+			t.Cleanup(func() { hostOverride = oldH })
+			hostOverride = ""
+
+			mustGit(t, "init", "-q")
+			for n, u := range remotes {
+				mustGit(t, "remote", "add", n, u)
+			}
+
+			if got := Domain(""); got != "github.com" {
+				t.Errorf("Domain(\"\") = %q, want the github.com default", got)
+			}
+		})
+	}
+}
+
+func TestSetRemoteMarksChoice(t *testing.T) {
+	restoreRemote(t)
+
+	UseDefaultRemote()
+	if remoteName != "origin" || remoteChosen {
+		t.Errorf("UseDefaultRemote: remote %q chosen %v, want origin and false", remoteName, remoteChosen)
+	}
+	SetRemote("origin")
+	if !remoteChosen {
+		t.Error("SetRemote(\"origin\") should count as a choice")
+	}
+}
+
+// isolateGitConfig keeps the developer's git config, such as url.*.insteadOf
+// rules, away from the resolver's own git calls.
+func isolateGitConfig(t *testing.T) {
+	t.Helper()
+	t.Setenv("GIT_CONFIG_GLOBAL", "/dev/null")
+	t.Setenv("GIT_CONFIG_SYSTEM", "/dev/null")
+}
+
+func restoreRemote(t *testing.T) {
+	t.Helper()
+	oldName, oldChosen := remoteName, remoteChosen
+	t.Cleanup(func() { remoteName, remoteChosen = oldName, oldChosen })
 }
