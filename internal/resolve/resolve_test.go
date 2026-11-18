@@ -1239,3 +1239,130 @@ ssh_host = SSH.Example.com
 		t.Errorf("TokenForDomain mixed case = %q, want secret", got)
 	}
 }
+
+func TestRepoResolvesRadicleRemote(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not installed")
+	}
+
+	const (
+		rid = "rad:z3gqcJUoA1n9HaHKufZs5FCSGazv5"
+		nid = "z6MksFqXN3Yhqk8pTJdUGLwATkRfQvwZXPqR2qMEhbS9wzpT"
+	)
+	radURL := "rad://" + strings.TrimPrefix(rid, "rad:")
+
+	tests := []struct {
+		name      string
+		remotes   map[string]string
+		remote    string
+		host      string
+		forgeType string
+		wantErr   string
+	}{
+		{
+			name:    "origin fetch URL",
+			remotes: map[string]string{"origin": radURL},
+			host:    "seed.radicle.dev",
+		},
+		{
+			name:    "origin push URL with node ID",
+			remotes: map[string]string{"origin": radURL + "/" + nid},
+			host:    "seed.radicle.dev",
+		},
+		{
+			name:    "rad remote when origin is missing",
+			remotes: map[string]string{"rad": radURL},
+			host:    "seed.radicle.dev",
+		},
+		{
+			name:    "rad remote that is not rad:// is not used",
+			remotes: map[string]string{"rad": "https://github.com/owner/repo.git"},
+			host:    "seed.radicle.dev",
+			wantErr: `reading remote "origin"`,
+		},
+		{
+			name:    "no fallback for a remote other than origin",
+			remotes: map[string]string{"rad": radURL},
+			remote:  "upstream",
+			host:    "seed.radicle.dev",
+			wantErr: `reading remote "upstream"`,
+		},
+		{
+			name:    "no node configured",
+			remotes: map[string]string{"origin": radURL},
+			wantErr: "no Radicle node configured",
+		},
+		{
+			name:      "conflicting forge type",
+			remotes:   map[string]string{"origin": radURL},
+			host:      "seed.radicle.dev",
+			forgeType: "github",
+			wantErr:   "is a Radicle ID",
+		},
+		{
+			name:    "invalid rad URL",
+			remotes: map[string]string{"origin": "rad://"},
+			host:    "seed.radicle.dev",
+			wantErr: `parsing remote "origin" URL`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dir := t.TempDir()
+			t.Chdir(dir)
+			t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+			t.Setenv("FORGE_HOST", "")
+			config.ResetCache()
+			t.Cleanup(config.ResetCache)
+
+			oldR, oldH, oldS, oldT := remoteName, hostOverride, schemeOverride, forgeTypeOverride
+			t.Cleanup(func() { remoteName, hostOverride, schemeOverride, forgeTypeOverride = oldR, oldH, oldS, oldT })
+			remoteName, hostOverride, schemeOverride, forgeTypeOverride = "origin", "", "", ""
+			SetRemote(tt.remote)
+			SetHost(tt.host)
+
+			mustGit(t, "init", "-q")
+			for name, u := range tt.remotes {
+				mustGit(t, "remote", "add", name, u)
+			}
+
+			f, owner, repo, domain, err := Repo("", tt.forgeType)
+			if tt.wantErr != "" {
+				if err == nil || !strings.Contains(err.Error(), tt.wantErr) {
+					t.Fatalf("error = %v, want it to contain %q", err, tt.wantErr)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("Repo: %v", err)
+			}
+			if owner != "" || repo != rid || domain != "seed.radicle.dev" {
+				t.Errorf("got owner %q repo %q domain %q, want empty owner, %q and seed.radicle.dev", owner, repo, domain, rid)
+			}
+			p, ok := f.(forges.APIBaseURLProvider)
+			if !ok || p.APIBaseURL() != "https://seed.radicle.dev/api/v1" {
+				t.Errorf("forge is not the Radicle backend for seed.radicle.dev: %T", f)
+			}
+		})
+	}
+}
+
+func TestRemoteURLPrefersOriginOverRad(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not installed")
+	}
+	t.Chdir(t.TempDir())
+	old := remoteName
+	t.Cleanup(func() { remoteName = old })
+	remoteName = "origin"
+
+	mustGit(t, "init", "-q")
+	mustGit(t, "remote", "add", "origin", "git@github.com:owner/repo.git")
+	mustGit(t, "remote", "add", "rad", "rad://z3gqcJUoA1n9HaHKufZs5FCSGazv5")
+
+	got, err := remoteURL()
+	if err != nil || got != "git@github.com:owner/repo.git" {
+		t.Fatalf("remoteURL() = %q, %v, want the origin URL", got, err)
+	}
+}

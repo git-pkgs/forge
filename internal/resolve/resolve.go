@@ -121,7 +121,7 @@ func Repo(flagRepo, flagForgeType string) (forge forges.Forge, owner, repo, doma
 
 func repoFromFlag(flagRepo, flagForgeType string) (forges.Forge, string, string, string, error) {
 	if host, hasHost, rid, ok := splitRadicleRepo(flagRepo); ok {
-		return radicleRepoFromFlag(host, hasHost, rid, flagForgeType)
+		return radicleRepo(host, hasHost, rid, flagForgeType)
 	}
 
 	parts := strings.Split(flagRepo, "/")
@@ -165,7 +165,7 @@ func splitRadicleRepo(flagRepo string) (host string, hasHost bool, rid string, o
 }
 
 // There is deliberately no default node, so a RID never goes to a seed the user did not choose.
-func radicleRepoFromFlag(host string, hasHost bool, rid, flagForgeType string) (forges.Forge, string, string, string, error) {
+func radicleRepo(host string, hasHost bool, rid, flagForgeType string) (forges.Forge, string, string, string, error) {
 	ft := flagForgeType
 	if ft == "" {
 		ft = forgeTypeOverride
@@ -242,8 +242,19 @@ func radicleDomain() (string, error) {
 	}
 }
 
-func repoFromGitRemote(_ string) (forges.Forge, string, string, string, error) {
-	domain, owner, repo, err := resolveRemote()
+func repoFromGitRemote(flagForgeType string) (forges.Forge, string, string, string, error) {
+	rawURL, err := remoteURL()
+	if err != nil {
+		return nil, "", "", "", err
+	}
+	if strings.HasPrefix(rawURL, radicle.RemoteScheme) {
+		rid, err := radicle.ParseRemoteURL(rawURL)
+		if err != nil {
+			return nil, "", "", "", fmt.Errorf("parsing remote %q URL: %w", remoteName, err)
+		}
+		return radicleRepo("", false, rid, flagForgeType)
+	}
+	domain, owner, repo, err := parseRemoteURL(rawURL)
 	if err != nil {
 		return nil, "", "", "", err
 	}
@@ -306,12 +317,32 @@ func ResourceFromURL(rawURL string) (forge forges.Forge, domain string, ref *for
 }
 
 func resolveRemote() (domain, owner, repo string, err error) {
-	url, err := gitRemoteURL(remoteName)
+	rawURL, err := remoteURL()
 	if err != nil {
-		return "", "", "", fmt.Errorf("reading remote %q (not in a git repo, or remote not configured; use -R or --remote): %w", remoteName, err)
+		return "", "", "", err
 	}
+	return parseRemoteURL(rawURL)
+}
 
-	domain, owner, repo, err = forges.ParseRepoURL(url)
+// radicleRemoteName is the remote rad clone and rad init create in place of origin.
+const radicleRemoteName = "rad"
+
+// remoteURL falls back to a rad:// "rad" remote when origin is missing.
+func remoteURL() (string, error) {
+	rawURL, err := gitRemoteURL(remoteName)
+	if err == nil {
+		return rawURL, nil
+	}
+	if remoteName == "origin" {
+		if radURL, radErr := gitRemoteURL(radicleRemoteName); radErr == nil && strings.HasPrefix(radURL, radicle.RemoteScheme) {
+			return radURL, nil
+		}
+	}
+	return "", fmt.Errorf("reading remote %q (not in a git repo, or remote not configured; use -R or --remote): %w", remoteName, err)
+}
+
+func parseRemoteURL(rawURL string) (domain, owner, repo string, err error) {
+	domain, owner, repo, err = forges.ParseRepoURL(rawURL)
 	if err != nil {
 		return "", "", "", fmt.Errorf("parsing remote %q URL: %w", remoteName, err)
 	}
