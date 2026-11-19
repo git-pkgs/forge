@@ -358,7 +358,7 @@ p, _ := purl.Parse("pkg:npm/lodash?repository_url=https://github.com/lodash/loda
 repo, err := client.FetchRepositoryFromPURL(ctx, p)
 ```
 
-Branches, tags and abbreviated commit refs can be resolved to full commit SHAs without listing every tag. GitHub, GitLab and Gitea/Forgejo implement this; the remaining backends return `forges.ErrNotSupported`.
+Branches, tags and abbreviated commit refs can be resolved to full commit SHAs without listing every tag. GitHub, GitLab, Gitea/Forgejo and Bitbucket Cloud implement this; the remaining backends return `forges.ErrNotSupported`.
 
 ```go
 f, _ := client.ForgeFor("gitlab.com")
