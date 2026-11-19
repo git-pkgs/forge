@@ -170,11 +170,11 @@ func NormalizeCommitStatusState(state string) CommitStatusState {
 		return CommitStatusSuccess
 	case "failure", "failed", "fail", "failing", "declined", "rejected":
 		return CommitStatusFailure
-	case "pending", "queued", "running", "in_progress", "created", "waiting":
+	case "pending", "queued", "running", "in_progress", "inprogress", "created", "waiting":
 		return CommitStatusPending
 	case "error", "errored", "broken":
 		return CommitStatusError
-	case "cancelled", "canceled":
+	case "cancelled", "canceled", "stopped":
 		return CommitStatusCancelled
 	case "skipped", "skip":
 		return CommitStatusSkipped

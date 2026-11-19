@@ -53,8 +53,12 @@ func TestNormalizeCommitStatusState(t *testing.T) {
 		{"approved", CommitStatusSuccess},
 		{"failed", CommitStatusFailure},
 		{"in_progress", CommitStatusPending},
+		{"INPROGRESS", CommitStatusPending},
 		{"errored", CommitStatusError},
 		{"canceled", CommitStatusCancelled},
+		{"STOPPED", CommitStatusCancelled},
+		{"SUCCESSFUL", CommitStatusSuccess},
+		{"FAILED", CommitStatusFailure},
 		{"unexpected", CommitStatusUnknown},
 	}
 
