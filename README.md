@@ -194,6 +194,8 @@ repo, err := client.FetchRepository(ctx, "https://github.com/octocat/hello-world
 
 The `Forge` interface exposes services for repos, issues, pull requests, reviews, releases, CI, branches, labels, milestones, deploy keys, webhooks, secrets, notifications, files, collaborators, commit statuses, commits and artifact attestations. Each backend implements these using its native SDK.
 
+On Bitbucket Cloud, secrets are the repository's Bitbucket Pipelines variables. Listing returns every variable, secured or not, and setting one stores a secured variable, updating and securing any existing variable with that name. Bitbucket deploy keys can only read, so creating one with `ReadOnly` unset (`forge deploy-key add --read-only=false`) returns `forges.ErrNotSupported`.
+
 Under TinyGo, `gitlab.New` retains its signature and returns a backend whose API operations report `forges.ErrNotSupported`. GitLab URL parsing, web link builders and webhook parsing remain available. Native Go retains the full GitLab implementation.
 
 ```go
