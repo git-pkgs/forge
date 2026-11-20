@@ -12,6 +12,24 @@ import (
 // These tests replay responses recorded from api.bitbucket.org. Re-record
 // them with FORGE_RECORD=1 go test ./bitbucket -run TestReplay.
 
+func TestReplayListCommitStatuses(t *testing.T) {
+	f := New("", httpreplay.Client(t))
+	statuses, err := f.CommitStatuses().List(context.Background(), "atlassian", "atlassian-connect-express", "fd61ca641c0db3ab42ad10bc1b2b7190033aee77")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if len(statuses) != 1 {
+		t.Fatalf("got %d statuses, want 1", len(statuses))
+	}
+	assertEqual(t, "State", "failure", statuses[0].State)
+	assertEqual(t, "Context", "default", statuses[0].Context)
+	assertEqual(t, "TargetURL", "https://bitbucket.org/atlassian/atlassian-connect-express/pipelines/results/2865", statuses[0].TargetURL)
+	if statuses[0].CreatedAt.IsZero() {
+		t.Error("CreatedAt is zero")
+	}
+}
+
 func TestReplayGetRepo(t *testing.T) {
 	f := New("", httpreplay.Client(t))
 	repo, err := f.Repos().Get(context.Background(), "tutorials", "markdowndemo")
