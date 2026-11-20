@@ -115,7 +115,9 @@ func TestBitbucketCreateDeployKey(t *testing.T) {
 	mux.HandleFunc("POST /2.0/repositories/atlassian/stash/deploy-keys", func(w http.ResponseWriter, r *http.Request) {
 		var body map[string]any
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-			t.Fatalf("decoding body: %v", err)
+			t.Errorf("decoding body: %v", err)
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
 		}
 		want := map[string]any{"key": deployKeyTestKey, "label": "ci"}
 		if len(body) != len(want) || body["key"] != want["key"] || body["label"] != want["label"] {

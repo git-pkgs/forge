@@ -92,7 +92,7 @@ func decodeVariableBody(t *testing.T, r *http.Request) map[string]any {
 	t.Helper()
 	var body map[string]any
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		t.Fatalf("decoding body: %v", err)
+		t.Errorf("decoding body: %v", err)
 	}
 	return body
 }
