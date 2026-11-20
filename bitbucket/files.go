@@ -161,8 +161,26 @@ func (s *bitbucketFileService) List(ctx context.Context, owner, repo, filePath, 
 			})
 		}
 		u = page.Next
+		if u != "" && !sameOrigin(u, bitbucketAPI) {
+			return nil, fmt.Errorf("refusing to follow pagination link to %s", u)
+		}
 	}
 	return entries, nil
+}
+
+// sameOrigin reports whether u has the same scheme and host as base. Listing
+// pages come from file content when dir turns out to be a file, so a next link
+// is only followed if it stays on the API, where the bearer token is sent.
+func sameOrigin(u, base string) bool {
+	a, err := url.Parse(u)
+	if err != nil {
+		return false
+	}
+	b, err := url.Parse(base)
+	if err != nil {
+		return false
+	}
+	return a.Scheme == b.Scheme && a.Host == b.Host
 }
 
 // listPage fetches one page of the listing of dir. The /src endpoint serves a

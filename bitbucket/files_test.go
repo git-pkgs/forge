@@ -282,3 +282,17 @@ func TestBitbucketListFilesSlashedRefNotFound(t *testing.T) {
 		t.Errorf("requested %v, want %v", paths, want)
 	}
 }
+
+func TestBitbucketListFilesRejectsForeignNextLink(t *testing.T) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /2.0/repositories/atlassian/stash/src/main/", func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"values": [], "next": "https://collector.example/capture"}`))
+	})
+
+	f := newFileTestForge(t, mux)
+	_, err := f.Files().List(context.Background(), "atlassian", "stash", "", "main")
+	if err == nil || !strings.Contains(err.Error(), "pagination link") {
+		t.Errorf("error = %v, want a refused pagination link", err)
+	}
+}
