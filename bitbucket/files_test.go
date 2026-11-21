@@ -15,17 +15,6 @@ import (
 
 const fileTestCommit = "5b6c39df3196eeeb8a36684beb9a3df854a0b5f3"
 
-// newFileTestForge points the Bitbucket API at a test server running h.
-func newFileTestForge(t *testing.T, h http.Handler) forge.Forge {
-	t.Helper()
-	srv := httptest.NewServer(h)
-	t.Cleanup(srv.Close)
-	origAPI := bitbucketAPI
-	setBitbucketAPI(srv.URL + "/2.0")
-	t.Cleanup(func() { setBitbucketAPI(origAPI) })
-	return New("test-token", srv.Client())
-}
-
 func writeSrcMeta(w http.ResponseWriter, path, typ string, size int64) {
 	_ = json.NewEncoder(w).Encode(map[string]any{
 		"path":   path,
@@ -51,7 +40,7 @@ func TestBitbucketGetFile(t *testing.T) {
 		_, _ = w.Write([]byte("hello"))
 	})
 
-	f := newFileTestForge(t, mux)
+	f := newCommitTestForge(t, mux)
 	file, err := f.Files().Get(context.Background(), "atlassian", "stash", "docs/README.md", "main")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -71,7 +60,7 @@ func TestBitbucketGetFileDefaultsToHEAD(t *testing.T) {
 		_, _ = w.Write([]byte("x: y"))
 	})
 
-	f := newFileTestForge(t, mux)
+	f := newCommitTestForge(t, mux)
 	file, err := f.Files().Get(context.Background(), "atlassian", "stash", "FUNDING.yml", "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -80,7 +69,7 @@ func TestBitbucketGetFileDefaultsToHEAD(t *testing.T) {
 }
 
 func TestBitbucketGetFileSlashedRef(t *testing.T) {
-	f := newFileTestForge(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	f := newCommitTestForge(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.EscapedPath() {
 		case "/2.0/repositories/atlassian/stash/refs/branches/feature%2Flogin":
 			_ = json.NewEncoder(w).Encode(map[string]any{
@@ -111,7 +100,7 @@ func TestBitbucketGetFileDirectory(t *testing.T) {
 		writeSrcMeta(w, "docs", "commit_directory", 0)
 	})
 
-	f := newFileTestForge(t, mux)
+	f := newCommitTestForge(t, mux)
 	_, err := f.Files().Get(context.Background(), "atlassian", "stash", "docs", "main")
 	if err == nil || !strings.Contains(err.Error(), "docs is a directory") {
 		t.Fatalf("error = %v, want directory error", err)
@@ -124,7 +113,7 @@ func TestBitbucketGetFileTooLarge(t *testing.T) {
 		writeSrcMeta(w, "big.bin", "commit_file", maxFileSize+1)
 	})
 
-	f := newFileTestForge(t, mux)
+	f := newCommitTestForge(t, mux)
 	_, err := f.Files().Get(context.Background(), "atlassian", "stash", "big.bin", "main")
 	if err == nil || !strings.Contains(err.Error(), "limit") {
 		t.Fatalf("error = %v, want size limit error", err)
@@ -132,7 +121,7 @@ func TestBitbucketGetFileTooLarge(t *testing.T) {
 }
 
 func TestBitbucketGetFileNotFound(t *testing.T) {
-	f := newFileTestForge(t, http.NotFoundHandler())
+	f := newCommitTestForge(t, http.NotFoundHandler())
 	_, err := f.Files().Get(context.Background(), "atlassian", "stash", "missing.txt", "main")
 	if !errors.Is(err, forge.ErrNotFound) {
 		t.Fatalf("error = %v, want ErrNotFound", err)
@@ -150,13 +139,21 @@ func TestBitbucketGetFileRequiresPath(t *testing.T) {
 
 func TestBitbucketFilePathsStayInsideSrc(t *testing.T) {
 	var paths []string
-	f := newFileTestForge(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	f := newCommitTestForge(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		paths = append(paths, r.URL.EscapedPath())
 		http.NotFound(w, r)
 	}))
 
 	ctx := context.Background()
 	_, _ = f.Files().Get(ctx, "atlassian", "stash", "../../../pullrequests/1", "main")
+	for _, ref := range []string{".", ".."} {
+		if _, err := f.Files().Get(ctx, "atlassian", "stash", "pullrequests/1", ref); err == nil {
+			t.Errorf("Get with ref %q succeeded, want an error", ref)
+		}
+		if _, err := f.Files().List(ctx, "atlassian", "stash", "docs", ref); err == nil {
+			t.Errorf("List with ref %q succeeded, want an error", ref)
+		}
+	}
 	_, _ = f.Files().List(ctx, "atlassian", "stash", "docs/../../..", "main")
 
 	want := []string{
@@ -237,7 +234,7 @@ func TestBitbucketListFilesSubdirectory(t *testing.T) {
 		})
 	})
 
-	f := newFileTestForge(t, mux)
+	f := newCommitTestForge(t, mux)
 	entries, err := f.Files().List(context.Background(), "atlassian", "stash", "/docs/guides/", "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -256,7 +253,7 @@ func TestBitbucketListFilesOnFile(t *testing.T) {
 		_, _ = w.Write([]byte(`{"values": []}`))
 	})
 
-	f := newFileTestForge(t, mux)
+	f := newCommitTestForge(t, mux)
 	_, err := f.Files().List(context.Background(), "atlassian", "stash", "package.json", "main")
 	if err == nil || !strings.Contains(err.Error(), "package.json is not a directory") {
 		t.Fatalf("error = %v, want not a directory error", err)
@@ -265,7 +262,7 @@ func TestBitbucketListFilesOnFile(t *testing.T) {
 
 func TestBitbucketListFilesSlashedRefNotFound(t *testing.T) {
 	var paths []string
-	f := newFileTestForge(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	f := newCommitTestForge(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		paths = append(paths, r.URL.EscapedPath())
 		http.NotFound(w, r)
 	}))
@@ -290,7 +287,7 @@ func TestBitbucketListFilesRejectsForeignNextLink(t *testing.T) {
 		_, _ = w.Write([]byte(`{"values": [], "next": "https://collector.example/capture"}`))
 	})
 
-	f := newFileTestForge(t, mux)
+	f := newCommitTestForge(t, mux)
 	_, err := f.Files().List(context.Background(), "atlassian", "stash", "", "main")
 	if err == nil || !strings.Contains(err.Error(), "pagination link") {
 		t.Errorf("error = %v, want a refused pagination link", err)

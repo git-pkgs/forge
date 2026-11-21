@@ -70,13 +70,15 @@ func srcURL(owner, repo, rev string, segments []string) string {
 }
 
 // srcRevision returns the revision to put in a /src URL for ref. An empty ref
-// means the main branch, which Bitbucket serves as HEAD. The /src endpoint
-// takes the revision as a single path segment, so a branch or tag containing
-// a slash is resolved to its commit first.
+// means the main branch, which Bitbucket serves as HEAD.
 func (s *bitbucketFileService) srcRevision(ctx context.Context, owner, repo, ref string) (string, error) {
 	switch {
 	case ref == "":
 		return "HEAD", nil
+	case ref == "." || ref == "..":
+		// Not valid ref names, and Bitbucket would resolve them as path
+		// segments and read other API resources.
+		return "", fmt.Errorf("invalid ref %q", ref)
 	case strings.Contains(ref, "/"):
 		return resolveSlashedRef(ctx, s.repoService(), owner, repo, ref)
 	default:
@@ -168,9 +170,8 @@ func (s *bitbucketFileService) List(ctx context.Context, owner, repo, filePath, 
 	return entries, nil
 }
 
-// sameOrigin reports whether u has the same scheme and host as base. Listing
-// pages come from file content when dir turns out to be a file, so a next link
-// is only followed if it stays on the API, where the bearer token is sent.
+// sameOrigin reports whether u has the same scheme and host as base. Next links
+// are fetched with the bearer token, so they must stay on the API origin.
 func sameOrigin(u, base string) bool {
 	a, err := url.Parse(u)
 	if err != nil {
@@ -183,9 +184,8 @@ func sameOrigin(u, base string) bool {
 	return a.Scheme == b.Scheme && a.Host == b.Host
 }
 
-// listPage fetches one page of the listing of dir. The /src endpoint serves a
-// file's raw content rather than an error when dir names a file, which shows
-// up as a response that isn't JSON.
+// listPage fetches one page of the listing of dir. When dir names a file, /src
+// serves its content instead of an error, so a non-JSON response means a file.
 func listPage(ctx context.Context, rs *bitbucketRepoService, u, dir string) (*bbSrcResponse, error) {
 	resp, err := rs.send(ctx, http.MethodGet, u, nil)
 	if err != nil {

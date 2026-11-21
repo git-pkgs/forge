@@ -26,10 +26,7 @@ type bbRef struct {
 	} `json:"target"`
 }
 
-// ResolveCommit returns the full commit SHA for ref in owner/repo. The
-// single-commit endpoint resolves branches, tags and abbreviated SHAs, but it
-// takes the ref as a path segment and can't route one that contains a slash,
-// such as "feature/login". Those are looked up as a branch and then as a tag.
+// ResolveCommit returns the full commit SHA for ref in owner/repo.
 func (s *bitbucketCommitService) ResolveCommit(ctx context.Context, owner, repo, ref string) (string, error) {
 	if err := forge.ValidateCommitRef(owner, repo, ref); err != nil {
 		return "", err
@@ -60,10 +57,9 @@ func (s *bitbucketCommitService) ResolveCommit(ctx context.Context, owner, repo,
 }
 
 // resolveSlashedRef returns the commit hash of the branch or tag named ref.
-// Bitbucket only accepts a ref containing a slash on its refs endpoints, where
-// it is escaped into one path segment. Branches are tried first because that
-// is where slashed names are common. It returns forge.ErrNotFound when
-// neither exists.
+// Bitbucket only routes a ref containing a slash on its refs endpoints, where
+// it is escaped into one segment. Branches are tried first, then tags, and
+// forge.ErrNotFound is returned if neither exists.
 func resolveSlashedRef(ctx context.Context, rs *bitbucketRepoService, owner, repo, ref string) (string, error) {
 	for _, kind := range []string{"branches", "tags"} {
 		u := fmt.Sprintf("%s/repositories/%s/%s/refs/%s/%s", bitbucketAPI, owner, repo, kind, url.PathEscape(ref))
