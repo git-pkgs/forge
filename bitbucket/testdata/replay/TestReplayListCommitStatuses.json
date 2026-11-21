@@ -1,0 +1,17 @@
+[
+  {
+    "request": {
+      "method": "GET",
+      "url": "https://api.bitbucket.org/2.0/repositories/atlassian/atlassian-connect-express/commit/fd61ca641c0db3ab42ad10bc1b2b7190033aee77/statuses?pagelen=100"
+    },
+    "response": {
+      "status_code": 200,
+      "header": {
+        "Content-Type": [
+          "application/json; charset=utf-8"
+        ]
+      },
+      "body": "{\"values\": [{\"key\": \"default\", \"type\": \"build\", \"state\": \"FAILED\", \"name\": \"Pipeline - default\", \"refname\": \"release/12.2.3\", \"commit\": {\"hash\": \"fd61ca641c0db3ab42ad10bc1b2b7190033aee77\", \"links\": {\"self\": {\"href\": \"https://api.bitbucket.org/2.0/repositories/atlassian/atlassian-connect-express/commit/fd61ca641c0db3ab42ad10bc1b2b7190033aee77\"}, \"html\": {\"href\": \"https://bitbucket.org/atlassian/atlassian-connect-express/commits/fd61ca641c0db3ab42ad10bc1b2b7190033aee77\"}}, \"type\": \"commit\"}, \"url\": \"https://bitbucket.org/atlassian/atlassian-connect-express/pipelines/results/2865\", \"repository\": {\"type\": \"repository\", \"full_name\": \"atlassian/atlassian-connect-express\", \"links\": {\"self\": {\"href\": \"https://api.bitbucket.org/2.0/repositories/atlassian/atlassian-connect-express\"}, \"html\": {\"href\": \"https://bitbucket.org/atlassian/atlassian-connect-express\"}, \"avatar\": {\"href\": \"https://bytebucket.org/ravatar/%7B47b154f6-a82d-4e03-99ce-44fb75b4827c%7D?ts=138914\"}}, \"name\": \"atlassian-connect-express\", \"uuid\": \"{47b154f6-a82d-4e03-99ce-44fb75b4827c}\"}, \"description\": \"\", \"created_on\": \"2026-04-30T04:38:20.636159+00:00\", \"updated_on\": \"2026-04-30T06:38:22.087954+00:00\", \"links\": {\"self\": {\"href\": \"https://api.bitbucket.org/2.0/repositories/atlassian/atlassian-connect-express/commit/fd61ca641c0db3ab42ad10bc1b2b7190033aee77/statuses/build/default\"}, \"commit\": {\"href\": \"https://api.bitbucket.org/2.0/repositories/atlassian/atlassian-connect-express/commit/fd61ca641c0db3ab42ad10bc1b2b7190033aee77\"}}}], \"pagelen\": 100, \"size\": 1, \"page\": 1}"
+    }
+  }
+]
