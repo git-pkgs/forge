@@ -48,6 +48,20 @@ func TestReplayGetRepo(t *testing.T) {
 	}
 }
 
+func TestReplayListBranches(t *testing.T) {
+	f := New("", httpreplay.Client(t))
+	branches, err := f.Branches().List(context.Background(), "tutorials", "markdowndemo", forge.ListBranchOpts{})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if len(branches) != 1 {
+		t.Fatalf("got %d branches, want 1", len(branches))
+	}
+	assertEqual(t, "Name", "master", branches[0].Name)
+	assertEqual(t, "SHA", "5b6c39df3196eeeb8a36684beb9a3df854a0b5f3", branches[0].SHA)
+}
+
 func TestReplayGetRepoNotFound(t *testing.T) {
 	f := New("", httpreplay.Client(t))
 	_, err := f.Repos().Get(context.Background(), "tutorials", "this-repository-does-not-exist")
