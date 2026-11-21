@@ -9,10 +9,6 @@ import (
 	forge "github.com/git-pkgs/forge"
 )
 
-// maxBranchPageLen is the largest page Bitbucket serves from the refs
-// endpoints.
-const maxBranchPageLen = 100
-
 type bitbucketBranchService struct {
 	token      string
 	httpClient *http.Client
@@ -27,11 +23,6 @@ type bbBranch struct {
 	Target struct {
 		Hash string `json:"hash"`
 	} `json:"target"`
-}
-
-type bbBranchesResponse struct {
-	Values []bbBranch `json:"values"`
-	Next   string     `json:"next"`
 }
 
 // convertBitbucketBranch maps a Bitbucket branch. Branch objects don't say
@@ -50,41 +41,9 @@ func (s *bitbucketBranchService) doJSON(ctx context.Context, method, url string,
 }
 
 func (s *bitbucketBranchService) List(ctx context.Context, owner, repo string, opts forge.ListBranchOpts) ([]forge.Branch, error) {
-	perPage := opts.PerPage
-	if perPage <= 0 || perPage > maxBranchPageLen {
-		perPage = maxBranchPageLen
-	}
-	// A start page is counted in pages of perPage, so the page size can only
-	// shrink to the limit when listing from the first page.
-	if opts.Limit > 0 && perPage > opts.Limit && opts.Page <= 1 {
-		perPage = opts.Limit
-	}
-
-	u := fmt.Sprintf("%s/repositories/%s/%s/refs/branches?pagelen=%d", bitbucketAPI, owner, repo, perPage)
-	if opts.Page > 1 {
-		u += fmt.Sprintf("&page=%d", opts.Page)
-	}
-
-	var all []forge.Branch
-	for u != "" {
-		var page bbBranchesResponse
-		if err := s.doJSON(ctx, http.MethodGet, u, nil, &page); err != nil {
-			return nil, err
-		}
-		for _, bb := range page.Values {
-			all = append(all, convertBitbucketBranch(bb))
-		}
-		if opts.Limit > 0 && len(all) >= opts.Limit {
-			break
-		}
-		u = page.Next
-	}
-
-	if opts.Limit > 0 && len(all) > opts.Limit {
-		all = all[:opts.Limit]
-	}
-
-	return all, nil
+	u := fmt.Sprintf("%s/repositories/%s/%s/refs/branches?%s", bitbucketAPI, owner, repo, pageQuery(opts.Page, opts.PerPage, opts.Limit))
+	rs := &bitbucketRepoService{token: s.token, httpClient: s.httpClient}
+	return listPages(ctx, rs, u, opts.Limit, convertBitbucketBranch)
 }
 
 // Create creates branch name at the head of branch from, or at from itself

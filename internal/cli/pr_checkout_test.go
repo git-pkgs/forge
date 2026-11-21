@@ -92,6 +92,7 @@ type mockForge struct {
 	commitStatusService forges.CommitStatusService
 	checkRunService     forges.CheckRunService
 	attestationService  forges.AttestationService
+	deployKeyService    forges.DeployKeyService
 }
 
 func (m *mockForge) Repos() forges.RepoService                  { return m.repoService }
@@ -102,7 +103,7 @@ func (m *mockForge) Milestones() forges.MilestoneService        { return nil }
 func (m *mockForge) Releases() forges.ReleaseService            { return m.releaseService }
 func (m *mockForge) CI() forges.CIService                       { return m.ciService }
 func (m *mockForge) Branches() forges.BranchService             { return nil }
-func (m *mockForge) DeployKeys() forges.DeployKeyService        { return nil }
+func (m *mockForge) DeployKeys() forges.DeployKeyService        { return m.deployKeyService }
 func (m *mockForge) Webhooks() forges.WebhookService            { return m.webhookService }
 func (m *mockForge) Secrets() forges.SecretService              { return nil }
 func (m *mockForge) Notifications() forges.NotificationService  { return nil }
