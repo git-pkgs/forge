@@ -104,7 +104,12 @@ func deployKeyAddCmd() *cobra.Command {
 				ReadOnly: flagReadOnly,
 			})
 			if err != nil {
-				return notSupported(err, "deploy keys")
+				feature := "deploy keys"
+				// A bare ErrNotSupported means the forge has no deploy keys at all.
+				if !flagReadOnly && err != forges.ErrNotSupported {
+					feature = "deploy keys with write access"
+				}
+				return notSupported(err, feature)
 			}
 
 			p := printer()
