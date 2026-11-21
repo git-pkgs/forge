@@ -113,19 +113,22 @@ type bbReposResponse struct {
 	Next   string         `json:"next"`
 }
 
-func (s *bitbucketRepoService) doJSON(ctx context.Context, method, url string, body any, v any) error {
+// send makes a request and returns the response when its status is below
+// 400. A 404 becomes forge.ErrNotFound and any other error status a
+// forge.HTTPError. The caller closes the response body.
+func (s *bitbucketRepoService) send(ctx context.Context, method, url string, body any) (*http.Response, error) {
 	var bodyReader io.Reader
 	if body != nil {
 		b, err := json.Marshal(body)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		bodyReader = bytes.NewReader(b)
 	}
 
 	req, err := http.NewRequestWithContext(ctx, method, url, bodyReader)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if s.token != "" {
 		req.Header.Set("Authorization", "Bearer "+s.token)
@@ -136,19 +139,30 @@ func (s *bitbucketRepoService) doJSON(ctx context.Context, method, url string, b
 
 	resp, err := s.httpClient.Do(req)
 	if err != nil {
+		return nil, err
+	}
+
+	if resp.StatusCode == http.StatusNotFound {
+		_ = resp.Body.Close()
+		return nil, forge.ErrNotFound
+	}
+	if resp.StatusCode >= http.StatusBadRequest {
+		respBody, _ := io.ReadAll(resp.Body)
+		_ = resp.Body.Close()
+		return nil, &forge.HTTPError{StatusCode: resp.StatusCode, URL: url, Body: string(respBody)}
+	}
+	return resp, nil
+}
+
+func (s *bitbucketRepoService) doJSON(ctx context.Context, method, url string, body any, v any) error {
+	resp, err := s.send(ctx, method, url, body)
+	if err != nil {
 		return err
 	}
 	defer func() { _ = resp.Body.Close() }()
 
-	if resp.StatusCode == http.StatusNotFound {
-		return forge.ErrNotFound
-	}
 	if resp.StatusCode == http.StatusNoContent {
 		return nil
-	}
-	if resp.StatusCode >= http.StatusBadRequest {
-		respBody, _ := io.ReadAll(resp.Body)
-		return &forge.HTTPError{StatusCode: resp.StatusCode, URL: url, Body: string(respBody)}
 	}
 
 	if v != nil {
