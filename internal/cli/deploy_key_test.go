@@ -51,18 +51,21 @@ func TestDeployKeySubcommands(t *testing.T) {
 }
 
 func TestDeployKeyAddNotSupported(t *testing.T) {
+	wrapped := fmt.Errorf("creating a deploy key: %w", forges.ErrNotSupported)
 	tests := []struct {
 		name string
+		err  error
 		args []string
 		want string
 	}{
-		{"read-only", nil, "deploy keys is not supported by this forge"},
-		{"write access", []string{"--read-only=false"}, "deploy keys with write access is not supported by this forge"},
+		{"read-only", wrapped, nil, "deploy keys is not supported by this forge"},
+		{"write access", wrapped, []string{"--read-only=false"}, "deploy keys with write access is not supported by this forge"},
+		{"no deploy keys at all", forges.ErrNotSupported, []string{"--read-only=false"}, "deploy keys is not supported by this forge"},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			keys := &mockDeployKeyService{createErr: fmt.Errorf("creating a deploy key: %w", forges.ErrNotSupported)}
+			keys := &mockDeployKeyService{createErr: tt.err}
 			resolve.SetTestForge(&mockForge{deployKeyService: keys}, "owner", "repo", "example.com")
 			t.Cleanup(resolve.ResetTestForge)
 
