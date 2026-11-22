@@ -1,0 +1,32 @@
+[
+  {
+    "request": {
+      "method": "GET",
+      "url": "https://api.bitbucket.org/2.0/repositories/atlassian/atlassian-connect-express/src/v12.2.3/.nvmrc?format=meta"
+    },
+    "response": {
+      "status_code": 200,
+      "header": {
+        "Content-Type": [
+          "application/json; charset=utf-8"
+        ]
+      },
+      "body": "{\"path\":\".nvmrc\",\"commit\":{\"hash\":\"fd61ca641c0db3ab42ad10bc1b2b7190033aee77\",\"links\":{\"self\":{\"href\":\"https://api.bitbucket.org/2.0/repositories/atlassian/atlassian-connect-express/commit/fd61ca641c0db3ab42ad10bc1b2b7190033aee77\"},\"html\":{\"href\":\"https://bitbucket.org/atlassian/atlassian-connect-express/commits/fd61ca641c0db3ab42ad10bc1b2b7190033aee77\"}},\"type\":\"commit\"},\"type\":\"commit_file\",\"attributes\":[],\"escaped_path\":\".nvmrc\",\"size\":7,\"mimetype\":null,\"links\":{\"self\":{\"href\":\"https://api.bitbucket.org/2.0/repositories/atlassian/atlassian-connect-express/src/fd61ca641c0db3ab42ad10bc1b2b7190033aee77/.nvmrc\"},\"meta\":{\"href\":\"https://api.bitbucket.org/2.0/repositories/atlassian/atlassian-connect-express/src/fd61ca641c0db3ab42ad10bc1b2b7190033aee77/.nvmrc?format=meta\"},\"history\":{\"href\":\"https://api.bitbucket.org/2.0/repositories/atlassian/atlassian-connect-express/filehistory/fd61ca641c0db3ab42ad10bc1b2b7190033aee77/.nvmrc\"}},\"has_malware_warning\":false}"
+    }
+  },
+  {
+    "request": {
+      "method": "GET",
+      "url": "https://api.bitbucket.org/2.0/repositories/atlassian/atlassian-connect-express/src/fd61ca641c0db3ab42ad10bc1b2b7190033aee77/.nvmrc"
+    },
+    "response": {
+      "status_code": 200,
+      "header": {
+        "Content-Type": [
+          "text/plain"
+        ]
+      },
+      "body": "18.20.7"
+    }
+  }
+]

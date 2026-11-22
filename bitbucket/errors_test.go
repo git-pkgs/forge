@@ -30,6 +30,14 @@ func TestBitbucketErrorsAreClassified(t *testing.T) {
 			_, err := f.PullRequests().Diff(ctx, "owner", "repo", 1)
 			return err
 		},
+		"file content": func(f forge.Forge) error {
+			_, err := f.Files().Get(ctx, "owner", "repo", "README.md", "main")
+			return err
+		},
+		"resolve commit": func(f forge.Forge) error {
+			_, err := f.Commits().ResolveCommit(ctx, "owner", "repo", "main")
+			return err
+		},
 	}
 
 	for _, tt := range tests {

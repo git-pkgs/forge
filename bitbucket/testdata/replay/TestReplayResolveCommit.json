@@ -1,0 +1,17 @@
+[
+  {
+    "request": {
+      "method": "GET",
+      "url": "https://api.bitbucket.org/2.0/repositories/atlassian/atlassian-connect-express/commit/v12.2.3"
+    },
+    "response": {
+      "status_code": 200,
+      "header": {
+        "Content-Type": [
+          "application/json; charset=utf-8"
+        ]
+      },
+      "body": "{\"type\": \"commit\", \"hash\": \"fd61ca641c0db3ab42ad10bc1b2b7190033aee77\", \"date\": \"2026-04-30T04:37:34+00:00\", \"author\": {\"type\": \"author\", \"raw\": \"Vincent <vnguyen5@atlassian.com>\", \"user\": {\"display_name\": \"Vincent Nguyen\", \"links\": {\"self\": {\"href\": \"https://api.bitbucket.org/2.0/users/%7B8921678d-cc20-474a-b7e3-8c6ff3b1a140%7D\"}, \"avatar\": {\"href\": \"https://avatar-management--avatars.us-west-2.prod.public.atl-paas.net/initials/VN-3.png\"}, \"html\": {\"href\": \"https://bitbucket.org/%7B8921678d-cc20-474a-b7e3-8c6ff3b1a140%7D/\"}}, \"type\": \"user\", \"uuid\": \"{8921678d-cc20-474a-b7e3-8c6ff3b1a140}\", \"account_id\": \"712020:cf50c3cb-714f-4214-be27-f5bace22a1f9\", \"nickname\": \"Vincent Nguyen\"}}, \"message\": \"12.2.3\\n\", \"summary\": {\"type\": \"rendered\", \"raw\": \"12.2.3\\n\", \"markup\": \"markdown\", \"html\": \"<p>12.2.3</p>\"}, \"links\": {\"self\": {\"href\": \"https://api.bitbucket.org/2.0/repositories/atlassian/atlassian-connect-express/commit/fd61ca641c0db3ab42ad10bc1b2b7190033aee77\"}, \"html\": {\"href\": \"https://bitbucket.org/atlassian/atlassian-connect-express/commits/fd61ca641c0db3ab42ad10bc1b2b7190033aee77\"}, \"diff\": {\"href\": \"https://api.bitbucket.org/2.0/repositories/atlassian/atlassian-connect-express/diff/fd61ca641c0db3ab42ad10bc1b2b7190033aee77\"}, \"approve\": {\"href\": \"https://api.bitbucket.org/2.0/repositories/atlassian/atlassian-connect-express/commit/fd61ca641c0db3ab42ad10bc1b2b7190033aee77/approve\"}, \"comments\": {\"href\": \"https://api.bitbucket.org/2.0/repositories/atlassian/atlassian-connect-express/commit/fd61ca641c0db3ab42ad10bc1b2b7190033aee77/comments\"}, \"statuses\": {\"href\": \"https://api.bitbucket.org/2.0/repositories/atlassian/atlassian-connect-express/commit/fd61ca641c0db3ab42ad10bc1b2b7190033aee77/statuses\"}, \"patch\": {\"href\": \"https://api.bitbucket.org/2.0/repositories/atlassian/atlassian-connect-express/patch/fd61ca641c0db3ab42ad10bc1b2b7190033aee77\"}}, \"parents\": [{\"hash\": \"eea819926de1835d07a9508c0459b00de6bb50d6\", \"links\": {\"self\": {\"href\": \"https://api.bitbucket.org/2.0/repositories/atlassian/atlassian-connect-express/commit/eea819926de1835d07a9508c0459b00de6bb50d6\"}, \"html\": {\"href\": \"https://bitbucket.org/atlassian/atlassian-connect-express/commits/eea819926de1835d07a9508c0459b00de6bb50d6\"}}, \"type\": \"commit\"}], \"rendered\": {\"message\": {\"type\": \"rendered\", \"raw\": \"12.2.3\\n\", \"markup\": \"markdown\", \"html\": \"<p>12.2.3</p>\"}}, \"repository\": {\"type\": \"repository\", \"full_name\": \"atlassian/atlassian-connect-express\", \"links\": {\"self\": {\"href\": \"https://api.bitbucket.org/2.0/repositories/atlassian/atlassian-connect-express\"}, \"html\": {\"href\": \"https://bitbucket.org/atlassian/atlassian-connect-express\"}, \"avatar\": {\"href\": \"https://bytebucket.org/ravatar/%7B47b154f6-a82d-4e03-99ce-44fb75b4827c%7D?ts=138914\"}}, \"name\": \"atlassian-connect-express\", \"uuid\": \"{47b154f6-a82d-4e03-99ce-44fb75b4827c}\"}, \"participants\": []}"
+    }
+  }
+]
